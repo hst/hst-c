@@ -1,0 +1,32 @@
+# autotools stuff
+*.a
+*.o
+*.la
+*.lo
+.deps
+.dirstamp
+/.libs/
+/aclocal.m4
+/autom4te.cache/
+/compile
+/config.guess
+/config.log
+/config.status
+/config.sub
+/configure
+/depcomp
+/install-sh
+/libtool
+/ltmain.sh
+/Makefile.in
+/Makefile
+/m4/libtool.m4
+/m4/lt*.m4
+/missing
+
+# In-source build artefacts
+/hst
+
+# Common out-of-source build locations
+/.build*
+/build*
