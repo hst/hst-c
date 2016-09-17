@@ -14,4 +14,4 @@ AUTOCONF=${AUTOCONF:-autoconf}
 AUTOHEADER=${AUTOHEADER:-autoheader}
 AUTOMAKE=${AUTOMAKE:-automake}
 
-"${AUTORECONF}" --verbose --install --force
+"${AUTORECONF}" --verbose --install --force -I m4
