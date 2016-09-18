@@ -24,16 +24,22 @@ hash_name(const char* name)
 
 struct csp {
     void  *events;
+    csp_id  tau;
+    csp_id  tick;
 };
 
 struct csp *
 csp_new(void)
 {
+    static const char* const TAU = "τ";
+    static const char* const TICK = "✔";
     struct csp  *csp = malloc(sizeof(struct csp));
     if (unlikely(csp == NULL)) {
         return NULL;
     }
     csp->events = NULL;
+    csp->tau = csp_get_event_id(csp, TAU);
+    csp->tick = csp_get_event_id(csp, TICK);
     return csp;
 }
 
@@ -76,4 +82,16 @@ csp_get_event_name(struct csp *csp, csp_id event)
     } else {
         return (void *) *vname;
     }
+}
+
+csp_id
+csp_tau(struct csp *csp)
+{
+    return csp->tau;
+}
+
+csp_id
+csp_tick(struct csp *csp)
+{
+    return csp->tick;
 }

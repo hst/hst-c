@@ -16,6 +16,16 @@ TEST_CASE_GROUP("environments");
     check_with_msg(strcmp((actual), (expected)) == 0, \
             "Expected \"%s\", got \"%s\"", (expected), (actual))
 
+TEST_CASE("predefined events exist") {
+    static const char* const TAU = "τ";
+    static const char* const TICK = "✔";
+    struct csp  *csp;
+    check_alloc(csp, csp_new());
+    check_streq(csp_get_event_name(csp, csp_tau(csp)), TAU);
+    check_streq(csp_get_event_name(csp, csp_tick(csp)), TICK);
+    csp_free(csp);
+}
+
 TEST_CASE("can create events") {
     struct csp  *csp;
     check_alloc(csp, csp_new());

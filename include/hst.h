@@ -39,6 +39,14 @@ csp_get_event_id(struct csp *csp, const char *name);
 const char *
 csp_get_event_name(struct csp *csp, csp_id event);
 
+/* Return the ID of the predefined τ ("tau") event. */
+csp_id
+csp_tau(struct csp *csp);
+
+/* Return the ID of the predefined ✔ (tick) event. */
+csp_id
+csp_tick(struct csp *csp);
+
 /*------------------------------------------------------------------------------
  * Sets
  */
