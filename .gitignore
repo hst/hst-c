@@ -5,10 +5,12 @@
 *.lo
 .deps
 .dirstamp
-/.libs/
+.libs/
 /aclocal.m4
 /autom4te.cache/
 /compile
+/config.h
+/config.h.in
 /config.guess
 /config.log
 /config.status
@@ -23,9 +25,16 @@
 /m4/libtool.m4
 /m4/lt*.m4
 /missing
+/stamp-h1
+/test-driver
+test*.log
+test*.trs
 
 # In-source build artefacts
 /hst
+/libhst.la
+/tests/test-*
+!/tests/test-*.c
 
 # Common out-of-source build locations
 /.build*
