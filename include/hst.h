@@ -139,6 +139,59 @@ void
 csp_process_get_afters(struct csp *csp, csp_id process, csp_id initial,
                        struct csp_id_set *dest);
 
+/*------------------------------------------------------------------------------
+ * Constructing process IDs
+ */
+
+/* We want to use reproducible IDs for our processes, which only depend on the
+ * definition of the process.  That is, if you try to define two processes with
+ * exactly the same definition, you should end up with the same ID for each one,
+ * without having to coordinate with anyone.
+ *
+ * That means we need some way to record what the definition of a process is,
+ * and a way to translate those definitions into an ID.  We don't need a
+ * super-precise definition of the process — for instance, we don't need the
+ * full AST of a CSPM term.  It's enough to have a list of all of the "inputs"
+ * that are needed for each kind of operator, and some tag to distinguish one
+ * operator from another.
+ *
+ * The "scope" below is the operator tag.  You just declare a scope somewhere in
+ * the file that deals with a particular operator.  For instance, the file that
+ * defines the prefix (→) operator would include:
+ *
+ *     static struct csp_id_scope  prefix;
+ *
+ * You don't need to fill the struct in, it just needs to exist.  That scope
+ * then provides a unique basis to generate IDs for all prefix processes.  The
+ * prefix operator (a → B) has two inputs: the event `a` and the process `B`.
+ * Both of those are represented internally by IDs, and so once you have the
+ * prefix scope, and the IDs for event `a` and process `B`, you can easily
+ * (and reproducibly) generate the ID for any prefix process:
+ *
+ *     static csp_id
+ *     prefix_id(csp_id a, csp_id B)
+ *     {
+ *         csp_id  id = csp_id_start(&prefix);
+ *         id = csp_id_add_id(id, a);
+ *         id = csp_id_add_id(id, B);
+ *         return id;
+ *     }
+ */
+
+struct csp_id_scope { unsigned int unused; };
+
+csp_id
+csp_id_start(struct csp_id_scope *scope);
+
+csp_id
+csp_id_add_id(csp_id id, csp_id id_to_add);
+
+csp_id
+csp_id_add_id_set(csp_id id, const struct csp_id_set *set);
+
+csp_id
+csp_id_add_name(csp_id id, const char *name);
+
 #ifdef __cplusplus
 }
 #endif
