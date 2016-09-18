@@ -17,6 +17,10 @@ LT_INIT
 # to something else when running configure.
 : ${CPPFLAGS="-Wall -Werror"}
 AC_PROG_CC
+AC_C_BIGENDIAN([AC_DEFINE([HAVE_BIG_ENDIAN], [1],
+                          [Whether this system is big-endian])],
+               [AC_DEFINE([HAVE_LITTLE_ENDIAN], [1],
+                          [Whether this system is little-endian])])
 AC_CHECK_LIB([Judy], [Judy1Set], [], [AC_MSG_ERROR([libjudy not found])])
 AX_GCC_BUILTIN([__builtin_expect])
 AX_GCC_FUNC_ATTRIBUTE([constructor])

@@ -15,11 +15,33 @@ extern "C" {
 #include <stddef.h>
 
 /*------------------------------------------------------------------------------
- * Sets
+ * Environments
  */
 
 /* Each process and event is identified by a number. */
 typedef unsigned long csp_id;
+
+struct csp;
+
+struct csp *
+csp_new(void);
+
+void
+csp_free(struct csp *csp);
+
+/* Return the ID of the event with the given name.  If you call this multiple
+ * times with the same name, you'll get the same result each time. */
+csp_id
+csp_get_event_id(struct csp *csp, const char *name);
+
+/* Return the name of the event with the given ID.  If you haven't created an
+ * event with that ID (via csp_get_event_id), we return NULL. */
+const char *
+csp_get_event_name(struct csp *csp, csp_id event);
+
+/*------------------------------------------------------------------------------
+ * Sets
+ */
 
 /* A set of IDs, stored as a sorted array.  This type is read-only; to construct
  * a set, use a csp_id_set_builder. */
