@@ -98,6 +98,62 @@ csp_id_set_builder_merge(struct csp_id_set_builder *builder,
 int
 csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder);
 
+/*------------------------------------------------------------------------------
+ * Processes
+ */
+
+typedef void
+(*csp_process_initials_f)(struct csp *csp, struct csp_id_set_builder *builder,
+                          void *ud);
+
+typedef void
+(*csp_process_afters_f)(struct csp *csp, csp_id initial,
+                        struct csp_id_set_builder *builder, void *ud);
+
+typedef void
+(*csp_process_free_f)(void *ud);
+
+/* Returns a new reference to `process`.  You are responsible for obtaining a
+ * unique ID for the process. */
+void
+csp_process_init(struct csp *csp, csp_id process, void *ud,
+                 csp_process_initials_f initials, csp_process_afters_f afters,
+                 csp_process_free_f free_ud);
+
+/* Returns a new reference to `process`.  You retain your original reference to
+ * `process`. */
+csp_id
+csp_process_ref(struct csp *csp, csp_id process);
+
+/* Releases your reference to `process`. */
+void
+csp_process_deref(struct csp *csp, csp_id process);
+
+/* Releases your references to all of `processes` in a set. */
+void
+csp_process_deref_set(struct csp *csp, struct csp_id_set *processes);
+
+void
+csp_process_get_initials(struct csp *csp, csp_id process,
+                         struct csp_id_set *dest);
+
+/* Returns a new reference to all of the processes in `dest`. */
+void
+csp_process_get_afters(struct csp *csp, csp_id process, csp_id initial,
+                       struct csp_id_set *dest);
+
+/*------------------------------------------------------------------------------
+ * Operators and predefined processes
+ */
+
+/* Return a new reference to the predefined STOP process. */
+csp_id
+csp_stop(struct csp *csp);
+
+/* Return a new reference to the predefined SKIP process. */
+csp_id
+csp_skip(struct csp *csp);
+
 #ifdef __cplusplus
 }
 #endif
