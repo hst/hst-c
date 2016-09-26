@@ -102,23 +102,23 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder);
  * Processes
  */
 
-typedef void
-(*csp_process_initials_f)(struct csp *csp, struct csp_id_set_builder *builder,
-                          void *ud);
+struct csp_process_iface {
+    void
+    (*initials)(struct csp *csp, struct csp_id_set_builder *builder, void *ud);
 
-typedef void
-(*csp_process_afters_f)(struct csp *csp, csp_id initial,
-                        struct csp_id_set_builder *builder, void *ud);
+    void
+    (*afters)(struct csp *csp, csp_id initial,
+              struct csp_id_set_builder *builder, void *ud);
 
-typedef void
-(*csp_process_free_f)(void *ud);
+    void
+    (*free_ud)(void *ud);
+};
 
 /* Returns a new reference to `process`.  You are responsible for obtaining a
  * unique ID for the process. */
 void
 csp_process_init(struct csp *csp, csp_id process, void *ud,
-                 csp_process_initials_f initials, csp_process_afters_f afters,
-                 csp_process_free_f free_ud);
+                 const struct csp_process_iface *iface);
 
 /* Returns a new reference to `process`.  You retain your original reference to
  * `process`. */
