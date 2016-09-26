@@ -10,7 +10,8 @@ include_HEADERS = include/hst.h
 lib_LTLIBRARIES = libhst.la
 check_PROGRAMS = \
 	tests/test-environment \
-	tests/test-id-sets
+	tests/test-id-sets \
+	tests/test-operators
 bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
 
@@ -19,11 +20,13 @@ LDADD = libhst.la
 libhst_la_SOURCES = \
 	third_party/ccan/hash/hash.c \
 	src/libhst/environment.c \
-	src/libhst/id-set.c
+	src/libhst/id-set.c \
+	src/libhst/operators/prefix.c
 libhst_la_LDFLAGS = -export-symbols-regex '^csp_[^_]'
 
 tests_test_environment_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
+tests_test_operators_LDFLAGS = -no-install
 
 hst_SOURCES = \
 	src/hst/hst.c

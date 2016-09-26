@@ -42,10 +42,10 @@ csp_process_new(void *ud, const struct csp_process_iface *iface)
 }
 
 static void
-csp_process_free(struct csp_process *process)
+csp_process_free(struct csp *csp, struct csp_process *process)
 {
     if (process->iface.free_ud != NULL) {
-        process->iface.free_ud(process->ud);
+        process->iface.free_ud(csp, process->ud);
     }
     free(process);
 }
@@ -227,7 +227,7 @@ csp_process_deref_one(struct csp_priv *csp, csp_id process_id,
     assert(process->ref_count > 0);
     if (--process->ref_count == 0) {
         UNNEEDED int  rc;
-        csp_process_free(process);
+        csp_process_free(&csp->public, process);
         JLD(rc, csp->processes, process_id);
     }
 }

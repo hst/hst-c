@@ -108,7 +108,7 @@ struct csp_process_iface {
               struct csp_id_set_builder *builder, void *ud);
 
     void
-    (*free_ud)(void *ud);
+    (*free_ud)(struct csp *csp, void *ud);
 };
 
 /* Returns a new reference to `process`.  You are responsible for obtaining a
@@ -134,7 +134,7 @@ void
 csp_process_get_initials(struct csp *csp, csp_id process,
                          struct csp_id_set *dest);
 
-/* Returns a new reference to all of the processes in `dest`. */
+/* We do NOT create new references to the processes in `dest`. */
 void
 csp_process_get_afters(struct csp *csp, csp_id process, csp_id initial,
                        struct csp_id_set *dest);
@@ -191,6 +191,14 @@ csp_id_add_id_set(csp_id id, const struct csp_id_set *set);
 
 csp_id
 csp_id_add_name(csp_id id, const char *name);
+
+/*------------------------------------------------------------------------------
+ * Operators
+ */
+
+/* Return a reference to the new process.  Steals a reference to `after`. */
+csp_id
+csp_prefix(struct csp *csp, csp_id event, csp_id after);
 
 #ifdef __cplusplus
 }
