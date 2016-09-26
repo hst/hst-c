@@ -38,8 +38,8 @@ TEST_CASE("predefined events exist") {
     static const char* const TICK = "✔";
     struct csp  *csp;
     check_alloc(csp, csp_new());
-    check_streq(csp_get_event_name(csp, csp_tau(csp)), TAU);
-    check_streq(csp_get_event_name(csp, csp_tick(csp)), TICK);
+    check_streq(csp_get_event_name(csp, csp->tau), TAU);
+    check_streq(csp_get_event_name(csp, csp->tick), TICK);
     csp_free(csp);
 }
 
@@ -55,59 +55,42 @@ TEST_CASE("can create events") {
 
 TEST_CASE("predefined STOP process exists") {
     struct csp  *csp;
-    csp_id  tau;
-    csp_id  tick;
-    csp_id  stop;
     struct csp_id_set  set;
     /* Create the CSP environment. */
     csp_id_set_init(&set);
     check_alloc(csp, csp_new());
-    tau = csp_tau(csp);
-    tick = csp_tick(csp);
-    stop = csp_stop(csp);
     /* Verify the initials set of the STOP process. */
-    csp_process_get_initials(csp, stop, &set);
+    csp_process_get_initials(csp, csp->stop, &set);
     check_size(set, 0);
     /* Verify the afters of τ. */
-    csp_process_get_afters(csp, stop, tau, &set);
+    csp_process_get_afters(csp, csp->stop, csp->tau, &set);
     check_size(set, 0);
     /* Verify the afters of ✔. */
-    csp_process_get_afters(csp, stop, tick, &set);
+    csp_process_get_afters(csp, csp->stop, csp->tick, &set);
     check_size(set, 0);
     /* Clean up. */
     csp_id_set_done(&set);
-    csp_process_deref(csp, stop);
     csp_free(csp);
 }
 
 TEST_CASE("predefined SKIP process exists") {
     struct csp  *csp;
-    csp_id  tau;
-    csp_id  tick;
-    csp_id  stop;
-    csp_id  skip;
     struct csp_id_set  set;
     /* Create the CSP environment. */
     csp_id_set_init(&set);
     check_alloc(csp, csp_new());
-    tau = csp_tau(csp);
-    tick = csp_tick(csp);
-    stop = csp_stop(csp);
-    skip = csp_skip(csp);
     /* Verify the initials set of the SKIP process. */
-    csp_process_get_initials(csp, skip, &set);
+    csp_process_get_initials(csp, csp->skip, &set);
     check_size(set, 1);
-    check_elements(set, tick);
+    check_elements(set, csp->tick);
     /* Verify the afters of τ. */
-    csp_process_get_afters(csp, skip, tau, &set);
+    csp_process_get_afters(csp, csp->skip, csp->tau, &set);
     check_size(set, 0);
     /* Verify the afters of ✔. */
-    csp_process_get_afters(csp, skip, tick, &set);
+    csp_process_get_afters(csp, csp->skip, csp->tick, &set);
     check_size(set, 1);
-    check_elements(set, stop);
+    check_elements(set, csp->stop);
     /* Clean up. */
     csp_id_set_done(&set);
-    csp_process_deref(csp, stop);
-    csp_process_deref(csp, skip);
     csp_free(csp);
 }
