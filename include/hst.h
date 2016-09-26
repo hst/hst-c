@@ -21,7 +21,12 @@ extern "C" {
 /* Each process and event is identified by a number. */
 typedef unsigned long csp_id;
 
-struct csp;
+struct csp {
+    csp_id  tau;
+    csp_id  tick;
+    csp_id  skip;
+    csp_id  stop;
+};
 
 struct csp *
 csp_new(void);
@@ -38,14 +43,6 @@ csp_get_event_id(struct csp *csp, const char *name);
  * event with that ID (via csp_get_event_id), we return NULL. */
 const char *
 csp_get_event_name(struct csp *csp, csp_id event);
-
-/* Return the ID of the predefined τ ("tau") event. */
-csp_id
-csp_tau(struct csp *csp);
-
-/* Return the ID of the predefined ✔ (tick) event. */
-csp_id
-csp_tick(struct csp *csp);
 
 /*------------------------------------------------------------------------------
  * Sets
@@ -141,18 +138,6 @@ csp_process_get_initials(struct csp *csp, csp_id process,
 void
 csp_process_get_afters(struct csp *csp, csp_id process, csp_id initial,
                        struct csp_id_set *dest);
-
-/*------------------------------------------------------------------------------
- * Operators and predefined processes
- */
-
-/* Return a new reference to the predefined STOP process. */
-csp_id
-csp_stop(struct csp *csp);
-
-/* Return a new reference to the predefined SKIP process. */
-csp_id
-csp_skip(struct csp *csp);
 
 #ifdef __cplusplus
 }
