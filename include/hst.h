@@ -48,12 +48,18 @@ csp_get_event_name(struct csp *csp, csp_id event);
  * Sets
  */
 
+/* We preallocate a certain number of entries in the csp_id_set struct itself,
+ * to minimize malloc overhead for small sets.  We've chosen 13 to make the set
+ * of the csp_id_set itself a nice multiple of sizeof(void*). */
+#define CSP_ID_SET_INTERNAL_SIZE  13
+
 /* A set of IDs, stored as a sorted array.  This type is read-only; to construct
  * a set, use a csp_id_set_builder. */
 struct csp_id_set {
     csp_id  *ids;
     size_t  count;
     size_t  allocated_count;
+    csp_id  internal[CSP_ID_SET_INTERNAL_SIZE];
 };
 
 void

@@ -5,7 +5,7 @@
  * -----------------------------------------------------------------------------
  */
 
-#include <errno.h>
+#include <assert.h>
 #include <stdlib.h>
 
 #define JUDYERROR_NOTEST 1
@@ -18,14 +18,14 @@
 void
 csp_id_set_init(struct csp_id_set *set)
 {
-    set->ids = NULL;
-    set->allocated_count = 0;
+    set->ids = set->internal;
+    set->allocated_count = CSP_ID_SET_INTERNAL_SIZE;
 }
 
 void
 csp_id_set_done(struct csp_id_set *set)
 {
-    if (set->ids != NULL) {
+    if (set->ids != set->internal) {
         free(set->ids);
     }
 }
@@ -72,6 +72,8 @@ csp_id_set_builder_merge(struct csp_id_set_builder *builder,
     }
 }
 
+#define CSP_ID_SET_FIRST_ALLOCATION_COUNT  32
+
 int
 csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
 {
@@ -84,19 +86,27 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
      * ids that have been added to the set. */
     J1C(set->count, builder->working_set, 0, -1);
     if (unlikely(set->count > set->allocated_count)) {
-        /* Whenever we reallocate, at least double the size of the existing
-         * array. */
-        csp_id  *new_ids;
-        size_t  new_count = set->allocated_count * 2;
-        if (set->count > new_count) {
-            new_count = set->count;
+        if (set->ids == set->internal) {
+            size_t  new_count = CSP_ID_SET_FIRST_ALLOCATION_COUNT;
+            while (set->count > new_count) {
+                new_count *= 2;
+            }
+            set->ids = malloc(new_count * sizeof(csp_id));
+            assert(set->ids != NULL);
+            set->allocated_count = CSP_ID_SET_FIRST_ALLOCATION_COUNT;
+        } else {
+            /* Whenever we reallocate, at least double the size of the existing
+             * array. */
+            csp_id  *new_ids;
+            size_t  new_count = set->allocated_count;
+            do {
+                new_count *= 2;
+            } while (set->count > new_count);
+            new_ids = realloc(set->ids, new_count * sizeof(csp_id));
+            assert(new_ids != NULL);
+            set->ids = new_ids;
+            set->allocated_count = new_count;
         }
-        new_ids = realloc(set->ids, new_count * sizeof(csp_id));
-        if (unlikely(new_ids == NULL)) {
-            return ENOMEM;
-        }
-        set->ids = new_ids;
-        set->allocated_count = new_count;
     }
 
     /* Then fill in the array. */
