@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define JUDYERROR_NOTEST 1
 #include <Judy.h>
@@ -74,17 +75,10 @@ csp_id_set_builder_merge(struct csp_id_set_builder *builder,
 
 #define CSP_ID_SET_FIRST_ALLOCATION_COUNT  32
 
-int
-csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
+/* Ensure that `set` is large enough to hold `set->count` elements. */
+static void
+csp_id_set_ensure_size(struct csp_id_set *set)
 {
-    int  found;
-    size_t  i;
-    csp_id  id;
-    UNNEEDED Word_t  dummy;
-
-    /* First make sure that the `ids` array is large enough to hold all of the
-     * ids that have been added to the set. */
-    J1C(set->count, builder->working_set, 0, -1);
     if (unlikely(set->count > set->allocated_count)) {
         if (set->ids == set->internal) {
             size_t  new_count = CSP_ID_SET_FIRST_ALLOCATION_COUNT;
@@ -108,6 +102,20 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
             set->allocated_count = new_count;
         }
     }
+}
+
+int
+csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
+{
+    int  found;
+    size_t  i;
+    csp_id  id;
+    UNNEEDED Word_t  dummy;
+
+    /* First make sure that the `ids` array is large enough to hold all of the
+     * ids that have been added to the set. */
+    J1C(set->count, builder->working_set, 0, -1);
+    csp_id_set_ensure_size(set);
 
     /* Then fill in the array. */
     i = 0;
@@ -120,4 +128,12 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
 
     J1FA(dummy, builder->working_set);
     return 0;
+}
+
+void
+csp_id_set_clone(struct csp_id_set *set, const struct csp_id_set *other)
+{
+    set->count = other->count;
+    csp_id_set_ensure_size(set);
+    memcpy(set->ids, other->ids, other->count * sizeof(csp_id));
 }

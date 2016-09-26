@@ -158,6 +158,50 @@ TEST_CASE("unlocking a set builder empties it") {
     csp_id_set_done(&set);
 }
 
+TEST_CASE("can clone a small set") {
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set1;
+    struct csp_id_set  set2;
+    csp_id  to_add[] = {0, 5, 1};
+    size_t  to_add_count = sizeof(to_add) / sizeof(to_add[0]);
+    /* Create a set. */
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add_many(&builder, to_add_count, to_add);
+    csp_id_set_init(&set1);
+    csp_id_set_build(&set1, &builder);
+    csp_id_set_builder_done(&builder);
+    /* Then create a copy of it. */
+    csp_id_set_init(&set2);
+    csp_id_set_clone(&set2, &set1);
+    /* And verify its contents. */
+    check_size(set2, 3);
+    check_elements(set2, 0, 1, 5);
+    /* Clean up. */
+    csp_id_set_done(&set1);
+    csp_id_set_done(&set2);
+}
+
+TEST_CASE("can clone a large set") {
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set1;
+    struct csp_id_set  set2;
+    /* Create a set. */
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add_range(
+            &builder, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1);
+    csp_id_set_init(&set1);
+    csp_id_set_build(&set1, &builder);
+    csp_id_set_builder_done(&builder);
+    /* Then create a copy of it. */
+    csp_id_set_init(&set2);
+    csp_id_set_clone(&set2, &set1);
+    /* And verify its contents. */
+    check_range(set2, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1);
+    /* Clean up. */
+    csp_id_set_done(&set1);
+    csp_id_set_done(&set2);
+}
+
 TEST_CASE("can spill over into allocated storage") {
     struct csp_id_set_builder  builder;
     struct csp_id_set  set;

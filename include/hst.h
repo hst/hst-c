@@ -68,6 +68,19 @@ csp_id_set_init(struct csp_id_set *set);
 void
 csp_id_set_done(struct csp_id_set *set);
 
+/* Fills a set with a copy of another set, without having to go through a
+ * builder first.  You must have already initialized `set`.  This is guaranteed
+ * to be equivalent to (and likely more efficient than):
+ *
+ *     struct csp_id_set_builder  builder;
+ *     csp_id_set_builder_init(&builder);
+ *     csp_id_set_builder_merge(&builder, other);
+ *     csp_id_set_build(set, &builder);
+ *     csp_id_set_builder_done(&builder);
+ */
+void
+csp_id_set_clone(struct csp_id_set *set, const struct csp_id_set *other);
+
 /* A writeable view of a set of IDs. */
 struct csp_id_set_builder {
     void  *working_set;
