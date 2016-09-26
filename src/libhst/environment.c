@@ -42,10 +42,10 @@ csp_process_new(void *ud, const struct csp_process_iface *iface)
 }
 
 static void
-csp_process_free(struct csp_process *process)
+csp_process_free(struct csp *csp, struct csp_process *process)
 {
     if (process->iface.free_ud != NULL) {
-        process->iface.free_ud(process->ud);
+        process->iface.free_ud(csp, process->ud);
     }
     free(process);
 }
@@ -227,7 +227,7 @@ csp_process_deref_one(struct csp_priv *csp, csp_id process_id,
     assert(process->ref_count > 0);
     if (--process->ref_count == 0) {
         UNNEEDED int  rc;
-        csp_process_free(process);
+        csp_process_free(&csp->public, process);
         JLD(rc, csp->processes, process_id);
     }
 }
@@ -270,4 +270,28 @@ csp_process_get_afters(struct csp *pcsp, csp_id process_id, csp_id initial,
     struct csp_process  *process = csp_process_get(csp, process_id);
     process->iface.afters(&csp->public, initial, &csp->builder, process->ud);
     csp_id_set_build(dest, &csp->builder);
+}
+
+csp_id
+csp_id_start(struct csp_id_scope *scope)
+{
+    return hash64_any(&scope, sizeof(struct csp_id_scope *), 0);
+}
+
+csp_id
+csp_id_add_id(csp_id id, csp_id id_to_add)
+{
+    return hash64_any(&id_to_add, sizeof(csp_id), id);
+}
+
+csp_id
+csp_id_add_id_set(csp_id id, const struct csp_id_set *set)
+{
+    return hash64_any(set->ids, set->count * sizeof(csp_id), id);
+}
+
+csp_id
+csp_id_add_name(csp_id id, const char *name)
+{
+    return hash64_any(name, strlen(name), id);
 }
