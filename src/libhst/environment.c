@@ -25,22 +25,17 @@ hash_name(const char* name)
 
 struct csp_process {
     void  *ud;
-    csp_process_initials_f  initials;
-    csp_process_afters_f  afters;
-    csp_process_free_f  free_ud;
+    const struct csp_process_iface  iface;
     unsigned int  ref_count;
 };
 
 static struct csp_process *
-csp_process_new(void *ud, csp_process_initials_f initials,
-                csp_process_afters_f afters, csp_process_free_f free_ud)
+csp_process_new(void *ud, const struct csp_process_iface *iface)
 {
     struct csp_process  *process = malloc(sizeof(struct csp_process));
     assert(process != NULL);
     process->ud = ud;
-    process->initials = initials;
-    process->afters = afters;
-    process->free_ud = free_ud;
+    *((struct csp_process_iface *) &process->iface) = *iface;
     process->ref_count = 1;
     return process;
 }
@@ -48,8 +43,8 @@ csp_process_new(void *ud, csp_process_initials_f initials,
 static void
 csp_process_free(struct csp_process *process)
 {
-    if (process->free_ud != NULL) {
-        process->free_ud(process->ud);
+    if (process->iface.free_ud != NULL) {
+        process->iface.free_ud(process->ud);
     }
     free(process);
 }
@@ -80,6 +75,12 @@ csp_stop_afters(struct csp *csp, csp_id initial,
 {
 }
 
+const struct csp_process_iface csp_stop_iface = {
+    &csp_stop_initials,
+    &csp_stop_afters,
+    NULL
+};
+
 static void
 csp_skip_initials(struct csp *csp, struct csp_id_set_builder *builder, void *ud)
 {
@@ -94,6 +95,12 @@ csp_skip_afters(struct csp *csp, csp_id initial,
         csp_id_set_builder_add(builder, csp->stop_id);
     }
 }
+
+const struct csp_process_iface csp_skip_iface = {
+    &csp_skip_initials,
+    &csp_skip_afters,
+    NULL
+};
 
 struct csp *
 csp_new(void)
@@ -110,12 +117,10 @@ csp_new(void)
     csp->tau = csp_get_event_id(csp, TAU);
     csp->tick = csp_get_event_id(csp, TICK);
     csp->stop_id = hash_name("STOP");
-    csp_process_init
-        (csp, csp->stop_id, NULL, csp_stop_initials, csp_stop_afters, NULL);
+    csp_process_init(csp, csp->stop_id, NULL, &csp_stop_iface);
     csp->stop = csp_process_get(csp, csp->stop_id);
     csp->skip_id = hash_name("SKIP");
-    csp_process_init
-        (csp, csp->skip_id, NULL, csp_skip_initials, csp_skip_afters, NULL);
+    csp_process_init(csp, csp->skip_id, NULL, &csp_skip_iface);
     csp->skip = csp_process_get(csp, csp->skip_id);
     return csp;
 }
@@ -188,14 +193,12 @@ csp_tick(struct csp *csp)
 
 void
 csp_process_init(struct csp *csp, csp_id process_id, void *ud,
-                 csp_process_initials_f initials, csp_process_afters_f afters,
-                 csp_process_free_f free_ud)
+                 const struct csp_process_iface *iface)
 {
     Word_t  *vprocess;
     JLI(vprocess, csp->processes, process_id);
     if (*vprocess == 0) {
-        struct csp_process  *process =
-            csp_process_new(ud, initials, afters, free_ud);
+        struct csp_process  *process = csp_process_new(ud, iface);
         *vprocess = (Word_t) process;
     } else {
         struct csp_process  *process = (void *) *vprocess;
@@ -257,7 +260,7 @@ csp_process_get_initials(struct csp *csp, csp_id process_id,
                          struct csp_id_set *dest)
 {
     struct csp_process  *process = csp_process_get(csp, process_id);
-    process->initials(csp, &csp->builder, process->ud);
+    process->iface.initials(csp, &csp->builder, process->ud);
     csp_id_set_build(dest, &csp->builder);
 }
 
@@ -266,7 +269,7 @@ csp_process_get_afters(struct csp *csp, csp_id process_id, csp_id initial,
                        struct csp_id_set *dest)
 {
     struct csp_process  *process = csp_process_get(csp, process_id);
-    process->afters(csp, initial, &csp->builder, process->ud);
+    process->iface.afters(csp, initial, &csp->builder, process->ud);
     csp_id_set_build(dest, &csp->builder);
 }
 
