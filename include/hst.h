@@ -48,12 +48,18 @@ csp_get_event_name(struct csp *csp, csp_id event);
  * Sets
  */
 
+/* We preallocate a certain number of entries in the csp_id_set struct itself,
+ * to minimize malloc overhead for small sets.  We've chosen 13 to make the set
+ * of the csp_id_set itself a nice multiple of sizeof(void*). */
+#define CSP_ID_SET_INTERNAL_SIZE  13
+
 /* A set of IDs, stored as a sorted array.  This type is read-only; to construct
  * a set, use a csp_id_set_builder. */
 struct csp_id_set {
     csp_id  *ids;
     size_t  count;
     size_t  allocated_count;
+    csp_id  internal[CSP_ID_SET_INTERNAL_SIZE];
 };
 
 void
@@ -61,6 +67,46 @@ csp_id_set_init(struct csp_id_set *set);
 
 void
 csp_id_set_done(struct csp_id_set *set);
+
+/* Fills a set with a copy of another set, without having to go through a
+ * builder first.  You must have already initialized `set`.  This is guaranteed
+ * to be equivalent to (and likely more efficient than):
+ *
+ *     struct csp_id_set_builder  builder;
+ *     csp_id_set_builder_init(&builder);
+ *     csp_id_set_builder_merge(&builder, other);
+ *     csp_id_set_build(set, &builder);
+ *     csp_id_set_builder_done(&builder);
+ */
+void
+csp_id_set_clone(struct csp_id_set *set, const struct csp_id_set *other);
+
+/* Shortcut for constructing an ID set with one element, without having to go
+ * through a builder.  This is guaranteed to be equivalent to (and likely more
+ * efficient than):
+ *
+ *     struct csp_id_set_builder  builder;
+ *     csp_id_set_builder_init(&builder);
+ *     csp_id_set_builder_add(&builder, event);
+ *     csp_id_set_build(set, &builder);
+ *     csp_id_set_builder_done(&builder);
+ */
+void
+csp_id_set_fill_single(struct csp_id_set *set, csp_id event);
+
+/* Shortcut for constructing an ID set with two elements, without having to go
+ * through a builder.  This is guaranteed to be equivalent to (and likely more
+ * efficient than):
+ *
+ *     struct csp_id_set_builder  builder;
+ *     csp_id_set_builder_init(&builder);
+ *     csp_id_set_builder_add(&builder, e1);
+ *     csp_id_set_builder_add(&builder, e2);
+ *     csp_id_set_build(set, &builder);
+ *     csp_id_set_builder_done(&builder);
+ */
+void
+csp_id_set_fill_double(struct csp_id_set *set, csp_id e1, csp_id e2);
 
 /* A writeable view of a set of IDs. */
 struct csp_id_set_builder {
