@@ -12,6 +12,7 @@
 #define JUDYERROR_NOTEST 1
 #include <Judy.h>
 
+#include "ccan/build_assert/build_assert.h"
 #include "ccan/compiler/compiler.h"
 #include "ccan/likely/likely.h"
 #include "hst.h"
@@ -136,4 +137,40 @@ csp_id_set_clone(struct csp_id_set *set, const struct csp_id_set *other)
     set->count = other->count;
     csp_id_set_ensure_size(set);
     memcpy(set->ids, other->ids, other->count * sizeof(csp_id));
+}
+
+void
+csp_id_set_fill_single(struct csp_id_set *set, csp_id event)
+{
+    /* Ensure that we can initialize the singleton set without having to
+     * allocate anything.  Because we always reallocate some space in the set
+     * itself, we can do this at build time. */
+    BUILD_ASSERT(CSP_ID_SET_INTERNAL_SIZE >= 1);
+    set->count = 1;
+    set->ids[0] = event;
+}
+
+void
+csp_id_set_fill_double(struct csp_id_set *set, csp_id e1, csp_id e2)
+{
+    /* Ensure that we can initialize the singleton set without having to
+     * allocate anything.  Because we always reallocate some space in the set
+     * itself, we can do this at build time. */
+    BUILD_ASSERT(CSP_ID_SET_INTERNAL_SIZE >= 2);
+
+    /* Make sure the events are deduplicated! */
+    if (unlikely(e1 == e2)) {
+        set->count = 1;
+        set->ids[0] = e1;
+    } else {
+        set->count = 2;
+        /* Make sure the events are sorted! */
+        if (e1 < e2) {
+            set->ids[0] = e1;
+            set->ids[1] = e2;
+        } else {
+            set->ids[0] = e2;
+            set->ids[1] = e1;
+        }
+    }
 }

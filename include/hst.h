@@ -81,6 +81,33 @@ csp_id_set_done(struct csp_id_set *set);
 void
 csp_id_set_clone(struct csp_id_set *set, const struct csp_id_set *other);
 
+/* Shortcut for constructing an ID set with one element, without having to go
+ * through a builder.  This is guaranteed to be equivalent to (and likely more
+ * efficient than):
+ *
+ *     struct csp_id_set_builder  builder;
+ *     csp_id_set_builder_init(&builder);
+ *     csp_id_set_builder_add(&builder, event);
+ *     csp_id_set_build(set, &builder);
+ *     csp_id_set_builder_done(&builder);
+ */
+void
+csp_id_set_fill_single(struct csp_id_set *set, csp_id event);
+
+/* Shortcut for constructing an ID set with two elements, without having to go
+ * through a builder.  This is guaranteed to be equivalent to (and likely more
+ * efficient than):
+ *
+ *     struct csp_id_set_builder  builder;
+ *     csp_id_set_builder_init(&builder);
+ *     csp_id_set_builder_add(&builder, e1);
+ *     csp_id_set_builder_add(&builder, e2);
+ *     csp_id_set_build(set, &builder);
+ *     csp_id_set_builder_done(&builder);
+ */
+void
+csp_id_set_fill_double(struct csp_id_set *set, csp_id e1, csp_id e2);
+
 /* A writeable view of a set of IDs. */
 struct csp_id_set_builder {
     void  *working_set;

@@ -202,6 +202,42 @@ TEST_CASE("can clone a large set") {
     csp_id_set_done(&set2);
 }
 
+TEST_CASE("can build a singleton set via shortcut") {
+    struct csp_id_set  set;
+    csp_id_set_init(&set);
+    csp_id_set_fill_single(&set, 0);
+    check_size(set, 1);
+    check_elements(set, 0);
+    csp_id_set_done(&set);
+}
+
+TEST_CASE("can build a doubleton set via shortcut") {
+    struct csp_id_set  set;
+    csp_id_set_init(&set);
+    csp_id_set_fill_double(&set, 0, 1);
+    check_size(set, 2);
+    check_elements(set, 0, 1);
+    csp_id_set_done(&set);
+}
+
+TEST_CASE("doubleton shortcut builder sorts events") {
+    struct csp_id_set  set;
+    csp_id_set_init(&set);
+    csp_id_set_fill_double(&set, 1, 0);
+    check_size(set, 2);
+    check_elements(set, 0, 1);
+    csp_id_set_done(&set);
+}
+
+TEST_CASE("doubleton shortcut builder deduplicates events") {
+    struct csp_id_set  set;
+    csp_id_set_init(&set);
+    csp_id_set_fill_double(&set, 0, 0);
+    check_size(set, 1);
+    check_elements(set, 0);
+    csp_id_set_done(&set);
+}
+
 TEST_CASE("can spill over into allocated storage") {
     struct csp_id_set_builder  builder;
     struct csp_id_set  set;
