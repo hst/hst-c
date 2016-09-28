@@ -79,3 +79,81 @@ TEST_CASE("a → b → STOP") {
     csp_process_deref(csp, p1);
     csp_free(csp);
 }
+
+TEST_CASE_GROUP("internal choice");
+
+TEST_CASE("(a → STOP) ⊓ (b → STOP)") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  b;
+    csp_id  p1;
+    csp_id  p2;
+    csp_id  root;
+    struct csp_id_set  set;
+    /* Create the CSP environment. */
+    csp_id_set_init(&set);
+    check_alloc(csp, csp_new());
+    /* root = (a → STOP) ⊓ (b → STOP) */
+    a = csp_get_event_id(csp, "a");
+    b = csp_get_event_id(csp, "b");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
+    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->stop));
+    root = csp_internal_choice(csp, p1, p2);
+    /* initials(root) == {τ} */
+    csp_process_get_initials(csp, root, &set);
+    check_set_elements_msg(
+            "initials((a → STOP) ⊓ (b → STOP)) == {τ}", set, csp->tau);
+    /* afters(root, τ) == {a → STOP, b → STOP} */
+    csp_process_get_afters(csp, root, csp->tau, &set);
+    check_set_elements_msg(
+            "afters((a → STOP) ⊓ (b → STOP), τ) == {a → STOP, b → STOP}",
+            set, p1, p2);
+    /* afters(root, a) == {} */
+    csp_process_get_afters(csp, root, a, &set);
+    check_set_empty_msg("afters((a → STOP) ⊓ (b → STOP), a) == {}", set);
+    /* Clean up. */
+    csp_id_set_done(&set);
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
+TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  b;
+    csp_id  c;
+    csp_id  p1;
+    csp_id  p2;
+    csp_id  p3;
+    csp_id  root;
+    struct csp_id_set  set;
+    /* Create the CSP environment. */
+    csp_id_set_init(&set);
+    check_alloc(csp, csp_new());
+    /* root = (a → STOP) ⊓ (b → STOP) */
+    a = csp_get_event_id(csp, "a");
+    b = csp_get_event_id(csp, "b");
+    c = csp_get_event_id(csp, "c");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
+    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->stop));
+    p3 = csp_prefix(csp, c, csp_process_ref(csp, csp->stop));
+    build_set(&set, p1, p2, p3);
+    root = csp_replicated_internal_choice(csp, &set);
+    /* initials(root) == {τ} */
+    csp_process_get_initials(csp, root, &set);
+    check_set_elements_msg(
+            "initials(⊓ {a → STOP, b → STOP, c → STOP}) == {τ}", set, csp->tau);
+    /* afters(root, τ) == {a → STOP, b → STOP, c → STOP} */
+    csp_process_get_afters(csp, root, csp->tau, &set);
+    check_set_elements_msg(
+            "afters(⊓ {a → STOP, b → STOP, c → STOP}, τ) == "
+            "{a → STOP, b → STOP, c → STOP}",
+            set, p1, p2, p3);
+    /* afters(root, a) == {} */
+    csp_process_get_afters(csp, root, a, &set);
+    check_set_empty_msg("afters((a → STOP) ⊓ (b → STOP), a) == {}", set);
+    /* Clean up. */
+    csp_id_set_done(&set);
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
