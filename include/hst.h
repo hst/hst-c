@@ -178,19 +178,24 @@ csp_process_init(struct csp *csp, csp_id process, void *ud,
 csp_id
 csp_process_ref(struct csp *csp, csp_id process);
 
+/* Returns a new reference to each process in `processes`.  You retain your
+ * original references. */
+struct csp_id_set *
+csp_process_set_ref(struct csp *csp, struct csp_id_set *processes);
+
 /* Releases your reference to `process`. */
 void
 csp_process_deref(struct csp *csp, csp_id process);
 
 /* Releases your references to all of `processes` in a set. */
 void
-csp_process_deref_set(struct csp *csp, struct csp_id_set *processes);
+csp_process_set_deref(struct csp *csp, struct csp_id_set *processes);
 
 void
 csp_process_get_initials(struct csp *csp, csp_id process,
                          struct csp_id_set *dest);
 
-/* We do NOT create new references to the processes in `dest`. */
+/* Creates new references to the processes in `dest`. */
 void
 csp_process_get_afters(struct csp *csp, csp_id process, csp_id initial,
                        struct csp_id_set *dest);

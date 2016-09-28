@@ -50,7 +50,7 @@ csp_prefix_afters(struct csp *csp, csp_id initial,
 {
     struct csp_prefix  *prefix = vprefix;
     if (initial == prefix->event) {
-        csp_id_set_builder_add(builder, prefix->after);
+        csp_id_set_builder_add(builder, csp_process_ref(csp, prefix->after));
     }
 }
 
