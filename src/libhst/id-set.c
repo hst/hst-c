@@ -64,6 +64,24 @@ csp_id_set_builder_add_many(struct csp_id_set_builder *builder, size_t count,
 }
 
 void
+csp_id_set_builder_remove(struct csp_id_set_builder *builder, csp_id id)
+{
+    UNNEEDED int  rc;
+    J1U(rc, builder->working_set, id);
+}
+
+void
+csp_id_set_builder_remove_many(struct csp_id_set_builder *builder, size_t count,
+                               csp_id *ids)
+{
+    UNNEEDED int  rc;
+    size_t  i;
+    for (i = 0; i < count; i++) {
+        J1U(rc, builder->working_set, ids[i]);
+    }
+}
+
+void
 csp_id_set_builder_merge(struct csp_id_set_builder *builder,
                          const struct csp_id_set *set)
 {
