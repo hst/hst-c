@@ -246,6 +246,15 @@ csp_id_add_name(csp_id id, const char *name);
 csp_id
 csp_prefix(struct csp *csp, csp_id event, csp_id after);
 
+/* Return a reference to the new process.  Steals references to `a` and `b`. */
+csp_id
+csp_internal_choice(struct csp *csp, csp_id a, csp_id b);
+
+/* Return a reference to the new process.  Steals references to all processes in
+ * `ps`. */
+csp_id
+csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps);
+
 #ifdef __cplusplus
 }
 #endif
