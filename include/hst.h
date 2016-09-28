@@ -192,13 +192,13 @@ void
 csp_process_set_deref(struct csp *csp, struct csp_id_set *processes);
 
 void
-csp_process_get_initials(struct csp *csp, csp_id process,
-                         struct csp_id_set *dest);
+csp_process_build_initials(struct csp *csp, csp_id process,
+                           struct csp_id_set_builder *builder);
 
-/* Creates new references to the processes in `dest`. */
+/* Creates new references to the processes in `builder`. */
 void
-csp_process_get_afters(struct csp *csp, csp_id process, csp_id initial,
-                       struct csp_id_set *dest);
+csp_process_build_afters(struct csp *csp, csp_id process, csp_id initial,
+                         struct csp_id_set_builder *builder);
 
 /*------------------------------------------------------------------------------
  * Constructing process IDs

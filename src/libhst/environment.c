@@ -52,7 +52,6 @@ csp_process_free(struct csp *csp, struct csp_process *process)
 
 struct csp_priv {
     struct csp  public;
-    struct csp_id_set_builder  builder;
     void  *events;
     void  *processes;
     struct csp_process  *stop;
@@ -114,7 +113,6 @@ csp_new(void)
     if (unlikely(csp == NULL)) {
         return NULL;
     }
-    csp_id_set_builder_init(&csp->builder);
     csp->events = NULL;
     csp->processes = NULL;
     csp->public.tau = csp_get_event_id(&csp->public, TAU);
@@ -154,7 +152,6 @@ csp_free(struct csp *pcsp)
     /* All of the other processes should have already been deferenced. */
     assert(csp->processes == NULL);
 
-    csp_id_set_builder_done(&csp->builder);
     free(csp);
 }
 
@@ -267,23 +264,21 @@ csp_process_set_deref(struct csp *pcsp, struct csp_id_set *process_ids)
 }
 
 void
-csp_process_get_initials(struct csp *pcsp, csp_id process_id,
-                         struct csp_id_set *dest)
+csp_process_build_initials(struct csp *pcsp, csp_id process_id,
+                           struct csp_id_set_builder *builder)
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
     struct csp_process  *process = csp_process_get(csp, process_id);
-    process->iface.initials(&csp->public, &csp->builder, process->ud);
-    csp_id_set_build(dest, &csp->builder);
+    process->iface.initials(&csp->public, builder, process->ud);
 }
 
 void
-csp_process_get_afters(struct csp *pcsp, csp_id process_id, csp_id initial,
-                       struct csp_id_set *dest)
+csp_process_build_afters(struct csp *pcsp, csp_id process_id, csp_id initial,
+                         struct csp_id_set_builder *builder)
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
     struct csp_process  *process = csp_process_get(csp, process_id);
-    process->iface.afters(&csp->public, initial, &csp->builder, process->ud);
-    csp_id_set_build(dest, &csp->builder);
+    process->iface.afters(&csp->public, initial, builder, process->ud);
 }
 
 csp_id

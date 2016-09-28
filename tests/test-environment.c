@@ -35,46 +35,58 @@ TEST_CASE("can create events") {
 
 TEST_CASE("predefined STOP process exists") {
     struct csp  *csp;
+    struct csp_id_set_builder  builder;
     struct csp_id_set  set;
     /* Create the CSP environment. */
+    csp_id_set_builder_init(&builder);
     csp_id_set_init(&set);
     check_alloc(csp, csp_new());
     /* Verify the initials set of the STOP process. */
-    csp_process_get_initials(csp, csp->stop, &set);
+    csp_process_build_initials(csp, csp->stop, &builder);
+    csp_id_set_build(&set, &builder);
     check_set_size(set, 0);
     /* Verify the afters of τ. */
-    csp_process_get_afters(csp, csp->stop, csp->tau, &set);
+    csp_process_build_afters(csp, csp->stop, csp->tau, &builder);
+    csp_id_set_build(&set, &builder);
     check_set_size(set, 0);
     csp_process_set_deref(csp, &set);
     /* Verify the afters of ✔. */
-    csp_process_get_afters(csp, csp->stop, csp->tick, &set);
+    csp_process_build_afters(csp, csp->stop, csp->tick, &builder);
+    csp_id_set_build(&set, &builder);
     check_set_size(set, 0);
     csp_process_set_deref(csp, &set);
     /* Clean up. */
+    csp_id_set_builder_done(&builder);
     csp_id_set_done(&set);
     csp_free(csp);
 }
 
 TEST_CASE("predefined SKIP process exists") {
     struct csp  *csp;
+    struct csp_id_set_builder  builder;
     struct csp_id_set  set;
     /* Create the CSP environment. */
+    csp_id_set_builder_init(&builder);
     csp_id_set_init(&set);
     check_alloc(csp, csp_new());
     /* Verify the initials set of the SKIP process. */
-    csp_process_get_initials(csp, csp->skip, &set);
+    csp_process_build_initials(csp, csp->skip, &builder);
+    csp_id_set_build(&set, &builder);
     check_set_size(set, 1);
     check_set_elements(set, csp->tick);
     /* Verify the afters of τ. */
-    csp_process_get_afters(csp, csp->skip, csp->tau, &set);
+    csp_process_build_afters(csp, csp->skip, csp->tau, &builder);
+    csp_id_set_build(&set, &builder);
     check_set_size(set, 0);
     csp_process_set_deref(csp, &set);
     /* Verify the afters of ✔. */
-    csp_process_get_afters(csp, csp->skip, csp->tick, &set);
+    csp_process_build_afters(csp, csp->skip, csp->tick, &builder);
+    csp_id_set_build(&set, &builder);
     check_set_size(set, 1);
     check_set_elements(set, csp->stop);
     csp_process_set_deref(csp, &set);
     /* Clean up. */
+    csp_id_set_builder_done(&builder);
     csp_id_set_done(&set);
     csp_free(csp);
 }
