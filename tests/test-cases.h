@@ -13,8 +13,10 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "ccan/compiler/compiler.h"
 #include "ccan/likely/likely.h"
 
 /*------------------------------------------------------------------------------
@@ -219,6 +221,73 @@ exit_status(void)
     } while (0)
 
 #define check_nonnull(call)  check_nonnull_with_msg(call, "Error occurred")
+
+#define check_id_eq(id1, id2) \
+    check_with_msg((id1) == (id2), \
+            "Expected IDs to be equal, got 0x%08lx and 0x%08lx", \
+            (id1), (id2))
+
+#define check_id_ne(id1, id2) \
+    check_with_msg((id1) != (id2), \
+            "Expected IDs to be unequal, got 0x%08lx", (id1))
+
+#define check_streq(actual, expected) \
+    check_with_msg(strcmp((actual), (expected)) == 0, \
+            "Expected \"%s\", got \"%s\"", (expected), (actual))
+
+#define build_set(set, ...) \
+    do { \
+        csp_id  __to_add[] = { __VA_ARGS__ }; \
+        size_t  __count = sizeof(__to_add) / sizeof(__to_add[0]); \
+        struct csp_id_set_builder  builder; \
+        csp_id_set_builder_init(&builder); \
+        csp_id_set_builder_add_many(&builder, __count, __to_add); \
+        csp_id_set_build((set), &builder); \
+        csp_id_set_builder_done(&builder); \
+    } while (0)
+
+#define check_set_size(set, expected) \
+    check_with_msg((set).count == (expected), \
+            "Expected set to have size %zu, got %zu", \
+            (size_t) (expected), (set).count)
+
+#define check_set_empty_msg(msg, set) \
+    check_with_msg((set).count == 0, (msg))
+
+#define check_set_elements(set, ...) \
+    do { \
+        csp_id  __expected[] = { __VA_ARGS__ }; \
+        size_t  __count = sizeof(__expected) / sizeof(__expected[0]); \
+        size_t  __i; \
+        for (__i = 0; __i < __count; __i++) { \
+            check_with_msg((set).ids[__i] == __expected[__i], \
+                    "Expected set[%zu] to be %lu, got %lu", \
+                    __i, __expected[__i], (set).ids[__i]); \
+        } \
+    } while (0)
+
+#define check_set_elements_msg(msg, set, ...) \
+    do { \
+        csp_id  __expected[] = { __VA_ARGS__ }; \
+        size_t  __count = sizeof(__expected) / sizeof(__expected[0]); \
+        size_t  __i; \
+        for (__i = 0; __i < __count; __i++) { \
+            check_with_msg((set).ids[__i] == __expected[__i], \
+                    "%s: Expected set[%zu] to be %lu, got %lu", \
+                    (msg), __i, __expected[__i], (set).ids[__i]); \
+        } \
+    } while (0)
+
+#define check_set_range(set, count) \
+    do { \
+        check_set_size(set, count); \
+        size_t  __i; \
+        for (__i = 0; __i < (count); __i++) { \
+            check_with_msg((set).ids[__i] == __i, \
+                    "Expected set[%zu] to be %zu, got %lu", \
+                    __i, __i, (set).ids[__i]); \
+        } \
+    } while (0)
 
 
 #endif /* TEST_CASES_H */

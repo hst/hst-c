@@ -8,50 +8,10 @@
 #include <string.h>
 
 #include "hst.h"
+#include "test-cases.h"
 #include "test-case-harness.h"
 
 TEST_CASE_GROUP("environments");
-
-#define check_size(set, expected) \
-    check_with_msg((set).count == (expected), \
-            "Expected set to have size %zu, got %zu", \
-            (size_t) (expected), (set).count)
-
-#define check_elements(set, ...) \
-    do { \
-        csp_id  __expected[] = { __VA_ARGS__ }; \
-        size_t  __count = sizeof(__expected) / sizeof(__expected[0]); \
-        size_t  __i; \
-        for (__i = 0; __i < __count; __i++) { \
-            check_with_msg((set).ids[__i] == __expected[__i], \
-                    "Expected set[%zu] to be %lu, got %lu", \
-                    __i, __expected[__i], (set).ids[__i]); \
-        } \
-    } while (0)
-
-#define check_streq(actual, expected) \
-    check_with_msg(strcmp((actual), (expected)) == 0, \
-            "Expected \"%s\", got \"%s\"", (expected), (actual))
-
-#define check_id_eq(id1, id2) \
-    check_with_msg((id1) == (id2), \
-            "Expected IDs to be equal, got 0x%08lx and 0x%08lx", \
-            (id1), (id2))
-
-#define check_id_ne(id1, id2) \
-    check_with_msg((id1) != (id2), \
-            "Expected IDs to be unequal, got 0x%08lx", (id1))
-
-#define build_set(set, ...) \
-    do { \
-        csp_id  __to_add[] = { __VA_ARGS__ }; \
-        size_t  __count = sizeof(__to_add) / sizeof(__to_add[0]); \
-        struct csp_id_set_builder  builder; \
-        csp_id_set_builder_init(&builder); \
-        csp_id_set_builder_add_many(&builder, __count, __to_add); \
-        csp_id_set_build((set), &builder); \
-        csp_id_set_builder_done(&builder); \
-    } while (0)
 
 TEST_CASE("predefined events exist") {
     static const char* const TAU = "τ";
@@ -81,13 +41,13 @@ TEST_CASE("predefined STOP process exists") {
     check_alloc(csp, csp_new());
     /* Verify the initials set of the STOP process. */
     csp_process_get_initials(csp, csp->stop, &set);
-    check_size(set, 0);
+    check_set_size(set, 0);
     /* Verify the afters of τ. */
     csp_process_get_afters(csp, csp->stop, csp->tau, &set);
-    check_size(set, 0);
+    check_set_size(set, 0);
     /* Verify the afters of ✔. */
     csp_process_get_afters(csp, csp->stop, csp->tick, &set);
-    check_size(set, 0);
+    check_set_size(set, 0);
     /* Clean up. */
     csp_id_set_done(&set);
     csp_free(csp);
@@ -101,15 +61,15 @@ TEST_CASE("predefined SKIP process exists") {
     check_alloc(csp, csp_new());
     /* Verify the initials set of the SKIP process. */
     csp_process_get_initials(csp, csp->skip, &set);
-    check_size(set, 1);
-    check_elements(set, csp->tick);
+    check_set_size(set, 1);
+    check_set_elements(set, csp->tick);
     /* Verify the afters of τ. */
     csp_process_get_afters(csp, csp->skip, csp->tau, &set);
-    check_size(set, 0);
+    check_set_size(set, 0);
     /* Verify the afters of ✔. */
     csp_process_get_afters(csp, csp->skip, csp->tick, &set);
-    check_size(set, 1);
-    check_elements(set, csp->stop);
+    check_set_size(set, 1);
+    check_set_elements(set, csp->stop);
     /* Clean up. */
     csp_id_set_done(&set);
     csp_free(csp);
