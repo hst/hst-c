@@ -123,13 +123,13 @@ csp_id_set_ensure_size(struct csp_id_set *set)
     }
 }
 
-int
-csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
+void
+csp_id_set_build_and_keep(struct csp_id_set *set,
+                          struct csp_id_set_builder *builder)
 {
     int  found;
     size_t  i;
     csp_id  id;
-    UNNEEDED Word_t  dummy;
 
     /* First make sure that the `ids` array is large enough to hold all of the
      * ids that have been added to the set. */
@@ -144,9 +144,14 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
         set->ids[i++] = id;
         J1N(found, builder->working_set, id);
     }
+}
 
+void
+csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
+{
+    UNNEEDED Word_t  dummy;
+    csp_id_set_build_and_keep(set, builder);
     J1FA(dummy, builder->working_set);
-    return 0;
 }
 
 void
