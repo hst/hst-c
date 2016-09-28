@@ -254,11 +254,28 @@ exit_status(void)
 #define check_set_empty_msg(msg, set) \
     check_with_msg((set).count == 0, (msg))
 
+UNNEEDED
+static int
+compare_ids(const void *vid1, const void *vid2)
+{
+    const csp_id  *id1 = vid1;
+    const csp_id  *id2 = vid2;
+    if (*id1 < *id2) {
+        return -1;
+    } else if (*id1 == *id2) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 #define check_set_elements(set, ...) \
     do { \
         csp_id  __expected[] = { __VA_ARGS__ }; \
         size_t  __count = sizeof(__expected) / sizeof(__expected[0]); \
         size_t  __i; \
+        /* Sort the expected elements before comparing */ \
+        qsort(__expected, __count, sizeof(csp_id), compare_ids); \
         for (__i = 0; __i < __count; __i++) { \
             check_with_msg((set).ids[__i] == __expected[__i], \
                     "Expected set[%zu] to be %lu, got %lu", \
@@ -271,6 +288,8 @@ exit_status(void)
         csp_id  __expected[] = { __VA_ARGS__ }; \
         size_t  __count = sizeof(__expected) / sizeof(__expected[0]); \
         size_t  __i; \
+        /* Sort the expected elements before comparing */ \
+        qsort(__expected, __count, sizeof(csp_id), compare_ids); \
         for (__i = 0; __i < __count; __i++) { \
             check_with_msg((set).ids[__i] == __expected[__i], \
                     "%s: Expected set[%zu] to be %lu, got %lu", \
