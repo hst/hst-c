@@ -149,8 +149,9 @@ csp_free(struct csp *pcsp)
     csp_process_deref(&csp->public, csp->public.stop);
     csp_process_deref(&csp->public, csp->public.skip);
 
-    /* All of the other processes should have already been deferenced. */
-    assert(csp->processes == NULL);
+    /* All of the other processes should have already been deferenced.  Don't
+     * free anything here, and rely on valgrind to tell us if we've forgotten to
+     * dereference something. */
 
     free(csp);
 }
@@ -195,6 +196,9 @@ csp_process_init(struct csp *pcsp, csp_id process_id, void *ud,
     } else {
         struct csp_process  *process = (void *) *vprocess;
         process->ref_count++;
+        if (iface->free_ud != NULL) {
+            iface->free_ud(&csp->public, ud);
+        }
     }
 }
 
