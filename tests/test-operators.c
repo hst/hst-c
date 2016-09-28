@@ -31,9 +31,11 @@ TEST_CASE("a → STOP") {
     /* afters(root, a) == {STOP} */
     csp_process_get_afters(csp, root, a, &set);
     check_set_elements_msg("afters(a → STOP, a) == {STOP}", set, csp->stop);
+    csp_process_set_deref(csp, &set);
     /* afters(root, b) == {} */
     csp_process_get_afters(csp, root, b, &set);
     check_set_empty_msg("afters(a → STOP, b) == {}", set);
+    csp_process_set_deref(csp, &set);
     /* Clean up. */
     csp_id_set_done(&set);
     csp_process_deref(csp, root);
@@ -61,18 +63,22 @@ TEST_CASE("a → b → STOP") {
     /* afters(root, a) == {p1} */
     csp_process_get_afters(csp, root, a, &set);
     check_set_elements_msg("afters(a → b → STOP, a) = {b → STOP}", set, p1);
+    csp_process_set_deref(csp, &set);
     /* afters(root, b) == {} */
     csp_process_get_afters(csp, root, b, &set);
     check_set_empty_msg("afters(a → b → STOP, b) = {}", set);
+    csp_process_set_deref(csp, &set);
     /* initials(p1) == {b} */
     csp_process_get_initials(csp, p1, &set);
     check_set_elements_msg("initials(b → STOP) == {b}", set, b);
     /* afters(p1, a) == {} */
     csp_process_get_afters(csp, p1, a, &set);
     check_set_empty_msg("afters(b → STOP, a) = {}", set);
+    csp_process_set_deref(csp, &set);
     /* afters(p1, b) == {STOP} */
     csp_process_get_afters(csp, p1, b, &set);
     check_set_elements_msg("afters(b → STOP, b) = {STOP}", set, csp->stop);
+    csp_process_set_deref(csp, &set);
     /* Clean up. */
     csp_id_set_done(&set);
     csp_process_deref(csp, root);
@@ -108,9 +114,11 @@ TEST_CASE("(a → STOP) ⊓ (b → STOP)") {
     check_set_elements_msg(
             "afters((a → STOP) ⊓ (b → STOP), τ) == {a → STOP, b → STOP}",
             set, p1, p2);
+    csp_process_set_deref(csp, &set);
     /* afters(root, a) == {} */
     csp_process_get_afters(csp, root, a, &set);
     check_set_empty_msg("afters((a → STOP) ⊓ (b → STOP), a) == {}", set);
+    csp_process_set_deref(csp, &set);
     /* Clean up. */
     csp_id_set_done(&set);
     csp_process_deref(csp, root);
@@ -149,9 +157,11 @@ TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}") {
             "afters(⊓ {a → STOP, b → STOP, c → STOP}, τ) == "
             "{a → STOP, b → STOP, c → STOP}",
             set, p1, p2, p3);
+    csp_process_set_deref(csp, &set);
     /* afters(root, a) == {} */
     csp_process_get_afters(csp, root, a, &set);
     check_set_empty_msg("afters((a → STOP) ⊓ (b → STOP), a) == {}", set);
+    csp_process_set_deref(csp, &set);
     /* Clean up. */
     csp_id_set_done(&set);
     csp_process_deref(csp, root);

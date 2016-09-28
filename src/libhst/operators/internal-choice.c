@@ -48,7 +48,8 @@ csp_internal_choice_afters(struct csp *csp, csp_id initial,
 {
     struct csp_internal_choice  *choice = vchoice;
     if (initial == csp->tau) {
-        csp_id_set_builder_merge(builder, &choice->processes);
+        csp_id_set_builder_merge(
+                builder, csp_process_set_ref(csp, &choice->processes));
     }
 }
 
@@ -56,7 +57,7 @@ static void
 csp_internal_choice_free(struct csp *csp, void *vchoice)
 {
     struct csp_internal_choice  *choice = vchoice;
-    csp_process_deref_set(csp, &choice->processes);
+    csp_process_set_deref(csp, &choice->processes);
     csp_id_set_done(&choice->processes);
     free(choice);
 }

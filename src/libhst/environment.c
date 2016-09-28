@@ -94,7 +94,8 @@ csp_skip_afters(struct csp *pcsp, csp_id initial,
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
     if (initial == csp->public.tick) {
-        csp_id_set_builder_add(builder, csp->public.stop);
+        csp_id_set_builder_add(
+                builder, csp_process_ref(&csp->public, csp->public.stop));
     }
 }
 
@@ -220,6 +221,19 @@ csp_process_ref(struct csp *pcsp, csp_id process_id)
     return process_id;
 }
 
+struct csp_id_set *
+csp_process_set_ref(struct csp *pcsp, struct csp_id_set *process_ids)
+{
+    struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
+    size_t  i;
+    for (i = 0; i < process_ids->count; i++) {
+        csp_id  process_id = process_ids->ids[i];
+        struct csp_process  *process = csp_process_get(csp, process_id);
+        process->ref_count++;
+    }
+    return process_ids;
+}
+
 static void
 csp_process_deref_one(struct csp_priv *csp, csp_id process_id,
                       struct csp_process *process)
@@ -241,7 +255,7 @@ csp_process_deref(struct csp *pcsp, csp_id process_id)
 }
 
 void
-csp_process_deref_set(struct csp *pcsp, struct csp_id_set *process_ids)
+csp_process_set_deref(struct csp *pcsp, struct csp_id_set *process_ids)
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
     size_t  i;

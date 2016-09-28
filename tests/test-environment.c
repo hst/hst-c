@@ -45,9 +45,11 @@ TEST_CASE("predefined STOP process exists") {
     /* Verify the afters of τ. */
     csp_process_get_afters(csp, csp->stop, csp->tau, &set);
     check_set_size(set, 0);
+    csp_process_set_deref(csp, &set);
     /* Verify the afters of ✔. */
     csp_process_get_afters(csp, csp->stop, csp->tick, &set);
     check_set_size(set, 0);
+    csp_process_set_deref(csp, &set);
     /* Clean up. */
     csp_id_set_done(&set);
     csp_free(csp);
@@ -66,10 +68,12 @@ TEST_CASE("predefined SKIP process exists") {
     /* Verify the afters of τ. */
     csp_process_get_afters(csp, csp->skip, csp->tau, &set);
     check_set_size(set, 0);
+    csp_process_set_deref(csp, &set);
     /* Verify the afters of ✔. */
     csp_process_get_afters(csp, csp->skip, csp->tick, &set);
     check_set_size(set, 1);
     check_set_elements(set, csp->stop);
+    csp_process_set_deref(csp, &set);
     /* Clean up. */
     csp_id_set_done(&set);
     csp_free(csp);
