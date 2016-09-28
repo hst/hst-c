@@ -1,4 +1,22 @@
 # autotools stuff
+/aclocal.m4
+/autom4te.cache/
+/build-aux/compile
+/build-aux/config.guess
+/build-aux/config.sub
+/build-aux/depcomp
+/build-aux/install-sh
+/build-aux/missing
+/build-aux/tap-driver.sh
+/build-aux/test-driver
+/config.h.in
+/configure
+/ltmain.sh
+/Makefile.in
+/m4/libtool.m4
+/m4/lt*.m4
+
+# In-source build artefacts
 *.a
 *.o
 *.la
@@ -6,34 +24,16 @@
 .deps
 .dirstamp
 .libs/
-/aclocal.m4
-/autom4te.cache/
-/compile
 /config.h
-/config.h.in
-/config.guess
 /config.log
 /config.status
-/config.sub
-/configure
-/depcomp
-/install-sh
-/libtool
-/ltmain.sh
-/Makefile.in
-/Makefile
-/m4/libtool.m4
-/m4/lt*.m4
-/missing
-/stamp-h1
-/tap-driver.sh
-/test-driver
-test*.log
-test*.trs
-
-# In-source build artefacts
 /hst
 /libhst.la
+/libtool
+/Makefile
+/stamp-h1
+test*.log
+test*.trs
 /tests/test-*
 !/tests/test-*.c
 

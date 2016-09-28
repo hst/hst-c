@@ -14,7 +14,8 @@ check_PROGRAMS = \
 	tests/test-operators
 bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
-LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
+LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+	     $(top_srcdir)/build-aux/tap-driver.sh
 
 LDADD = libhst.la
 
