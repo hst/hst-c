@@ -184,7 +184,7 @@ TEST_CASE("can merge sets") {
     csp_id_set_done(&set2);
 }
 
-TEST_CASE("unlocking a set builder empties it") {
+TEST_CASE("can empty a builder when building a set") {
     struct csp_id_set_builder  builder;
     struct csp_id_set  set;
     csp_id_set_builder_init(&builder);
@@ -196,6 +196,22 @@ TEST_CASE("unlocking a set builder empties it") {
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
     check_set_size(set, 0);
+    csp_id_set_done(&set);
+}
+
+TEST_CASE("can keep a builder full when building a set") {
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set;
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add(&builder, 0);
+    csp_id_set_builder_add(&builder, 5);
+    csp_id_set_builder_add(&builder, 1);
+    csp_id_set_init(&set);
+    csp_id_set_build_and_keep(&set, &builder);
+    csp_id_set_build(&set, &builder);
+    csp_id_set_builder_done(&builder);
+    check_set_size(set, 3);
+    check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
 

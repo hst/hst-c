@@ -148,8 +148,15 @@ csp_id_set_builder_merge(struct csp_id_set_builder *builder,
 /* "Lock" the contents of a set builder, filling in a (read-only)
  * set.  The set builder will be cleared in the process, allowing you to
  * reuse it if you need to build several sets. */
-int
+void
 csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder);
+
+/* "Lock" the contents of a set builder, filling in a (read-only)
+ * set.  The set builder will NOT be cleared in the process, allowing you to
+ * easily build several sets that have similar contents. */
+void
+csp_id_set_build_and_keep(struct csp_id_set *set,
+                          struct csp_id_set_builder *builder);
 
 /*------------------------------------------------------------------------------
  * Processes
