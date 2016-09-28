@@ -12,34 +12,6 @@
 
 TEST_CASE_GROUP("identifier sets");
 
-#define check_size(set, expected) \
-    check_with_msg((set).count == (expected), \
-            "Expected set to have size %zu, got %zu", \
-            (size_t) (expected), (set).count)
-
-#define check_elements(set, ...) \
-    do { \
-        csp_id  __expected[] = { __VA_ARGS__ }; \
-        size_t  __count = sizeof(__expected) / sizeof(__expected[0]); \
-        size_t  __i; \
-        for (__i = 0; __i < __count; __i++) { \
-            check_with_msg((set).ids[__i] == __expected[__i], \
-                    "Expected set[%zu] to be %lu, got %lu", \
-                    __i, __expected[__i], (set).ids[__i]); \
-        } \
-    } while (0)
-
-#define check_range(set, count) \
-    do { \
-        check_size(set, count); \
-        size_t  __i; \
-        for (__i = 0; __i < (count); __i++) { \
-            check_with_msg((set).ids[__i] == __i, \
-                    "Expected set[%zu] to be %zu, got %lu", \
-                    __i, __i, (set).ids[__i]); \
-        } \
-    } while (0)
-
 static void
 csp_id_set_builder_add_range(struct csp_id_set_builder *builder, size_t count)
 {
@@ -56,7 +28,7 @@ TEST_CASE("can create empty set") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_done(&set);
-    check_size(set, 0);
+    check_set_size(set, 0);
     csp_id_set_builder_done(&builder);
 }
 
@@ -70,8 +42,8 @@ TEST_CASE("can add individual ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_size(set, 3);
-    check_elements(set, 0, 1, 5);
+    check_set_size(set, 3);
+    check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
 
@@ -88,8 +60,8 @@ TEST_CASE("can add duplicate individual ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_size(set, 3);
-    check_elements(set, 0, 1, 5);
+    check_set_size(set, 3);
+    check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
 
@@ -103,8 +75,8 @@ TEST_CASE("can add bulk ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_size(set, 3);
-    check_elements(set, 0, 1, 5);
+    check_set_size(set, 3);
+    check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
 
@@ -118,8 +90,8 @@ TEST_CASE("can add duplicate bulk ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_size(set, 3);
-    check_elements(set, 0, 1, 5);
+    check_set_size(set, 3);
+    check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
 
@@ -137,8 +109,8 @@ TEST_CASE("can merge sets") {
     csp_id_set_init(&set2);
     csp_id_set_build(&set2, &builder);
     csp_id_set_builder_done(&builder);
-    check_size(set2, 3);
-    check_elements(set2, 0, 1, 5);
+    check_set_size(set2, 3);
+    check_set_elements(set2, 0, 1, 5);
     csp_id_set_done(&set1);
     csp_id_set_done(&set2);
 }
@@ -154,7 +126,7 @@ TEST_CASE("unlocking a set builder empties it") {
     csp_id_set_build(&set, &builder);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_size(set, 0);
+    check_set_size(set, 0);
     csp_id_set_done(&set);
 }
 
@@ -174,8 +146,8 @@ TEST_CASE("can clone a small set") {
     csp_id_set_init(&set2);
     csp_id_set_clone(&set2, &set1);
     /* And verify its contents. */
-    check_size(set2, 3);
-    check_elements(set2, 0, 1, 5);
+    check_set_size(set2, 3);
+    check_set_elements(set2, 0, 1, 5);
     /* Clean up. */
     csp_id_set_done(&set1);
     csp_id_set_done(&set2);
@@ -196,7 +168,7 @@ TEST_CASE("can clone a large set") {
     csp_id_set_init(&set2);
     csp_id_set_clone(&set2, &set1);
     /* And verify its contents. */
-    check_range(set2, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1);
+    check_set_range(set2, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1);
     /* Clean up. */
     csp_id_set_done(&set1);
     csp_id_set_done(&set2);
@@ -206,8 +178,8 @@ TEST_CASE("can build a singleton set via shortcut") {
     struct csp_id_set  set;
     csp_id_set_init(&set);
     csp_id_set_fill_single(&set, 0);
-    check_size(set, 1);
-    check_elements(set, 0);
+    check_set_size(set, 1);
+    check_set_elements(set, 0);
     csp_id_set_done(&set);
 }
 
@@ -215,8 +187,8 @@ TEST_CASE("can build a doubleton set via shortcut") {
     struct csp_id_set  set;
     csp_id_set_init(&set);
     csp_id_set_fill_double(&set, 0, 1);
-    check_size(set, 2);
-    check_elements(set, 0, 1);
+    check_set_size(set, 2);
+    check_set_elements(set, 0, 1);
     csp_id_set_done(&set);
 }
 
@@ -224,8 +196,8 @@ TEST_CASE("doubleton shortcut builder sorts events") {
     struct csp_id_set  set;
     csp_id_set_init(&set);
     csp_id_set_fill_double(&set, 1, 0);
-    check_size(set, 2);
-    check_elements(set, 0, 1);
+    check_set_size(set, 2);
+    check_set_elements(set, 0, 1);
     csp_id_set_done(&set);
 }
 
@@ -233,8 +205,8 @@ TEST_CASE("doubleton shortcut builder deduplicates events") {
     struct csp_id_set  set;
     csp_id_set_init(&set);
     csp_id_set_fill_double(&set, 0, 0);
-    check_size(set, 1);
-    check_elements(set, 0);
+    check_set_size(set, 1);
+    check_set_elements(set, 0);
     csp_id_set_done(&set);
 }
 
@@ -250,7 +222,7 @@ TEST_CASE("can spill over into allocated storage") {
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
     /* Verify that we got a valid set. */
-    check_range(set, CSP_ID_SET_INTERNAL_SIZE + 1);
+    check_set_range(set, CSP_ID_SET_INTERNAL_SIZE + 1);
     csp_id_set_done(&set);
 }
 
@@ -267,7 +239,7 @@ TEST_CASE("can spill over into large allocated storage") {
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
     /* Verify that we got a valid set. */
-    check_range(set, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1);
+    check_set_range(set, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1);
     csp_id_set_done(&set);
 }
 
@@ -287,6 +259,6 @@ TEST_CASE("can reallocate allocated storage") {
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
     /* Verify that we got a valid set. */
-    check_range(set, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1);
+    check_set_range(set, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1);
     csp_id_set_done(&set);
 }
