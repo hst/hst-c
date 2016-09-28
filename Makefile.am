@@ -24,6 +24,7 @@ libhst_la_SOURCES = \
 	third_party/ccan/hash/hash.c \
 	src/libhst/environment.c \
 	src/libhst/id-set.c \
+	src/libhst/operators/external-choice.c \
 	src/libhst/operators/internal-choice.c \
 	src/libhst/operators/prefix.c
 libhst_la_LDFLAGS = -export-symbols-regex '^csp_[^_]'
