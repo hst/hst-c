@@ -130,6 +130,16 @@ void
 csp_id_set_builder_add_many(struct csp_id_set_builder *builder, size_t count,
                             csp_id *ids);
 
+/* Remote a single ID from a set builder. */
+void
+csp_id_set_builder_remove(struct csp_id_set_builder *builder, csp_id id);
+
+/* Remove several IDs from a set builder.  `ids` does not need to be sorted, and
+ * it's okay for it to contain duplicates. */
+void
+csp_id_set_builder_remove_many(struct csp_id_set_builder *builder, size_t count,
+                               csp_id *ids);
+
 /* Add the contents of an existing set to a set builder. */
 void
 csp_id_set_builder_merge(struct csp_id_set_builder *builder,

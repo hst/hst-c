@@ -65,6 +65,39 @@ TEST_CASE("can add duplicate individual ids") {
     csp_id_set_done(&set);
 }
 
+TEST_CASE("can remove individual ids") {
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set;
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add(&builder, 0);
+    csp_id_set_builder_add(&builder, 5);
+    csp_id_set_builder_add(&builder, 1);
+    csp_id_set_builder_remove(&builder, 5);
+    csp_id_set_init(&set);
+    csp_id_set_build(&set, &builder);
+    csp_id_set_builder_done(&builder);
+    check_set_size(set, 2);
+    check_set_elements(set, 0, 1);
+    csp_id_set_done(&set);
+}
+
+TEST_CASE("can remove missing individual ids") {
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set;
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add(&builder, 0);
+    csp_id_set_builder_add(&builder, 5);
+    csp_id_set_builder_add(&builder, 1);
+    csp_id_set_builder_remove(&builder, 5);
+    csp_id_set_builder_remove(&builder, 7);
+    csp_id_set_init(&set);
+    csp_id_set_build(&set, &builder);
+    csp_id_set_builder_done(&builder);
+    check_set_size(set, 2);
+    check_set_elements(set, 0, 1);
+    csp_id_set_done(&set);
+}
+
 TEST_CASE("can add bulk ids") {
     struct csp_id_set_builder  builder;
     struct csp_id_set  set;
@@ -92,6 +125,42 @@ TEST_CASE("can add duplicate bulk ids") {
     csp_id_set_builder_done(&builder);
     check_set_size(set, 3);
     check_set_elements(set, 0, 1, 5);
+    csp_id_set_done(&set);
+}
+
+TEST_CASE("can remove bulk ids") {
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set;
+    csp_id  to_add[] = {0, 5, 1, 6};
+    size_t  to_add_count = sizeof(to_add) / sizeof(to_add[0]);
+    csp_id  to_remove[] = {1, 5};
+    size_t  to_remove_count = sizeof(to_remove) / sizeof(to_remove[0]);
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add_many(&builder, to_add_count, to_add);
+    csp_id_set_builder_remove_many(&builder, to_remove_count, to_remove);
+    csp_id_set_init(&set);
+    csp_id_set_build(&set, &builder);
+    csp_id_set_builder_done(&builder);
+    check_set_size(set, 2);
+    check_set_elements(set, 0, 6);
+    csp_id_set_done(&set);
+}
+
+TEST_CASE("can remove missing bulk ids") {
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set;
+    csp_id  to_add[] = {0, 5, 1, 6};
+    size_t  to_add_count = sizeof(to_add) / sizeof(to_add[0]);
+    csp_id  to_remove[] = {1, 7};
+    size_t  to_remove_count = sizeof(to_remove) / sizeof(to_remove[0]);
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add_many(&builder, to_add_count, to_add);
+    csp_id_set_builder_remove_many(&builder, to_remove_count, to_remove);
+    csp_id_set_init(&set);
+    csp_id_set_build(&set, &builder);
+    csp_id_set_builder_done(&builder);
+    check_set_size(set, 3);
+    check_set_elements(set, 0, 5, 6);
     csp_id_set_done(&set);
 }
 
