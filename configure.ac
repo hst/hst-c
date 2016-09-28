@@ -36,6 +36,13 @@ AC_DEFINE([HAVE_ATTRIBUTE_UNUSED], [HAVE_FUNC_ATTRIBUTE_UNUSED],
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_PROG_AWK
 
+# Valgrind support
+AX_VALGRIND_DFLT([memcheck], [on])
+AX_VALGRIND_DFLT([helgrind], [off])
+AX_VALGRIND_DFLT([drd], [off])
+AX_VALGRIND_DFLT([sgcheck], [off])
+AX_VALGRIND_CHECK()
+
 AC_OUTPUT([Makefile])
 
 cat <<EOF

@@ -16,6 +16,7 @@ bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 	     $(top_srcdir)/build-aux/tap-driver.sh
+@VALGRIND_CHECK_RULES@
 
 LDADD = libhst.la
 
