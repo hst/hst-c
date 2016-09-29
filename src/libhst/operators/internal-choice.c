@@ -13,32 +13,39 @@
 static struct csp_id_scope  internal_choice;
 
 static csp_id
-csp_internal_choice_id(const struct csp_id_set *processes)
+csp_internal_choice_id(const struct csp_id_set *ps)
 {
     csp_id  id = csp_id_start(&internal_choice);
-    id = csp_id_add_id_set(id, processes);
+    id = csp_id_add_id_set(id, ps);
     return id;
 }
 
 struct csp_internal_choice {
-    struct csp_id_set  processes;
+    struct csp_id_set  ps;
 };
 
-/* Leaves `processes` unfilled; you have to fill this in yourself. */
+/* Leaves `ps` unfilled; you have to fill this in yourself. */
 static struct csp_internal_choice *
 csp_internal_choice_new(void)
 {
     struct csp_internal_choice  *choice =
         malloc(sizeof(struct csp_internal_choice));
     assert(choice != NULL);
-    csp_id_set_init(&choice->processes);
+    csp_id_set_init(&choice->ps);
     return choice;
 }
+
+/* Operational semantics for ⊓ Ps
+ *
+ * 1) ──────────── P ∈ Ps
+ *     ⊓ Ps -τ→ P
+ */
 
 static void
 csp_internal_choice_initials(struct csp *csp,
                              struct csp_id_set_builder *builder, void *vchoice)
 {
+    /* initials(⊓ Ps) = {τ} */
     csp_id_set_builder_add(builder, csp->tau);
 }
 
@@ -46,10 +53,11 @@ static void
 csp_internal_choice_afters(struct csp *csp, csp_id initial,
                            struct csp_id_set_builder *builder, void *vchoice)
 {
+    /* afters(⊓ Ps, τ) = Ps */
     struct csp_internal_choice  *choice = vchoice;
     if (initial == csp->tau) {
         csp_id_set_builder_merge(
-                builder, csp_process_set_ref(csp, &choice->processes));
+                builder, csp_process_set_ref(csp, &choice->ps));
     }
 }
 
@@ -57,8 +65,8 @@ static void
 csp_internal_choice_free(struct csp *csp, void *vchoice)
 {
     struct csp_internal_choice  *choice = vchoice;
-    csp_process_set_deref(csp, &choice->processes);
-    csp_id_set_done(&choice->processes);
+    csp_process_set_deref(csp, &choice->ps);
+    csp_id_set_done(&choice->ps);
     free(choice);
 }
 
@@ -74,19 +82,18 @@ csp_internal_choice(struct csp *csp, csp_id a, csp_id b)
     csp_id  id;
     struct csp_internal_choice  *choice;
     choice = csp_internal_choice_new();
-    csp_id_set_fill_double(&choice->processes, a, b);
-    id = csp_internal_choice_id(&choice->processes);
+    csp_id_set_fill_double(&choice->ps, a, b);
+    id = csp_internal_choice_id(&choice->ps);
     csp_process_init(csp, id, choice, &csp_internal_choice_iface);
     return id;
 }
 
 csp_id
-csp_replicated_internal_choice(struct csp *csp,
-                               const struct csp_id_set *processes)
+csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps)
 {
-    csp_id  id = csp_internal_choice_id(processes);
+    csp_id  id = csp_internal_choice_id(ps);
     struct csp_internal_choice  *choice = csp_internal_choice_new();
-    csp_id_set_clone(&choice->processes, processes);
+    csp_id_set_clone(&choice->ps, ps);
     csp_process_init(csp, id, choice, &csp_internal_choice_iface);
     return id;
 }

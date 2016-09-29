@@ -264,17 +264,20 @@ csp_id_add_name(csp_id id, const char *name);
  * Operators
  */
 
-/* Return a reference to the new process.  Steals references to `a` and `b`. */
-csp_id
-csp_external_choice(struct csp *csp, csp_id a, csp_id b);
+/* In all of the below:  `p` and `q` are processes.  `ps` is a set of processes.
+ * `a` is an event. */
 
-/* Return a reference to the new process.  Steals references to `a` and `b`. */
+/* Return a reference to the new process.  Steals references to `p` and `q`. */
 csp_id
-csp_internal_choice(struct csp *csp, csp_id a, csp_id b);
+csp_external_choice(struct csp *csp, csp_id p, csp_id q);
 
-/* Return a reference to the new process.  Steals a reference to `after`. */
+/* Return a reference to the new process.  Steals references to `p` and `q`. */
 csp_id
-csp_prefix(struct csp *csp, csp_id event, csp_id after);
+csp_internal_choice(struct csp *csp, csp_id p, csp_id q);
+
+/* Return a reference to the new process.  Steals a reference to `p`. */
+csp_id
+csp_prefix(struct csp *csp, csp_id a, csp_id p);
 
 /* Return a reference to the new process.  Steals references to all processes in
  * `ps`. */
