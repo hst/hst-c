@@ -41,6 +41,9 @@ TEST_CASE("predefined STOP process exists") {
     csp_id_set_builder_init(&builder);
     csp_id_set_init(&set);
     check_alloc(csp, csp_new());
+    /* Verify that STOP has the right name. */
+    check_id_eq(csp_get_process_by_name(csp, "STOP"), csp->stop);
+    check_id_eq(csp_get_process_by_sized_name(csp, "STOP", 4), csp->stop);
     /* Verify the initials set of the STOP process. */
     csp_process_build_initials(csp, csp->stop, &builder);
     csp_id_set_build(&set, &builder);
@@ -69,6 +72,9 @@ TEST_CASE("predefined SKIP process exists") {
     csp_id_set_builder_init(&builder);
     csp_id_set_init(&set);
     check_alloc(csp, csp_new());
+    /* Verify that SKIP has the right name. */
+    check_id_eq(csp_get_process_by_name(csp, "SKIP"), csp->skip);
+    check_id_eq(csp_get_process_by_sized_name(csp, "SKIP", 4), csp->skip);
     /* Verify the initials set of the SKIP process. */
     csp_process_build_initials(csp, csp->skip, &builder);
     csp_id_set_build(&set, &builder);
@@ -88,6 +94,48 @@ TEST_CASE("predefined SKIP process exists") {
     /* Clean up. */
     csp_id_set_builder_done(&builder);
     csp_id_set_done(&set);
+    csp_free(csp);
+}
+
+TEST_CASE("can add new process names") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* Create a couple of new process names. */
+    check(csp_add_process_name(csp, 10, "a"));
+    check(csp_add_process_sized_name(csp, 20, "b", 1));
+    /* And verify that they map to the process IDs that we gave. */
+    check_id_eq(csp_get_process_by_name(csp, "a"), 10);
+    check_id_eq(csp_get_process_by_name(csp, "b"), 20);
+    check_id_eq(csp_get_process_by_sized_name(csp, "a", 1), 10);
+    check_id_eq(csp_get_process_by_sized_name(csp, "b", 1), 20);
+    /* Clean up. */
+    csp_free(csp);
+}
+
+TEST_CASE("can detect undefined process names") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* And verify that we get a "no process" ID for an undefined name. */
+    check_id_eq(csp_get_process_by_name(csp, "a"), CSP_PROCESS_NONE);
+    check_id_eq(csp_get_process_by_sized_name(csp, "a", 1), CSP_PROCESS_NONE);
+    /* Clean up. */
+    csp_free(csp);
+}
+
+TEST_CASE("cannot overwrite process names") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* Create a new process name. */
+    check(csp_add_process_name(csp, 10, "a"));
+    /* Try to overwrite it; verify that this fails. */
+    check(!csp_add_process_name(csp, 20, "a"));
+    /* And verify that the name maps to the original ID. */
+    check_id_eq(csp_get_process_by_name(csp, "a"), 10);
+    check_id_eq(csp_get_process_by_sized_name(csp, "a", 1), 10);
+    /* Clean up. */
     csp_free(csp);
 }
 
