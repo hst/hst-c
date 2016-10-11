@@ -16,6 +16,9 @@
 /m4/libtool.m4
 /m4/lt*.m4
 
+# Dist tarballs
+hst-*.tar.xz
+
 # In-source build artefacts
 *.a
 *.o
