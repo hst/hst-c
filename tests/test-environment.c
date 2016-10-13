@@ -29,7 +29,11 @@ TEST_CASE("can create events") {
     check_with_msg(csp_get_event_name(csp, 0) == NULL,
                    "Should get a name for undefined event");
     check_streq(csp_get_event_name(csp, csp_get_event_id(csp, "a")), "a");
+    check_streq(csp_get_event_name(csp, csp_get_sized_event_id(csp, "a", 1)),
+                "a");
     check_streq(csp_get_event_name(csp, csp_get_event_id(csp, "b")), "b");
+    check_streq(csp_get_event_name(csp, csp_get_sized_event_id(csp, "b", 1)),
+                "b");
     csp_free(csp);
 }
 

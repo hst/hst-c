@@ -41,6 +41,12 @@ csp_free(struct csp *csp);
 csp_id
 csp_get_event_id(struct csp *csp, const char *name);
 
+/* Return the ID of the event with the given name.  `name` does not need to be
+ * NUL-terminated, but it cannot contain any NULs.  If you call this multiple
+ * times with the same name, you'll get the same result each time. */
+csp_id
+csp_get_sized_event_id(struct csp *csp, const char *name, size_t name_length);
+
 /* Return the name of the event with the given ID.  If you haven't created an
  * event with that ID (via csp_get_event_id), we return NULL. */
 const char *

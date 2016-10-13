@@ -20,9 +20,15 @@
 #include "hst.h"
 
 static uint64_t
+hash_sized_name(const char* name, size_t name_length)
+{
+    return hash64_any(name, name_length, 0);
+}
+
+static uint64_t
 hash_name(const char* name)
 {
-    return hash64_any(name, strlen(name), 0);
+    return hash_sized_name(name, strlen(name));
 }
 
 struct csp_process {
@@ -178,6 +184,22 @@ csp_get_event_id(struct csp *pcsp, const char *name)
     JLI(vname, csp->events, event);
     if (*vname == 0) {
         const char  *name_copy = strdup(name);
+        *vname = (Word_t) name_copy;
+    }
+    return event;
+}
+
+csp_id
+csp_get_sized_event_id(struct csp *pcsp, const char *name, size_t name_length)
+{
+    struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
+    csp_id  event = hash_sized_name(name, name_length);
+    Word_t  *vname;
+    JLI(vname, csp->events, event);
+    if (*vname == 0) {
+        char  *name_copy = malloc(name_length + 1);
+        memcpy(name_copy, name, name_length);
+        name_copy[name_length] = '\0';
         *vname = (Word_t) name_copy;
     }
     return event;
