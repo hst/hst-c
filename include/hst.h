@@ -327,6 +327,16 @@ csp_replicated_external_choice(struct csp *csp, const struct csp_id_set *ps);
 csp_id
 csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps);
 
+/*------------------------------------------------------------------------------
+ * CSP₀
+ */
+
+/* Load in a CSP₀ process from an in-memory string, placing a reference to the
+ * new process in `dest`.  Returns 0 on success.  If the CSP₀ process is
+ * invalid, returns -1. */
+int
+csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest);
+
 #ifdef __cplusplus
 }
 #endif
