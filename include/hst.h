@@ -48,26 +48,27 @@ csp_get_event_name(struct csp *csp, csp_id event);
 
 /* Add a name for an existing process.  Not every process will have a name, and
  * each process might have more than one name.  Returns false if there is
- * already a process with the given name. */
+ * already a process with the given name.  Steals the reference to `process`. */
 bool
 csp_add_process_name(struct csp *csp, csp_id process, const char *name);
 
 /* Add a name for an existing process.  `name` does not need to be
  * NUL-terminated, but it cannot contain any NULs.  Not every process will have
  * a name, and each process might have more than one name.  Returns false if
- * there is already a process with the given name. */
+ * there is already a process with the given name.  Steals the reference to
+ * `process`. */
 bool
 csp_add_process_sized_name(struct csp *csp, csp_id process, const char *name,
                            size_t name_length);
 
-/* Return the ID of the process with the given name.  Returns `CSP_PROCESS_NONE`
- * if there is no process with that name. */
+/* Return a new reference to the process with the given name.  Returns
+ * `CSP_PROCESS_NONE` if there is no process with that name. */
 csp_id
 csp_get_process_by_name(struct csp *csp, const char *name);
 
-/* Return the ID of the process with the given name.  `name` does not need to be
- * NUL-terminated, but it cannot contain any NULs.  Returns `CSP_PROCESS_NONE`
- * if there is no process with that name. */
+/* Return a new reference to the process with the given name.  `name` does not
+ * need to be NUL-terminated, but it cannot contain any NULs.  Returns
+ * `CSP_PROCESS_NONE` if there is no process with that name. */
 csp_id
 csp_get_process_by_sized_name(struct csp *csp, const char *name,
                               size_t name_length);

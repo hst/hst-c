@@ -14,6 +14,7 @@
 
 #include "ccan/compiler/compiler.h"
 #include "ccan/container_of/container_of.h"
+#include "ccan/darray/darray.h"
 #include "ccan/hash/hash.h"
 #include "ccan/likely/likely.h"
 #include "hst.h"
@@ -55,6 +56,7 @@ struct csp_priv {
     void  *events;
     void  *processes;
     void  *process_names;
+    darray(csp_id)  named_processes;
     struct csp_process  *stop;
     struct csp_process  *skip;
 };
@@ -117,13 +119,16 @@ csp_new(void)
     csp->events = NULL;
     csp->processes = NULL;
     csp->process_names = NULL;
+    darray_init(csp->named_processes);
     csp->public.tau = csp_get_event_id(&csp->public, TAU);
     csp->public.tick = csp_get_event_id(&csp->public, TICK);
     csp->public.stop = hash_name("STOP");
     csp_process_init(&csp->public, csp->public.stop, NULL, &csp_stop_iface);
+    /* Recording the name of STOP takes the reference we just created. */
     csp_add_process_name(&csp->public, csp->public.stop, "STOP");
     csp->stop = csp_process_get(csp, csp->public.stop);
     csp->public.skip = hash_name("SKIP");
+    /* Recording the name of SKIP takes the reference we just created. */
     csp_process_init(&csp->public, csp->public.skip, NULL, &csp_skip_iface);
     csp_add_process_name(&csp->public, csp->public.skip, "SKIP");
     csp->skip = csp_process_get(csp, csp->public.skip);
@@ -136,7 +141,14 @@ csp_free(struct csp *pcsp)
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
     UNNEEDED Word_t  dummy;
 
-    JHSFA(dummy, csp->process_names);
+    {
+        csp_id  *process;
+        darray_foreach(process, csp->named_processes) {
+            csp_process_deref(&csp->public, *process);
+        }
+        darray_free(csp->named_processes);
+        JHSFA(dummy, csp->process_names);
+    }
 
     {
         Word_t  *vname;
@@ -149,11 +161,6 @@ csp_free(struct csp *pcsp)
         }
         JLFA(dummy, csp->events);
     }
-
-    /* Release the environment's references to the predefined STOP and SKIP
-     * processes. */
-    csp_process_deref(&csp->public, csp->public.stop);
-    csp_process_deref(&csp->public, csp->public.skip);
 
     /* All of the other processes should have already been deferenced.  Don't
      * free anything here, and rely on valgrind to tell us if we've forgotten to
@@ -204,8 +211,10 @@ csp_add_process_sized_name(struct csp *pcsp, csp_id process, const char *name,
     JHSI(vprocess, csp->process_names, (uint8_t *) name, name_length);
     if (*vprocess == 0) {
         *vprocess = process;
+        darray_append(csp->named_processes, process);
         return true;
     } else {
+        csp_process_deref(&csp->public, process);
         return false;
     }
 }
@@ -226,7 +235,7 @@ csp_get_process_by_sized_name(struct csp *pcsp, const char *name,
     if (vprocess == NULL) {
         return CSP_PROCESS_NONE;
     } else {
-        return *vprocess;
+        return csp_process_ref(&csp->public, *vprocess);
     }
 }
 
