@@ -12,6 +12,39 @@
 
 TEST_CASE_GROUP("external choice");
 
+TEST_CASE("STOP □ STOP") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  root;
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set;
+    /* Create the CSP environment. */
+    csp_id_set_builder_init(&builder);
+    csp_id_set_init(&set);
+    check_alloc(csp, csp_new());
+    /* root = STOP □ STOP */
+    a = csp_get_event_id(csp, "a");
+    root = csp_external_choice(
+            csp, csp_process_ref(csp, csp->stop),
+            csp_process_ref(csp, csp->stop));
+    /* initials(root) == {} */
+    csp_process_build_initials(csp, root, &builder);
+    csp_id_set_build(&set, &builder);
+    check_set_empty_msg(
+            "initials(STOP □ STOP) == {}", set);
+    /* afters(root, a) == {} */
+    csp_process_build_afters(csp, root, a, &builder);
+    csp_id_set_build(&set, &builder);
+    check_set_empty_msg(
+            "afters(STOP □ STOP, a) == {}", set);
+    csp_process_set_deref(csp, &set);
+    /* Clean up. */
+    csp_id_set_builder_done(&builder);
+    csp_id_set_done(&set);
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
 TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)") {
     struct csp  *csp;
     csp_id  a;
@@ -194,6 +227,45 @@ TEST_CASE("□ {a → STOP, b → STOP, c → STOP}") {
 }
 
 TEST_CASE_GROUP("internal choice");
+
+TEST_CASE("STOP ⊓ STOP") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  root;
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set;
+    /* Create the CSP environment. */
+    csp_id_set_builder_init(&builder);
+    csp_id_set_init(&set);
+    check_alloc(csp, csp_new());
+    /* root = STOP ⊓ STOP */
+    a = csp_get_event_id(csp, "a");
+    root = csp_internal_choice(
+            csp, csp_process_ref(csp, csp->stop),
+            csp_process_ref(csp, csp->stop));
+    /* initials(root) == {τ} */
+    csp_process_build_initials(csp, root, &builder);
+    csp_id_set_build(&set, &builder);
+    check_set_elements_msg(
+            "initials(STOP ⊓ STOP) == {τ}", set, csp->tau);
+    /* afters(root, τ) == {STOP} */
+    csp_process_build_afters(csp, root, csp->tau, &builder);
+    csp_id_set_build(&set, &builder);
+    check_set_elements_msg(
+            "afters(STOP ⊓ STOP, τ) == {STOP}", set, csp->stop);
+    csp_process_set_deref(csp, &set);
+    /* afters(root, a) == {} */
+    csp_process_build_afters(csp, root, a, &builder);
+    csp_id_set_build(&set, &builder);
+    check_set_empty_msg(
+            "afters(STOP ⊓ STOP, a) == {}", set);
+    csp_process_set_deref(csp, &set);
+    /* Clean up. */
+    csp_id_set_builder_done(&builder);
+    csp_id_set_done(&set);
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
 
 TEST_CASE("(a → STOP) ⊓ (b → STOP)") {
     struct csp  *csp;
