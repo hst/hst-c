@@ -265,18 +265,12 @@ exit_status(void)
     do { \
         csp_id  __actual = csp_get_process_by_name(csp, (name)); \
         check_id_eq(__actual, (expected)); \
-        if (__actual != CSP_PROCESS_NONE) { \
-            csp_process_deref(csp, __actual); \
-        } \
     } while (0)
 
 #define check_sized_named_process_eq(name, len, expected) \
     do { \
         csp_id  __actual = csp_get_process_by_sized_name(csp, (name), (len)); \
         check_id_eq(__actual, (expected)); \
-        if (__actual != CSP_PROCESS_NONE) { \
-            csp_process_deref(csp, __actual); \
-        } \
     } while (0)
 
 #define check_streq(actual, expected) \
