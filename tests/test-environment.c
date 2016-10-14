@@ -106,9 +106,8 @@ TEST_CASE("can add new process names") {
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Create a couple of new process names. */
-    check(csp_add_process_name(csp, csp_process_ref(csp, csp->stop), "a"));
-    check(csp_add_process_sized_name(
-                csp, csp_process_ref(csp, csp->skip), "b", 1));
+    check(csp_add_process_name(csp, csp->stop, "a"));
+    check(csp_add_process_sized_name(csp, csp->skip, "b", 1));
     /* And verify that they map to the process IDs that we gave. */
     check_named_process_eq("a", csp->stop);
     check_named_process_eq("b", csp->skip);
@@ -134,9 +133,9 @@ TEST_CASE("cannot overwrite process names") {
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Create a new process name. */
-    check(csp_add_process_name(csp, csp_process_ref(csp, csp->stop), "a"));
+    check(csp_add_process_name(csp, csp->stop, "a"));
     /* Try to overwrite it; verify that this fails. */
-    check(!csp_add_process_name(csp, csp_process_ref(csp, csp->skip), "a"));
+    check(!csp_add_process_name(csp, csp->skip, "a"));
     /* And verify that the name maps to the original ID. */
     check_named_process_eq("a", csp->stop);
     check_sized_named_process_eq("a", 1, csp->stop);

@@ -130,11 +130,9 @@ csp_new(void)
     csp->public.tick = csp_get_event_id(&csp->public, TICK);
     csp->public.stop = hash_name("STOP");
     csp_process_init(&csp->public, csp->public.stop, NULL, &csp_stop_iface);
-    /* Recording the name of STOP takes the reference we just created. */
     csp_add_process_name(&csp->public, csp->public.stop, "STOP");
     csp->stop = csp_process_get(csp, csp->public.stop);
     csp->public.skip = hash_name("SKIP");
-    /* Recording the name of SKIP takes the reference we just created. */
     csp_process_init(&csp->public, csp->public.skip, NULL, &csp_skip_iface);
     csp_add_process_name(&csp->public, csp->public.skip, "SKIP");
     csp->skip = csp_process_get(csp, csp->public.skip);
@@ -167,6 +165,11 @@ csp_free(struct csp *pcsp)
         }
         JLFA(dummy, csp->events);
     }
+
+    /* Release the environment's references to the predefined STOP and SKIP
+     * processes. */
+    csp_process_deref(&csp->public, csp->public.stop);
+    csp_process_deref(&csp->public, csp->public.skip);
 
     /* All of the other processes should have already been deferenced.  Don't
      * free anything here, and rely on valgrind to tell us if we've forgotten to
@@ -233,10 +236,10 @@ csp_add_process_sized_name(struct csp *pcsp, csp_id process, const char *name,
     JHSI(vprocess, csp->process_names, (uint8_t *) name, name_length);
     if (*vprocess == 0) {
         *vprocess = process;
-        darray_append(csp->named_processes, process);
+        darray_append(
+                csp->named_processes, csp_process_ref(&csp->public, process));
         return true;
     } else {
-        csp_process_deref(&csp->public, process);
         return false;
     }
 }
@@ -257,7 +260,7 @@ csp_get_process_by_sized_name(struct csp *pcsp, const char *name,
     if (vprocess == NULL) {
         return CSP_PROCESS_NONE;
     } else {
-        return csp_process_ref(&csp->public, *vprocess);
+        return *vprocess;
     }
 }
 
