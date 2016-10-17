@@ -259,6 +259,39 @@ TEST_CASE("can clone a large set") {
     csp_id_set_done(&set2);
 }
 
+TEST_CASE("can compare sets") {
+    struct csp_id_set_builder  builder;
+    struct csp_id_set  set1;
+    struct csp_id_set  set2;
+    struct csp_id_set  set3;
+    csp_id  to_add[] = {5, 1};
+    size_t  to_add_count = sizeof(to_add) / sizeof(to_add[0]);
+    /* bulk */
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add_many(&builder, to_add_count, to_add);
+    csp_id_set_init(&set1);
+    csp_id_set_build(&set1, &builder);
+    csp_id_set_builder_done(&builder);
+    /* individual */
+    csp_id_set_builder_init(&builder);
+    csp_id_set_builder_add(&builder, 1);
+    csp_id_set_builder_add(&builder, 5);
+    csp_id_set_init(&set2);
+    csp_id_set_build(&set2, &builder);
+    csp_id_set_builder_done(&builder);
+    /* shortcut */
+    csp_id_set_init(&set3);
+    csp_id_set_fill_double(&set3, 1, 5);
+    /* compare */
+    check(csp_id_set_eq(&set1, &set2));
+    check(csp_id_set_eq(&set1, &set3));
+    check(csp_id_set_eq(&set2, &set3));
+    /* clean up */
+    csp_id_set_done(&set1);
+    csp_id_set_done(&set2);
+    csp_id_set_done(&set3);
+}
+
 TEST_CASE("can build a singleton set via shortcut") {
     struct csp_id_set  set;
     csp_id_set_init(&set);

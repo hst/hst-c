@@ -32,6 +32,16 @@ csp_id_set_done(struct csp_id_set *set)
     }
 }
 
+bool
+csp_id_set_eq(const struct csp_id_set *set1, const struct csp_id_set *set2)
+{
+    if (set1->count != set2->count) {
+        return false;
+    } else {
+        return memcmp(set1->ids, set2->ids, set1->count * sizeof(csp_id)) == 0;
+    }
+}
+
 void
 csp_id_set_builder_init(struct csp_id_set_builder *builder)
 {
