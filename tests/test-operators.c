@@ -10,6 +10,15 @@
 #include "hst.h"
 #include "test-case-harness.h"
 
+/* The test cases in this file verify that we've implemented each of the CSP
+ * operators correctly: specifically, that they have the right "initials" and
+ * "afters" sets, as defined by CSP's operational semantics.
+ *
+ * We've provided some helper macros that make these test cases easy to write.
+ * In particular, you can assume that the CSP₀ parser works as expected; that
+ * will have been checked in test-csp0.c.
+ */
+
 TEST_CASE_GROUP("external choice");
 
 TEST_CASE("STOP □ STOP") {

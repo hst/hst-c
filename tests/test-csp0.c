@@ -11,6 +11,11 @@
 #include "test-cases.h"
 #include "test-case-harness.h"
 
+/* Don't check the semantics of any of the operators here; this file just checks
+ * that the CSP₀ parser produces the same processes that you'd get constructing
+ * things by hand.  Look in test-operators.c for test cases that verify that
+ * each operator behaves as we expect it to. */
+
 TEST_CASE_GROUP("CSP₀ syntax");
 
 TEST_CASE("can parse identifiers") {
