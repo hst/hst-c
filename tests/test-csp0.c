@@ -74,6 +74,62 @@ TEST_CASE("can parse SKIP") {
 
 TEST_CASE_GROUP("CSP₀ operators");
 
+TEST_CASE("can parse external choice") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  p1;
+    csp_id  root;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    a = csp_get_event_id(csp, "a");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
+    root = csp_external_choice(csp, p1, csp_process_ref(csp, csp->skip));
+    /* Verify that we can parse the process, with and without whitespace. */
+    check_csp0_eq("a->STOP[]SKIP", root);
+    check_csp0_eq(" a->STOP[]SKIP", root);
+    check_csp0_eq(" a ->STOP[]SKIP", root);
+    check_csp0_eq(" a -> STOP[]SKIP", root);
+    check_csp0_eq(" a -> STOP []SKIP", root);
+    check_csp0_eq(" a -> STOP [] SKIP", root);
+    check_csp0_eq(" a -> STOP [] SKIP ", root);
+    check_csp0_eq("a→STOP□SKIP", root);
+    check_csp0_eq(" a→STOP□SKIP", root);
+    check_csp0_eq(" a →STOP□SKIP", root);
+    check_csp0_eq(" a → STOP□SKIP", root);
+    check_csp0_eq(" a → STOP □SKIP", root);
+    check_csp0_eq(" a → STOP □ SKIP", root);
+    check_csp0_eq(" a → STOP □ SKIP ", root);
+    /* Fail to parse a bunch of invalid statements. */
+    /* a is undefined */
+    check_csp0_invalid("a □ STOP");
+    check_csp0_invalid("STOP □ a");
+    /* Clean up. */
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
+TEST_CASE("external choice is right-associative") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  b;
+    csp_id  p1;
+    csp_id  p2;
+    csp_id  root;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    a = csp_get_event_id(csp, "a");
+    b = csp_get_event_id(csp, "b");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
+    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->stop));
+    root = csp_external_choice(csp, p1, p2);
+    /* Verify that we can parse the process, with and without whitespace. */
+    check_csp0_eq("a -> STOP [] b -> STOP", root);
+    check_csp0_eq("a → STOP □ b → STOP", root);
+    /* Clean up. */
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
 TEST_CASE("can parse parentheses") {
     struct csp  *csp;
     /* Create the CSP environment. */
