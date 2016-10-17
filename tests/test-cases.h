@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "ccan/compiler/compiler.h"
+#include "ccan/cppmagic/cppmagic.h"
 #include "ccan/likely/likely.h"
 #include "hst.h"
 
@@ -372,6 +373,105 @@ compare_ids(const void *vid1, const void *vid2)
     do { \
         csp_id  __actual; \
         checkx0(csp_load_csp0_string(csp, (str), &__actual)); \
+    } while (0)
+
+/**
+ * CPPMAGIC_MAP_SEMICOLONS - iterate another macro across arguments
+ * @m: name of a one argument macro
+ *
+ * CPPMAGIC_MAP_SEMICOLONS(@m, @a1, @a2, ... @an)
+ *     expands to the expansion of @m(@a1) ; @m(@a2) ; ... ; @m(@an)
+ */
+#define _CPPMAGIC_MAP_SEMICOLONS_()  _CPPMAGIC_MAP_SEMICOLONS
+#define _CPPMAGIC_MAP_SEMICOLONS(m_, a_, ...) \
+    m_(a_) \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
+        (; CPPMAGIC_DEFER2(_CPPMAGIC_MAP_SEMICOLONS_)()(m_, __VA_ARGS__)) \
+        ()
+#define CPPMAGIC_MAP_SEMICOLONS(m_, ...) \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
+        (CPPMAGIC_EVAL(_CPPMAGIC_MAP_SEMICOLONS(m_, __VA_ARGS__))) \
+        ()
+
+/* Add IDs to a set.  `id_adder` should be a macro that takes in one of the
+ * elements of `...`, translates it into an ID, and adds that ID to an ID set
+ * builder named `__builder`. */
+#define fill_id_set(id_adder, set, ...) \
+    do { \
+        struct csp_id_set_builder  __builder; \
+        csp_id_set_builder_init(&__builder); \
+        CPPMAGIC_MAP_SEMICOLONS(id_adder, __VA_ARGS__); \
+        csp_id_set_build((set), &__builder); \
+        csp_id_set_builder_done(&__builder); \
+    } while (0)
+
+#define fill_event_id_set(set, ...) \
+    fill_id_set(add_event_id, set, __VA_ARGS__)
+#define add_event_id(event_name) \
+    do { \
+        csp_id  __event = csp_get_event_id(csp, (event_name)); \
+        csp_id_set_builder_add(&__builder, __event); \
+    } while (0)
+
+#define fill_csp0_set(set, ...) \
+    fill_id_set(add_csp0_process, set, __VA_ARGS__)
+#define add_csp0_process(str) \
+    do { \
+        csp_id  __process; \
+        check_csp0(&__process, str); \
+        csp_id_set_builder_add(&__builder, __process); \
+    } while (0)
+
+#define check_csp0_initials(csp0, ...) \
+    do { \
+        csp_id  __process; \
+        struct csp_id_set_builder  __builder; \
+        struct csp_id_set  __actual; \
+        struct csp_id_set  __expected; \
+        csp_id_set_builder_init(&__builder); \
+        csp_id_set_init(&__actual); \
+        csp_id_set_init(&__expected); \
+        check_csp0(&__process, (csp0)); \
+        csp_process_build_initials(csp, __process, &__builder); \
+        csp_id_set_build(&__actual, &__builder); \
+        fill_event_id_set(&__expected, __VA_ARGS__); \
+        check_with_msg( \
+                csp_id_set_eq(&__actual, &__expected), \
+                "initials(" csp0 ") == {" \
+                CPPMAGIC_JOIN(",", __VA_ARGS__) \
+                "}"); \
+        csp_id_set_builder_done(&__builder); \
+        csp_process_deref(csp, __process); \
+        csp_id_set_done(&__actual); \
+        csp_id_set_done(&__expected); \
+    } while (0)
+
+#define check_csp0_afters(csp0, initial, ...) \
+    do { \
+        csp_id  __process; \
+        csp_id  __initial; \
+        struct csp_id_set_builder  __builder; \
+        struct csp_id_set  __actual; \
+        struct csp_id_set  __expected; \
+        csp_id_set_builder_init(&__builder); \
+        csp_id_set_init(&__actual); \
+        csp_id_set_init(&__expected); \
+        check_csp0(&__process, (csp0)); \
+        __initial = csp_get_event_id(csp, (initial)); \
+        csp_process_build_afters(csp, __process, __initial, &__builder); \
+        csp_id_set_build(&__actual, &__builder); \
+        fill_csp0_set(&__expected, __VA_ARGS__); \
+        check_with_msg( \
+                csp_id_set_eq(&__actual, &__expected), \
+                "afters(" csp0 ", " initial ") == {" \
+                CPPMAGIC_JOIN(", ", __VA_ARGS__) \
+                "}"); \
+        csp_id_set_builder_done(&__builder); \
+        csp_process_deref(csp, __process); \
+        csp_process_set_deref(csp, &__actual); \
+        csp_process_set_deref(csp, &__expected); \
+        csp_id_set_done(&__actual); \
+        csp_id_set_done(&__expected); \
     } while (0)
 
 
