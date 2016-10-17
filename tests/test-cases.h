@@ -350,5 +350,29 @@ compare_ids(const void *vid1, const void *vid2)
         } \
     } while (0)
 
+#define check_csp0(dest, str) \
+    check0(csp_load_csp0_string(csp, (str), (dest)))
+
+#define check_csp0_eq(str, expected) \
+    do { \
+        csp_id  __actual; \
+        check_csp0(&__actual, (str)); \
+        check_id_eq(__actual, (expected)); \
+        csp_process_deref(csp, __actual); \
+    } while (0)
+
+#define check_csp0_valid(str) \
+    do { \
+        csp_id  __actual; \
+        check_csp0(&__actual, (str)); \
+        csp_process_deref(csp, __actual); \
+    } while (0)
+
+#define check_csp0_invalid(str) \
+    do { \
+        csp_id  __actual; \
+        checkx0(csp_load_csp0_string(csp, (str), &__actual)); \
+    } while (0)
+
 
 #endif /* TEST_CASES_H */

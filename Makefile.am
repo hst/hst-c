@@ -10,6 +10,7 @@ include_HEADERS = include/hst.h
 lib_LTLIBRARIES = libhst.la
 check_LTLIBRARIES = libtests.la
 check_PROGRAMS = \
+	tests/test-csp0 \
 	tests/test-environment \
 	tests/test-id-sets \
 	tests/test-operators
@@ -22,6 +23,7 @@ LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 EXTRA_DIST = third_party
 
 libhst_la_SOURCES = \
+	src/libhst/csp0.c \
 	src/libhst/environment.c \
 	src/libhst/id-set.c \
 	src/libhst/operators/external-choice.c \
@@ -46,6 +48,7 @@ hst_SOURCES = \
 hst_LDADD = libhst.la
 
 LDADD = libhst.la libtests.la
+tests_test_csp0_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
