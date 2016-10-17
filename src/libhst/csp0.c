@@ -150,6 +150,45 @@ parse_token(struct csp0_parse_state *state, const char *expected)
 static int
 parse_process(struct csp0_parse_state *state, csp_id *dest);
 
+static int
+parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
+{
+    struct csp_id_set_builder  builder;
+    csp_id  process;
+    DEBUG("ENTER  process set");
+
+    csp_id_set_builder_init(&builder);
+    require(parse_token(state, "{"));
+    skip_whitespace(state);
+    if (parse_process(state, &process) == 0) {
+        csp_id_set_builder_add(&builder, process);
+        skip_whitespace(state);
+        while (parse_token(state, ",") == 0) {
+            skip_whitespace(state);
+            if (unlikely(parse_process(state, &process) != 0)) {
+                // Expected process after `,`
+                csp_id_set_build(set, &builder);
+                csp_id_set_builder_done(&builder);
+                csp_process_set_deref(state->csp, set);
+                DEBUG("FAIL   process set");
+                return -1;
+            }
+            csp_id_set_builder_add(&builder, process);
+            skip_whitespace(state);
+        }
+    }
+    csp_id_set_build(set, &builder);
+    csp_id_set_builder_done(&builder);
+    if (unlikely(parse_token(state, "}") != 0)) {
+        // Expected process `}`
+        csp_process_set_deref(state->csp, set);
+        DEBUG("FAIL   process set");
+        return -1;
+    }
+    DEBUG("ACCEPT process set (size=%u)", (unsigned int) set->count);
+    return 0;
+}
+
 /*
  * Precedence order (tightest first)
  *  1. () STOP SKIP
@@ -291,7 +330,55 @@ parse_process7(struct csp0_parse_state *state, csp_id *dest)
     return 0;
 }
 
-#define parse_process11  parse_process7  /* NIY */
+#define parse_process10  parse_process7  /* NIY */
+
+static int
+parse_process11(struct csp0_parse_state *state, csp_id *dest)
+{
+    // process11 = process10 | □ {process} | ⊓ {process}
+
+    struct csp_id_set  processes;
+    DEBUG("ENTER  process11");
+
+    // □ {process}
+    if (parse_token(state, "[]") == 0 || parse_token(state, "□") == 0) {
+        skip_whitespace(state);
+        csp_id_set_init(&processes);
+        if (unlikely(parse_process_set(state, &processes) != 0)) {
+            csp_id_set_done(&processes);
+            DEBUG("FAIL   process11");
+            return -1;
+        }
+        *dest = csp_replicated_external_choice(state->csp, &processes);
+        csp_id_set_done(&processes);
+        DEBUG("ACCEPT process11 0x%08lx", *dest);
+        return 0;
+    }
+
+    // ⊓ {process}
+    if (parse_token(state, "|~|") == 0 || parse_token(state, "⊓") == 0) {
+        skip_whitespace(state);
+        csp_id_set_init(&processes);
+        if (unlikely(parse_process_set(state, &processes) != 0)) {
+            csp_id_set_done(&processes);
+            DEBUG("FAIL   process11");
+            return -1;
+        }
+        *dest = csp_replicated_internal_choice(state->csp, &processes);
+        csp_id_set_done(&processes);
+        DEBUG("ACCEPT process11 0x%08lx", *dest);
+        return 0;
+    }
+
+    // process10
+    if (likely(parse_process10(state, dest) == 0)) {
+        DEBUG("PASS   process11");
+        return 0;
+    } else {
+        DEBUG("FAIL   process11");
+        return -1;
+    }
+}
 
 static int
 parse_process(struct csp0_parse_state *state, csp_id *dest)

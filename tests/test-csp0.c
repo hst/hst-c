@@ -253,6 +253,108 @@ TEST_CASE("prefix is right-associative") {
     csp_free(csp);
 }
 
+TEST_CASE("can parse replicated external choice") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  p1;
+    csp_id  root;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    a = csp_get_event_id(csp, "a");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
+    root = csp_external_choice(csp, p1, csp_process_ref(csp, csp->skip));
+    fprintf(stderr, "STOP = 0x%08lx\n", csp->stop);
+    fprintf(stderr, "SKIP = 0x%08lx\n", csp->skip);
+    fprintf(stderr, "p1   = 0x%08lx\n", p1);
+    fprintf(stderr, "root = 0x%08lx\n", root);
+    /* Verify that we can parse the process, with and without whitespace. */
+    check_csp0_eq("[]{a->STOP,SKIP}", root);
+    check_csp0_eq(" []{a->STOP,SKIP}", root);
+    check_csp0_eq(" [] {a->STOP,SKIP}", root);
+    check_csp0_eq(" [] { a->STOP,SKIP}", root);
+    check_csp0_eq(" [] { a ->STOP,SKIP}", root);
+    check_csp0_eq(" [] { a -> STOP,SKIP}", root);
+    check_csp0_eq(" [] { a -> STOP ,SKIP}", root);
+    check_csp0_eq(" [] { a -> STOP , SKIP}", root);
+    check_csp0_eq(" [] { a -> STOP , SKIP }", root);
+    check_csp0_eq(" [] { a -> STOP , SKIP } ", root);
+    check_csp0_eq("□{a→STOP,SKIP}", root);
+    check_csp0_eq(" □{a→STOP,SKIP}", root);
+    check_csp0_eq(" □ {a→STOP,SKIP}", root);
+    check_csp0_eq(" □ { a→STOP,SKIP}", root);
+    check_csp0_eq(" □ { a →STOP,SKIP}", root);
+    check_csp0_eq(" □ { a → STOP,SKIP}", root);
+    check_csp0_eq(" □ { a → STOP ,SKIP}", root);
+    check_csp0_eq(" □ { a → STOP , SKIP}", root);
+    check_csp0_eq(" □ { a → STOP , SKIP }", root);
+    /* missing `{` */
+    check_csp0_invalid("□");
+    /* missing process after `{` */
+    check_csp0_invalid("□ {");
+    /* missing `}` */
+    check_csp0_invalid("□ { STOP");
+    /* missing process after `,` */
+    check_csp0_invalid("□ { STOP,");
+    check_csp0_invalid("□ { STOP, }");
+    /* a is undefined */
+    check_csp0_invalid("□ { a, STOP }");
+    check_csp0_invalid("□ { STOP, a }");
+    /* Clean up. */
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
+TEST_CASE("can parse replicated internal choice") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  p1;
+    csp_id  root;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    a = csp_get_event_id(csp, "a");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
+    root = csp_internal_choice(csp, p1, csp_process_ref(csp, csp->skip));
+    fprintf(stderr, "STOP = 0x%08lx\n", csp->stop);
+    fprintf(stderr, "SKIP = 0x%08lx\n", csp->skip);
+    fprintf(stderr, "p1   = 0x%08lx\n", p1);
+    fprintf(stderr, "root = 0x%08lx\n", root);
+    /* Verify that we can parse the process, with and without whitespace. */
+    check_csp0_eq("|~|{a->STOP,SKIP}", root);
+    check_csp0_eq(" |~|{a->STOP,SKIP}", root);
+    check_csp0_eq(" |~| {a->STOP,SKIP}", root);
+    check_csp0_eq(" |~| { a->STOP,SKIP}", root);
+    check_csp0_eq(" |~| { a ->STOP,SKIP}", root);
+    check_csp0_eq(" |~| { a -> STOP,SKIP}", root);
+    check_csp0_eq(" |~| { a -> STOP ,SKIP}", root);
+    check_csp0_eq(" |~| { a -> STOP , SKIP}", root);
+    check_csp0_eq(" |~| { a -> STOP , SKIP }", root);
+    check_csp0_eq(" |~| { a -> STOP , SKIP } ", root);
+    check_csp0_eq("⊓{a→STOP,SKIP}", root);
+    check_csp0_eq(" ⊓{a→STOP,SKIP}", root);
+    check_csp0_eq(" ⊓ {a→STOP,SKIP}", root);
+    check_csp0_eq(" ⊓ { a→STOP,SKIP}", root);
+    check_csp0_eq(" ⊓ { a →STOP,SKIP}", root);
+    check_csp0_eq(" ⊓ { a → STOP,SKIP}", root);
+    check_csp0_eq(" ⊓ { a → STOP ,SKIP}", root);
+    check_csp0_eq(" ⊓ { a → STOP , SKIP}", root);
+    check_csp0_eq(" ⊓ { a → STOP , SKIP }", root);
+    /* missing `{` */
+    check_csp0_invalid("⊓");
+    /* missing process after `{` */
+    check_csp0_invalid("⊓ {");
+    /* missing `}` */
+    check_csp0_invalid("⊓ { STOP");
+    /* missing process after `,` */
+    check_csp0_invalid("⊓ { STOP,");
+    check_csp0_invalid("⊓ { STOP, }");
+    /* a is undefined */
+    check_csp0_invalid("⊓ { a, STOP }");
+    check_csp0_invalid("⊓ { STOP, a }");
+    /* Clean up. */
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
 TEST_CASE("verify precedence order") {
     struct csp  *csp;
     csp_id  a;
