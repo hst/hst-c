@@ -263,7 +263,35 @@ parse_process6(struct csp0_parse_state *state, csp_id *dest)
     return 0;
 }
 
-#define parse_process11  parse_process6  /* NIY */
+static int
+parse_process7(struct csp0_parse_state *state, csp_id *dest)
+{
+    // process7 = process6 (⊓ process7)?
+
+    csp_id  lhs;
+    csp_id  rhs;
+    DEBUG("ENTER  process7");
+
+    require(parse_process6(state, &lhs));
+    skip_whitespace(state);
+    if (parse_token(state, "|~|") != 0 && parse_token(state, "⊓") != 0) {
+        *dest = lhs;
+        DEBUG("PASS   process7");
+        return 0;
+    }
+    skip_whitespace(state);
+    if (parse_process7(state, &rhs) != 0) {
+        // Expected process after ⊓
+        csp_process_deref(state->csp, lhs);
+        DEBUG("FAIL   process7");
+        return -1;
+    }
+    *dest = csp_internal_choice(state->csp, lhs, rhs);
+    DEBUG("ACCEPT process7 ⊓ 0x%08lx", *dest);
+    return 0;
+}
+
+#define parse_process11  parse_process7  /* NIY */
 
 static int
 parse_process(struct csp0_parse_state *state, csp_id *dest)
