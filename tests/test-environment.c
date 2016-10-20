@@ -11,6 +11,29 @@
 #include "test-cases.h"
 #include "test-case-harness.h"
 
+#define check_named_process_eq(name, expected) \
+    do { \
+        csp_id  __actual = csp_get_process_by_name(csp, (name)); \
+        check_id_eq(__actual, (expected)); \
+    } while (0)
+
+#define check_sized_named_process_eq(name, len, expected) \
+    do { \
+        csp_id  __actual = csp_get_process_by_sized_name(csp, (name), (len)); \
+        check_id_eq(__actual, (expected)); \
+    } while (0)
+
+#define build_set(set, ...) \
+    do { \
+        csp_id  __to_add[] = { __VA_ARGS__ }; \
+        size_t  __count = sizeof(__to_add) / sizeof(__to_add[0]); \
+        struct csp_id_set_builder  builder; \
+        csp_id_set_builder_init(&builder); \
+        csp_id_set_builder_add_many(&builder, __count, __to_add); \
+        csp_id_set_build((set), &builder); \
+        csp_id_set_builder_done(&builder); \
+    } while (0)
+
 TEST_CASE_GROUP("environments");
 
 TEST_CASE("predefined events exist") {

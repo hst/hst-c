@@ -16,6 +16,27 @@
  * things by hand.  Look in test-operators.c for test cases that verify that
  * each operator behaves as we expect it to. */
 
+#define check_csp0_eq(str, expected) \
+    do { \
+        csp_id  __actual; \
+        check0(csp_load_csp0_string(csp, (str), &__actual)); \
+        check_id_eq(__actual, (expected)); \
+        csp_process_deref(csp, __actual); \
+    } while (0)
+
+#define check_csp0_valid(str) \
+    do { \
+        csp_id  __actual; \
+        check0(csp_load_csp0_string(csp, (str), &__actual)); \
+        csp_process_deref(csp, __actual); \
+    } while (0)
+
+#define check_csp0_invalid(str) \
+    do { \
+        csp_id  __actual; \
+        checkx0(csp_load_csp0_string(csp, (str), &__actual)); \
+    } while (0)
+
 TEST_CASE_GROUP("CSP₀ syntax");
 
 TEST_CASE("can parse identifiers") {
