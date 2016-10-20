@@ -10,6 +10,17 @@
 
 #define CSP_ID_SET_FIRST_ALLOCATION_COUNT  32
 
+#define check_set_range(set, count) \
+    do { \
+        check_set_size(set, count); \
+        size_t  __i; \
+        for (__i = 0; __i < (count); __i++) { \
+            check_with_msg((set).ids[__i] == __i, \
+                    "Expected set[%zu] to be %zu, got %lu", \
+                    __i, __i, (set).ids[__i]); \
+        } \
+    } while (0)
+
 TEST_CASE_GROUP("identifier sets");
 
 static void
