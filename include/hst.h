@@ -157,8 +157,9 @@ csp_id_set_builder_init(struct csp_id_set_builder *builder);
 void
 csp_id_set_builder_done(struct csp_id_set_builder *builder);
 
-/* Add a single ID to a set builder. */
-void
+/* Add a single ID to a set builder.  Return whether the ID is new (i.e., it
+ * wasn't already in `builder`.) */
+bool
 csp_id_set_builder_add(struct csp_id_set_builder *builder, csp_id id);
 
 /* Add several IDs to a set builder.  `ids` does not need to be sorted, and it's

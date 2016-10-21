@@ -55,11 +55,12 @@ csp_id_set_builder_done(struct csp_id_set_builder *builder)
     J1FA(dummy, builder->working_set);
 }
 
-void
+bool
 csp_id_set_builder_add(struct csp_id_set_builder *builder, csp_id id)
 {
-    UNNEEDED int  rc;
+    int  rc;
     J1S(rc, builder->working_set, id);
+    return rc;
 }
 
 void
