@@ -73,11 +73,12 @@ csp_id_set_builder_add_many(struct csp_id_set_builder *builder, size_t count,
     }
 }
 
-void
+bool
 csp_id_set_builder_remove(struct csp_id_set_builder *builder, csp_id id)
 {
-    UNNEEDED int  rc;
+    int  rc;
     J1U(rc, builder->working_set, id);
+    return rc;
 }
 
 void
