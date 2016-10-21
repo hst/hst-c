@@ -331,6 +331,10 @@ csp_replicated_external_choice(struct csp *csp, const struct csp_id_set *ps);
 csp_id
 csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps);
 
+/* Return a reference to the new process.  Steals references to `p` and `q`. */
+csp_id
+csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
+
 /*------------------------------------------------------------------------------
  * CSP₀
  */

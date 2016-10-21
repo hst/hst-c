@@ -252,3 +252,62 @@ TEST_CASE("a → b → STOP") {
     /* Clean up. */
     csp_free(csp);
 }
+
+TEST_CASE_GROUP("sequential composition");
+
+TEST_CASE("SKIP ; STOP") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* a → STOP */
+    check_csp0_initials("SKIP ; STOP", ("τ"));
+    check_csp0_afters("SKIP ; STOP", "a", ());
+    check_csp0_afters("SKIP ; STOP", "b", ());
+    check_csp0_afters("SKIP ; STOP", "τ", ("STOP"));
+    check_csp0_afters("SKIP ; STOP", "✔", ());
+    /* Clean up. */
+    csp_free(csp);
+}
+
+TEST_CASE("a → SKIP ; STOP") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* a → STOP */
+    check_csp0_initials("a → SKIP ; STOP", ("a"));
+    check_csp0_afters("a → SKIP ; STOP", "a", ("SKIP ; STOP"));
+    check_csp0_afters("a → SKIP ; STOP", "b", ());
+    check_csp0_afters("a → SKIP ; STOP", "τ", ());
+    check_csp0_afters("a → SKIP ; STOP", "✔", ());
+    /* Clean up. */
+    csp_free(csp);
+}
+
+TEST_CASE("(a → b → STOP □ SKIP) ; STOP") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* a → STOP */
+    check_csp0_initials("(a → b → STOP □ SKIP) ; STOP", ("a", "τ"));
+    check_csp0_afters("(a → b → STOP □ SKIP) ; STOP", "a", ("b → STOP ; STOP"));
+    check_csp0_afters("(a → b → STOP □ SKIP) ; STOP", "b", ());
+    check_csp0_afters("(a → b → STOP □ SKIP) ; STOP", "τ", ("STOP"));
+    check_csp0_afters("(a → b → STOP □ SKIP) ; STOP", "✔", ());
+    /* Clean up. */
+    csp_free(csp);
+}
+
+TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* a → STOP */
+    check_csp0_initials("(a → b → STOP ⊓ SKIP) ; STOP", ("τ"));
+    check_csp0_afters("(a → b → STOP ⊓ SKIP) ; STOP", "a", ());
+    check_csp0_afters("(a → b → STOP ⊓ SKIP) ; STOP", "b", ());
+    check_csp0_afters("(a → b → STOP ⊓ SKIP) ; STOP", "τ",
+                      ("a → b → STOP ; STOP", "SKIP ; STOP"));
+    check_csp0_afters("(a → b → STOP ⊓ SKIP) ; STOP", "✔", ());
+    /* Clean up. */
+    csp_free(csp);
+}
