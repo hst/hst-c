@@ -393,7 +393,65 @@ TEST_CASE("can parse replicated internal choice") {
     csp_free(csp);
 }
 
-TEST_CASE("verify precedence order") {
+TEST_CASE("can parse sequential composition") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  p1;
+    csp_id  root;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    a = csp_get_event_id(csp, "a");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->skip));
+    root = csp_sequential_composition(csp, p1, csp_process_ref(csp, csp->stop));
+    /* Verify that we can parse the process, with and without whitespace. */
+    check_csp0_eq("a→SKIP;STOP", root);
+    check_csp0_eq(" a→SKIP;STOP", root);
+    check_csp0_eq(" a →SKIP;STOP", root);
+    check_csp0_eq(" a → SKIP;STOP", root);
+    check_csp0_eq(" a → SKIP ;STOP", root);
+    check_csp0_eq(" a → SKIP ; STOP", root);
+    check_csp0_eq(" a → SKIP ; STOP ", root);
+    /* Fail to parse a bunch of invalid statements. */
+    /* a is undefined */
+    check_csp0_invalid("a ; STOP");
+    check_csp0_invalid("STOP ; a");
+    /* Missing process after ; */
+    check_csp0_invalid("SKIP;");
+    check_csp0_invalid("SKIP ;");
+    check_csp0_invalid("SKIP ; ");
+    /* Clean up. */
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
+TEST_CASE("sequential composition is right-associative") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  b;
+    csp_id  c;
+    csp_id  p1;
+    csp_id  p2;
+    csp_id  p3;
+    csp_id  p4;
+    csp_id  root;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    a = csp_get_event_id(csp, "a");
+    b = csp_get_event_id(csp, "b");
+    c = csp_get_event_id(csp, "c");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->skip));
+    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->skip));
+    p3 = csp_prefix(csp, c, csp_process_ref(csp, csp->skip));
+    p4 = csp_sequential_composition(csp, p2, p3);
+    root = csp_sequential_composition(csp, p1, p4);
+    /* Verify that we can parse the process, with and without whitespace. */
+    check_csp0_eq("a → SKIP ; b → SKIP ; c → SKIP", root);
+    /* Clean up. */
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
+TEST_CASE("verify precedence of a → STOP □ b → STOP ⊓ c → STOP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  b;
@@ -418,6 +476,36 @@ TEST_CASE("verify precedence order") {
     root = csp_internal_choice(csp, p4, p3);
     /* Verify the precedence order of operations. */
     check_csp0_eq("a → STOP □ b → STOP ⊓ c → STOP", root);
+    /* Clean up. */
+    csp_process_deref(csp, root);
+    csp_free(csp);
+}
+
+TEST_CASE("verify precedence of a → STOP □ b → SKIP ; c → STOP") {
+    struct csp  *csp;
+    csp_id  a;
+    csp_id  b;
+    csp_id  c;
+    csp_id  p1;
+    csp_id  p2;
+    csp_id  p3;
+    csp_id  p4;
+    csp_id  root;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* Expected result is
+     * a → STOP □ (b → SKIP ; c → STOP)
+     */
+    a = csp_get_event_id(csp, "a");
+    b = csp_get_event_id(csp, "b");
+    c = csp_get_event_id(csp, "c");
+    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
+    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->skip));
+    p3 = csp_prefix(csp, c, csp_process_ref(csp, csp->stop));
+    p4 = csp_sequential_composition(csp, p2, p3);
+    root = csp_external_choice(csp, p1, p4);
+    /* Verify the precedence order of operations. */
+    check_csp0_eq("a → STOP □ b → SKIP ; c → STOP", root);
     /* Clean up. */
     csp_process_deref(csp, root);
     csp_free(csp);

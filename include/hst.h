@@ -171,8 +171,9 @@ void
 csp_id_set_builder_add_many(struct csp_id_set_builder *builder, size_t count,
                             csp_id *ids);
 
-/* Remote a single ID from a set builder. */
-void
+/* Remove a single ID from a set builder.  Returns whether that ID was in the
+ * builder or not. */
+bool
 csp_id_set_builder_remove(struct csp_id_set_builder *builder, csp_id id);
 
 /* Remove several IDs from a set builder.  `ids` does not need to be sorted, and
@@ -329,6 +330,10 @@ csp_replicated_external_choice(struct csp *csp, const struct csp_id_set *ps);
  * `ps`. */
 csp_id
 csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps);
+
+/* Return a reference to the new process.  Steals references to `p` and `q`. */
+csp_id
+csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
 
 /*------------------------------------------------------------------------------
  * CSP₀

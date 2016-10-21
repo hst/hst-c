@@ -272,7 +272,35 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
     return 0;
 }
 
-#define parse_process5  parse_process2  /* NIY */
+static int
+parse_process3(struct csp0_parse_state *state, csp_id *dest)
+{
+    // process3 = process2 (; process3)?
+
+    csp_id  lhs;
+    csp_id  rhs;
+    DEBUG("ENTER  process3");
+
+    require(parse_process2(state, &lhs));
+    skip_whitespace(state);
+    if (parse_token(state, ";") != 0) {
+        *dest = lhs;
+        DEBUG("PASS   process3");
+        return 0;
+    }
+    skip_whitespace(state);
+    if (parse_process3(state, &rhs) != 0) {
+        // Expected process after ;
+        csp_process_deref(state->csp, lhs);
+        DEBUG("FAIL   process3");
+        return -1;
+    }
+    *dest = csp_sequential_composition(state->csp, lhs, rhs);
+    DEBUG("ACCEPT process3 ; 0x%08lx", *dest);
+    return 0;
+}
+
+#define parse_process5  parse_process3  /* NIY */
 
 static int
 parse_process6(struct csp0_parse_state *state, csp_id *dest)

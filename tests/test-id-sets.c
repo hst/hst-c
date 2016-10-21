@@ -83,7 +83,8 @@ TEST_CASE("can remove individual ids") {
     csp_id_set_builder_add(&builder, 0);
     csp_id_set_builder_add(&builder, 5);
     csp_id_set_builder_add(&builder, 1);
-    csp_id_set_builder_remove(&builder, 5);
+    check(csp_id_set_builder_remove(&builder, 5));
+    check(!csp_id_set_builder_remove(&builder, 6));
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
