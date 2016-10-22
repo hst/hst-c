@@ -208,15 +208,40 @@ struct csp_process_iface {
     (*afters)(struct csp *csp, csp_id initial,
               struct csp_id_set_builder *builder, void *ud);
 
+    csp_id
+    (*get_id)(struct csp *csp, const void *temp_ud);
+
+    size_t
+    (*ud_size)(struct csp *csp, const void *temp_ud);
+
     void
-    (*free_ud)(struct csp *csp, void *ud);
+    (*init_ud)(struct csp *csp, void *ud, const void *temp_ud);
+
+    void
+    (*done_ud)(struct csp *csp, void *ud);
 };
 
-/* Creates a new process.  You are responsible for obtaining a unique ID for the
- * process.  If there is already an existing process with the same ID, it takes
- * precedence, and your new process is ignored and freed. */
-void
-csp_process_init(struct csp *csp, csp_id process, void *ud,
+/* Creates a new process.
+ *
+ * You provide a userdata object that contains whatever you need to define the
+ * new process, and an interface that defines several callbacks related to the
+ * process.  You pass in a "temporary" userdata, which only needs to exist for
+ * the duration of this function call.  (So it's safe to allocate on the stack,
+ * for instance.)
+ *
+ * This function is safe to call multiple times for the "same" process (i.e., a
+ * process with exactly the same definition).  The first thing we do is call the
+ * process's `get_id` callback to produce the ID of the new process.  If there
+ * is already an existing process with the same ID, then we do nothing else and
+ * return the ID of the existing process.
+ *
+ * If the process is new, then we need to turn the "tempoary" userdata into a
+ * "permanent" one.  To do this, we'll first call the process's `ud_size`
+ * callback, which should return the size of the permanent userdata.  We'll then
+ * allocate this much memory, and call the process's `init_ud` callback to fill
+ * it in from the temporary userdata. */
+csp_id
+csp_process_init(struct csp *csp, const void *temp_ud,
                  const struct csp_process_iface *iface);
 
 void

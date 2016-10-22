@@ -10,32 +10,10 @@
 
 #include "hst.h"
 
-static struct csp_id_scope  sequential_composition;
-
-static csp_id
-csp_sequential_composition_id(csp_id p, csp_id q)
-{
-    csp_id  id = csp_id_start(&sequential_composition);
-    id = csp_id_add_id(id, p);
-    id = csp_id_add_id(id, q);
-    return id;
-}
-
 struct csp_sequential_composition {
     csp_id  p;
     csp_id  q;
 };
-
-static struct csp_sequential_composition *
-csp_sequential_composition_new(csp_id p, csp_id q)
-{
-    struct csp_sequential_composition  *seq =
-        malloc(sizeof(struct csp_sequential_composition));
-    assert(seq != NULL);
-    seq->p = p;
-    seq->q = q;
-    return seq;
-}
 
 /* Operational semantics for P ; Q
  *
@@ -117,25 +95,50 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
     csp_id_set_done(&afters);
 }
 
+static csp_id
+csp_sequential_composition_get_id(struct csp *csp, const void *vinput)
+{
+    const struct csp_sequential_composition  *input = vinput;
+    static struct csp_id_scope  sequential_composition;
+    csp_id  id = csp_id_start(&sequential_composition);
+    id = csp_id_add_id(id, input->p);
+    id = csp_id_add_id(id, input->q);
+    return id;
+}
+
+static size_t
+csp_sequential_composition_ud_size(struct csp *csp, const void *vinput)
+{
+    return sizeof(struct csp_sequential_composition);
+}
+
 static void
-csp_sequential_composition_free(struct csp *csp, void *vseq)
+csp_sequential_composition_init(struct csp *csp, void *vseq, const void *vinput)
 {
     struct csp_sequential_composition  *seq = vseq;
-    free(seq);
+    const struct csp_sequential_composition  *input = vinput;
+    seq->p = input->p;
+    seq->q = input->q;
+}
+
+static void
+csp_sequential_composition_done(struct csp *csp, void *vseq)
+{
+    /* nothing to do */
 }
 
 const struct csp_process_iface  csp_sequential_composition_iface = {
     &csp_sequential_composition_initials,
     &csp_sequential_composition_afters,
-    &csp_sequential_composition_free
+    &csp_sequential_composition_get_id,
+    &csp_sequential_composition_ud_size,
+    &csp_sequential_composition_init,
+    &csp_sequential_composition_done
 };
 
 csp_id
 csp_sequential_composition(struct csp *csp, csp_id p, csp_id q)
 {
-    csp_id  id = csp_sequential_composition_id(p, q);
-    struct csp_sequential_composition  *seq =
-        csp_sequential_composition_new(p, q);
-    csp_process_init(csp, id, seq, &csp_sequential_composition_iface);
-    return id;
+    struct csp_sequential_composition  input = { p, q };
+    return csp_process_init(csp, &input, &csp_sequential_composition_iface);
 }

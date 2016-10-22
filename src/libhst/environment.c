@@ -31,16 +31,19 @@ hash_name(const char* name)
 }
 
 struct csp_process {
-    void  *ud;
     const struct csp_process_iface  iface;
 };
 
+#define csp_process_ud(proc)  ((void *) (((struct csp_process *) (proc)) + 1))
+
 static struct csp_process *
-csp_process_new(void *ud, const struct csp_process_iface *iface)
+csp_process_new(struct csp *csp, const void *temp_ud,
+                const struct csp_process_iface *iface)
 {
-    struct csp_process  *process = malloc(sizeof(struct csp_process));
+    size_t  ud_size = iface->ud_size(csp, temp_ud);
+    struct csp_process  *process = malloc(sizeof(struct csp_process) + ud_size);
     assert(process != NULL);
-    process->ud = ud;
+    iface->init_ud(csp, csp_process_ud(process), temp_ud);
     *((struct csp_process_iface *) &process->iface) = *iface;
     return process;
 }
@@ -48,9 +51,7 @@ csp_process_new(void *ud, const struct csp_process_iface *iface)
 static void
 csp_process_free(struct csp *csp, struct csp_process *process)
 {
-    if (process->iface.free_ud != NULL) {
-        process->iface.free_ud(csp, process->ud);
-    }
+    process->iface.done_ud(csp, csp_process_ud(process));
     free(process);
 }
 
@@ -78,10 +79,37 @@ csp_stop_afters(struct csp *pcsp, csp_id initial,
 {
 }
 
+static csp_id
+csp_stop_get_id(struct csp *pcsp, const void *temp_ud)
+{
+    return hash_name("STOP");
+}
+
+static size_t
+csp_stop_ud_size(struct csp *pcsp, const void *temp_ud)
+{
+    return 0;
+}
+
+static void
+csp_stop_init(struct csp *pcsp, void *ud, const void *temp_ud)
+{
+    /* nothing to do */
+}
+
+static void
+csp_stop_done(struct csp *pcsp, void *ud)
+{
+    /* nothing to do */
+}
+
 const struct csp_process_iface csp_stop_iface = {
     &csp_stop_initials,
     &csp_stop_afters,
-    NULL
+    &csp_stop_get_id,
+    &csp_stop_ud_size,
+    &csp_stop_init,
+    &csp_stop_done
 };
 
 static void
@@ -102,10 +130,37 @@ csp_skip_afters(struct csp *pcsp, csp_id initial,
     }
 }
 
+static csp_id
+csp_skip_get_id(struct csp *pcsp, const void *temp_ud)
+{
+    return hash_name("SKIP");
+}
+
+static size_t
+csp_skip_ud_size(struct csp *pcsp, const void *temp_ud)
+{
+    return 0;
+}
+
+static void
+csp_skip_init(struct csp *pcsp, void *ud, const void *temp_ud)
+{
+    /* nothing to do */
+}
+
+static void
+csp_skip_done(struct csp *pcsp, void *ud)
+{
+    /* nothing to do */
+}
+
 const struct csp_process_iface csp_skip_iface = {
     &csp_skip_initials,
     &csp_skip_afters,
-    NULL
+    &csp_skip_get_id,
+    &csp_skip_ud_size,
+    &csp_skip_init,
+    &csp_skip_done
 };
 
 struct csp *
@@ -122,12 +177,10 @@ csp_new(void)
     csp->process_names = NULL;
     csp->public.tau = csp_get_event_id(&csp->public, TAU);
     csp->public.tick = csp_get_event_id(&csp->public, TICK);
-    csp->public.stop = hash_name("STOP");
-    csp_process_init(&csp->public, csp->public.stop, NULL, &csp_stop_iface);
+    csp->public.stop = csp_process_init(&csp->public, NULL, &csp_stop_iface);
     csp_add_process_name(&csp->public, csp->public.stop, "STOP");
     csp->stop = csp_process_get(csp, csp->public.stop);
-    csp->public.skip = hash_name("SKIP");
-    csp_process_init(&csp->public, csp->public.skip, NULL, &csp_skip_iface);
+    csp->public.skip = csp_process_init(&csp->public, NULL, &csp_skip_iface);
     csp_add_process_name(&csp->public, csp->public.skip, "SKIP");
     csp->skip = csp_process_get(csp, csp->public.skip);
     return &csp->public;
@@ -252,23 +305,20 @@ csp_get_process_by_sized_name(struct csp *pcsp, const char *name,
     }
 }
 
-void
-csp_process_init(struct csp *pcsp, csp_id process_id, void *ud,
+csp_id
+csp_process_init(struct csp *pcsp, const void *temp_ud,
                  const struct csp_process_iface *iface)
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
+    csp_id  process_id = iface->get_id(&csp->public, temp_ud);
     Word_t  *vprocess;
     JLI(vprocess, csp->processes, process_id);
-    if (unlikely(*vprocess == 0)) {
-        /* There isn't already a process with this ID. */
-        struct csp_process  *process = csp_process_new(ud, iface);
+    if (*vprocess == 0) {
+        struct csp_process  *process =
+            csp_process_new(&csp->public, temp_ud, iface);
         *vprocess = (Word_t) process;
-    } else {
-        /* There is an existing process with this ID; free the new one. */
-        if (iface->free_ud != NULL) {
-            iface->free_ud(&csp->public, ud);
-        }
     }
+    return process_id;
 }
 
 static struct csp_process *
@@ -288,7 +338,7 @@ csp_process_build_initials(struct csp *pcsp, csp_id process_id,
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
     struct csp_process  *process = csp_process_get(csp, process_id);
-    process->iface.initials(&csp->public, builder, process->ud);
+    process->iface.initials(&csp->public, builder, csp_process_ud(process));
 }
 
 void
@@ -297,7 +347,8 @@ csp_process_build_afters(struct csp *pcsp, csp_id process_id, csp_id initial,
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
     struct csp_process  *process = csp_process_get(csp, process_id);
-    process->iface.afters(&csp->public, initial, builder, process->ud);
+    process->iface.afters(
+            &csp->public, initial, builder, csp_process_ud(process));
 }
 
 csp_id
