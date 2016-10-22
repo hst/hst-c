@@ -10,32 +10,10 @@
 
 #include "hst.h"
 
-static struct csp_id_scope  sequential_composition;
-
-static csp_id
-csp_sequential_composition_id(csp_id p, csp_id q)
-{
-    csp_id  id = csp_id_start(&sequential_composition);
-    id = csp_id_add_id(id, p);
-    id = csp_id_add_id(id, q);
-    return id;
-}
-
 struct csp_sequential_composition {
     csp_id  p;
     csp_id  q;
 };
-
-static struct csp_sequential_composition *
-csp_sequential_composition_new(csp_id p, csp_id q)
-{
-    struct csp_sequential_composition  *seq =
-        malloc(sizeof(struct csp_sequential_composition));
-    assert(seq != NULL);
-    seq->p = p;
-    seq->q = q;
-    return seq;
-}
 
 /* Operational semantics for P ; Q
  *
@@ -97,12 +75,7 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
     csp_id_set_build(&afters, &afters_builder);
     for (i = 0; i < afters.count; i++) {
         csp_id  p_prime = afters.ids[i];
-        /* P';Q will want to steal references to P' and Q.  We already have a
-         * reference to P' that we can give it (via csp_process_build_afters);
-         * we have to create a new reference to Q since we want to hang on to
-         * our reference to it. */
-        csp_id  seq_prime = csp_sequential_composition(
-                csp, p_prime, csp_process_ref(csp, seq->q));
+        csp_id  seq_prime = csp_sequential_composition(csp, p_prime, seq->q);
         csp_id_set_builder_add(builder, seq_prime);
     }
 
@@ -114,36 +87,58 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
         if (afters.count > 0) {
             /* A can perform ✔, and we don't actually care what it leads to,
              * since we're going to lead to Q no matter what. */
-            csp_id_set_builder_add(builder, csp_process_ref(csp, seq->q));
+            csp_id_set_builder_add(builder, seq->q);
         }
-        csp_process_set_deref(csp, &afters);
     }
 
     csp_id_set_builder_done(&afters_builder);
     csp_id_set_done(&afters);
 }
 
+static csp_id
+csp_sequential_composition_get_id(struct csp *csp, const void *vinput)
+{
+    const struct csp_sequential_composition  *input = vinput;
+    static struct csp_id_scope  sequential_composition;
+    csp_id  id = csp_id_start(&sequential_composition);
+    id = csp_id_add_id(id, input->p);
+    id = csp_id_add_id(id, input->q);
+    return id;
+}
+
+static size_t
+csp_sequential_composition_ud_size(struct csp *csp, const void *vinput)
+{
+    return sizeof(struct csp_sequential_composition);
+}
+
 static void
-csp_sequential_composition_free(struct csp *csp, void *vseq)
+csp_sequential_composition_init(struct csp *csp, void *vseq, const void *vinput)
 {
     struct csp_sequential_composition  *seq = vseq;
-    csp_process_deref(csp, seq->p);
-    csp_process_deref(csp, seq->q);
-    free(seq);
+    const struct csp_sequential_composition  *input = vinput;
+    seq->p = input->p;
+    seq->q = input->q;
+}
+
+static void
+csp_sequential_composition_done(struct csp *csp, void *vseq)
+{
+    /* nothing to do */
 }
 
 const struct csp_process_iface  csp_sequential_composition_iface = {
     &csp_sequential_composition_initials,
     &csp_sequential_composition_afters,
-    &csp_sequential_composition_free
+    &csp_sequential_composition_get_id,
+    &csp_sequential_composition_ud_size,
+    &csp_sequential_composition_init,
+    &csp_sequential_composition_done
 };
 
 csp_id
 csp_sequential_composition(struct csp *csp, csp_id p, csp_id q)
 {
-    csp_id  id = csp_sequential_composition_id(p, q);
-    struct csp_sequential_composition  *seq =
-        csp_sequential_composition_new(p, q);
-    csp_process_init(csp, id, seq, &csp_sequential_composition_iface);
-    return id;
+    struct csp_sequential_composition  input = { p, q };
+    return csp_process_init(csp, &input, &csp_sequential_composition_iface);
 }

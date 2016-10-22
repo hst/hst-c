@@ -169,7 +169,6 @@ parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
                 // Expected process after `,`
                 csp_id_set_build(set, &builder);
                 csp_id_set_builder_done(&builder);
-                csp_process_set_deref(state->csp, set);
                 DEBUG("FAIL   process set");
                 return -1;
             }
@@ -181,7 +180,6 @@ parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
     csp_id_set_builder_done(&builder);
     if (unlikely(parse_token(state, "}") != 0)) {
         // Expected process `}`
-        csp_process_set_deref(state->csp, set);
         DEBUG("FAIL   process set");
         return -1;
     }
@@ -225,14 +223,14 @@ parse_process1(struct csp0_parse_state *state, csp_id *dest)
 
     // STOP
     if (parse_token(state, "STOP") == 0) {
-        *dest = csp_process_ref(state->csp, state->csp->stop);
+        *dest = state->csp->stop;
         DEBUG("ACCEPT STOP 0x%08lx", state->csp->stop);
         return 0;
     }
 
     // SKIP
     if (parse_token(state, "SKIP") == 0) {
-        *dest = csp_process_ref(state->csp, state->csp->skip);
+        *dest = state->csp->skip;
         DEBUG("ACCEPT SKIP 0x%08lx", state->csp->skip);
         return 0;
     }
@@ -291,7 +289,6 @@ parse_process3(struct csp0_parse_state *state, csp_id *dest)
     skip_whitespace(state);
     if (parse_process3(state, &rhs) != 0) {
         // Expected process after ;
-        csp_process_deref(state->csp, lhs);
         DEBUG("FAIL   process3");
         return -1;
     }
@@ -321,7 +318,6 @@ parse_process6(struct csp0_parse_state *state, csp_id *dest)
     skip_whitespace(state);
     if (parse_process6(state, &rhs) != 0) {
         // Expected process after □
-        csp_process_deref(state->csp, lhs);
         DEBUG("FAIL   process6");
         return -1;
     }
@@ -349,7 +345,6 @@ parse_process7(struct csp0_parse_state *state, csp_id *dest)
     skip_whitespace(state);
     if (parse_process7(state, &rhs) != 0) {
         // Expected process after ⊓
-        csp_process_deref(state->csp, lhs);
         DEBUG("FAIL   process7");
         return -1;
     }
@@ -427,7 +422,6 @@ csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest)
     skip_whitespace(&state);
     if (unlikely(state.p != state.eof)) {
         // Unexpected characters at end of stream
-        csp_process_deref(csp, *dest);
         return -1;
     }
     return 0;

@@ -21,14 +21,12 @@
         csp_id  __actual; \
         check0(csp_load_csp0_string(csp, (str), &__actual)); \
         check_id_eq(__actual, (expected)); \
-        csp_process_deref(csp, __actual); \
     } while (0)
 
 #define check_csp0_valid(str) \
     do { \
         csp_id  __actual; \
         check0(csp_load_csp0_string(csp, (str), &__actual)); \
-        csp_process_deref(csp, __actual); \
     } while (0)
 
 #define check_csp0_invalid(str) \
@@ -108,8 +106,8 @@ TEST_CASE("can parse external choice") {
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
-    root = csp_external_choice(csp, p1, csp_process_ref(csp, csp->skip));
+    p1 = csp_prefix(csp, a,  csp->stop);
+    root = csp_external_choice(csp, p1, csp->skip);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a->STOP[]SKIP", root);
     check_csp0_eq(" a->STOP[]SKIP", root);
@@ -130,7 +128,6 @@ TEST_CASE("can parse external choice") {
     check_csp0_invalid("a □ STOP");
     check_csp0_invalid("STOP □ a");
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -149,16 +146,15 @@ TEST_CASE("external choice is right-associative") {
     a = csp_get_event_id(csp, "a");
     b = csp_get_event_id(csp, "b");
     c = csp_get_event_id(csp, "c");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
-    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->stop));
-    p3 = csp_prefix(csp, c, csp_process_ref(csp, csp->stop));
+    p1 = csp_prefix(csp, a, csp->stop);
+    p2 = csp_prefix(csp, b, csp->stop);
+    p3 = csp_prefix(csp, c, csp->stop);
     p4 = csp_external_choice(csp, p2, p3);
     root = csp_external_choice(csp, p1, p4);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a -> STOP [] b -> STOP [] c -> STOP", root);
     check_csp0_eq("a → STOP □ b → STOP □ c → STOP", root);
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -170,8 +166,8 @@ TEST_CASE("can parse internal choice") {
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
-    root = csp_internal_choice(csp, p1, csp_process_ref(csp, csp->skip));
+    p1 = csp_prefix(csp, a, csp->stop);
+    root = csp_internal_choice(csp, p1, csp->skip);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a->STOP|~|SKIP", root);
     check_csp0_eq(" a->STOP|~|SKIP", root);
@@ -192,7 +188,6 @@ TEST_CASE("can parse internal choice") {
     check_csp0_invalid("a ⊓ STOP");
     check_csp0_invalid("STOP ⊓ a");
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -211,16 +206,15 @@ TEST_CASE("internal choice is right-associative") {
     a = csp_get_event_id(csp, "a");
     b = csp_get_event_id(csp, "b");
     c = csp_get_event_id(csp, "c");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
-    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->stop));
-    p3 = csp_prefix(csp, c, csp_process_ref(csp, csp->stop));
+    p1 = csp_prefix(csp, a, csp->stop);
+    p2 = csp_prefix(csp, b, csp->stop);
+    p3 = csp_prefix(csp, c, csp->stop);
     p4 = csp_internal_choice(csp, p2, p3);
     root = csp_internal_choice(csp, p1, p4);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a -> STOP |~| b -> STOP |~| c -> STOP", root);
     check_csp0_eq("a → STOP ⊓ b → STOP ⊓ c → STOP", root);
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -247,7 +241,7 @@ TEST_CASE("can parse prefix") {
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
-    root = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
+    root = csp_prefix(csp, a, csp->stop);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a->STOP", root);
     check_csp0_eq(" a->STOP", root);
@@ -267,7 +261,6 @@ TEST_CASE("can parse prefix") {
     /* b isn't a process (reported as "b is undefined") */
     check_csp0_invalid("(a → b) → STOP");
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -281,13 +274,12 @@ TEST_CASE("prefix is right-associative") {
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
     b = csp_get_event_id(csp, "b");
-    p = csp_prefix(csp, b, csp_process_ref(csp, csp->stop));
+    p = csp_prefix(csp, b, csp->stop);
     root = csp_prefix(csp, a, p);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a -> b -> STOP", root);
     check_csp0_eq("a → b → STOP", root);
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -299,8 +291,8 @@ TEST_CASE("can parse replicated external choice") {
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
-    root = csp_external_choice(csp, p1, csp_process_ref(csp, csp->skip));
+    p1 = csp_prefix(csp, a, csp->stop);
+    root = csp_external_choice(csp, p1, csp->skip);
     fprintf(stderr, "STOP = 0x%08lx\n", csp->stop);
     fprintf(stderr, "SKIP = 0x%08lx\n", csp->skip);
     fprintf(stderr, "p1   = 0x%08lx\n", p1);
@@ -338,7 +330,6 @@ TEST_CASE("can parse replicated external choice") {
     check_csp0_invalid("□ { a, STOP }");
     check_csp0_invalid("□ { STOP, a }");
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -350,8 +341,8 @@ TEST_CASE("can parse replicated internal choice") {
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
-    root = csp_internal_choice(csp, p1, csp_process_ref(csp, csp->skip));
+    p1 = csp_prefix(csp, a, csp->stop);
+    root = csp_internal_choice(csp, p1, csp->skip);
     fprintf(stderr, "STOP = 0x%08lx\n", csp->stop);
     fprintf(stderr, "SKIP = 0x%08lx\n", csp->skip);
     fprintf(stderr, "p1   = 0x%08lx\n", p1);
@@ -389,7 +380,6 @@ TEST_CASE("can parse replicated internal choice") {
     check_csp0_invalid("⊓ { a, STOP }");
     check_csp0_invalid("⊓ { STOP, a }");
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -401,8 +391,8 @@ TEST_CASE("can parse sequential composition") {
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->skip));
-    root = csp_sequential_composition(csp, p1, csp_process_ref(csp, csp->stop));
+    p1 = csp_prefix(csp, a, csp->skip);
+    root = csp_sequential_composition(csp, p1, csp->stop);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a→SKIP;STOP", root);
     check_csp0_eq(" a→SKIP;STOP", root);
@@ -420,7 +410,6 @@ TEST_CASE("can parse sequential composition") {
     check_csp0_invalid("SKIP ;");
     check_csp0_invalid("SKIP ; ");
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -439,15 +428,14 @@ TEST_CASE("sequential composition is right-associative") {
     a = csp_get_event_id(csp, "a");
     b = csp_get_event_id(csp, "b");
     c = csp_get_event_id(csp, "c");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->skip));
-    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->skip));
-    p3 = csp_prefix(csp, c, csp_process_ref(csp, csp->skip));
+    p1 = csp_prefix(csp, a, csp->skip);
+    p2 = csp_prefix(csp, b, csp->skip);
+    p3 = csp_prefix(csp, c, csp->skip);
     p4 = csp_sequential_composition(csp, p2, p3);
     root = csp_sequential_composition(csp, p1, p4);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a → SKIP ; b → SKIP ; c → SKIP", root);
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -469,15 +457,14 @@ TEST_CASE("verify precedence of a → STOP □ b → STOP ⊓ c → STOP") {
     a = csp_get_event_id(csp, "a");
     b = csp_get_event_id(csp, "b");
     c = csp_get_event_id(csp, "c");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
-    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->stop));
-    p3 = csp_prefix(csp, c, csp_process_ref(csp, csp->stop));
+    p1 = csp_prefix(csp, a, csp->stop);
+    p2 = csp_prefix(csp, b, csp->stop);
+    p3 = csp_prefix(csp, c, csp->stop);
     p4 = csp_external_choice(csp, p1, p2);
     root = csp_internal_choice(csp, p4, p3);
     /* Verify the precedence order of operations. */
     check_csp0_eq("a → STOP □ b → STOP ⊓ c → STOP", root);
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }
 
@@ -499,14 +486,13 @@ TEST_CASE("verify precedence of a → STOP □ b → SKIP ; c → STOP") {
     a = csp_get_event_id(csp, "a");
     b = csp_get_event_id(csp, "b");
     c = csp_get_event_id(csp, "c");
-    p1 = csp_prefix(csp, a, csp_process_ref(csp, csp->stop));
-    p2 = csp_prefix(csp, b, csp_process_ref(csp, csp->skip));
-    p3 = csp_prefix(csp, c, csp_process_ref(csp, csp->stop));
+    p1 = csp_prefix(csp, a, csp->stop);
+    p2 = csp_prefix(csp, b, csp->skip);
+    p3 = csp_prefix(csp, c, csp->stop);
     p4 = csp_sequential_composition(csp, p2, p3);
     root = csp_external_choice(csp, p1, p4);
     /* Verify the precedence order of operations. */
     check_csp0_eq("a → STOP □ b → SKIP ; c → STOP", root);
     /* Clean up. */
-    csp_process_deref(csp, root);
     csp_free(csp);
 }

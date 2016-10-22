@@ -54,30 +54,26 @@ csp_get_event_name(struct csp *csp, csp_id event);
 
 /* Add a name for an existing process.  Not every process will have a name, and
  * each process might have more than one name.  Returns false if there is
- * already a process with the given name.  Creates a new reference to `process`;
- * you retain ownership of your own reference. */
+ * already a process with the given name. */
 bool
 csp_add_process_name(struct csp *csp, csp_id process, const char *name);
 
 /* Add a name for an existing process.  `name` does not need to be
  * NUL-terminated, but it cannot contain any NULs.  Not every process will have
  * a name, and each process might have more than one name.  Returns false if
- * there is already a process with the given name.  Creates a new reference to
- * `process`; you retain ownership of your own reference. */
+ * there is already a process with the given name. */
 bool
 csp_add_process_sized_name(struct csp *csp, csp_id process, const char *name,
                            size_t name_length);
 
 /* Return the ID of the process with the given name.  Returns `CSP_PROCESS_NONE`
- * if there is no process with that name.  Does not create a new reference to
- * the process; you must do that yourself if needed. */
+ * if there is no process with that name. */
 csp_id
 csp_get_process_by_name(struct csp *csp, const char *name);
 
 /* Return the ID of the process with the given name.  `name` does not need to be
  * NUL-terminated, but it cannot contain any NULs.  Returns `CSP_PROCESS_NONE`
- * if there is no process with that name.  Does not create a new reference to
- * the process; you must do that yourself if needed. */
+ * if there is no process with that name. */
 csp_id
 csp_get_process_by_sized_name(struct csp *csp, const char *name,
                               size_t name_length);
@@ -212,39 +208,46 @@ struct csp_process_iface {
     (*afters)(struct csp *csp, csp_id initial,
               struct csp_id_set_builder *builder, void *ud);
 
+    csp_id
+    (*get_id)(struct csp *csp, const void *temp_ud);
+
+    size_t
+    (*ud_size)(struct csp *csp, const void *temp_ud);
+
     void
-    (*free_ud)(struct csp *csp, void *ud);
+    (*init_ud)(struct csp *csp, void *ud, const void *temp_ud);
+
+    void
+    (*done_ud)(struct csp *csp, void *ud);
 };
 
-/* Returns a new reference to `process`.  You are responsible for obtaining a
- * unique ID for the process. */
-void
-csp_process_init(struct csp *csp, csp_id process, void *ud,
-                 const struct csp_process_iface *iface);
-
-/* Returns a new reference to `process`.  You retain your original reference to
- * `process`. */
+/* Creates a new process.
+ *
+ * You provide a userdata object that contains whatever you need to define the
+ * new process, and an interface that defines several callbacks related to the
+ * process.  You pass in a "temporary" userdata, which only needs to exist for
+ * the duration of this function call.  (So it's safe to allocate on the stack,
+ * for instance.)
+ *
+ * This function is safe to call multiple times for the "same" process (i.e., a
+ * process with exactly the same definition).  The first thing we do is call the
+ * process's `get_id` callback to produce the ID of the new process.  If there
+ * is already an existing process with the same ID, then we do nothing else and
+ * return the ID of the existing process.
+ *
+ * If the process is new, then we need to turn the "tempoary" userdata into a
+ * "permanent" one.  To do this, we'll first call the process's `ud_size`
+ * callback, which should return the size of the permanent userdata.  We'll then
+ * allocate this much memory, and call the process's `init_ud` callback to fill
+ * it in from the temporary userdata. */
 csp_id
-csp_process_ref(struct csp *csp, csp_id process);
-
-/* Returns a new reference to each process in `processes`.  You retain your
- * original references. */
-struct csp_id_set *
-csp_process_set_ref(struct csp *csp, struct csp_id_set *processes);
-
-/* Releases your reference to `process`. */
-void
-csp_process_deref(struct csp *csp, csp_id process);
-
-/* Releases your references to all of `processes` in a set. */
-void
-csp_process_set_deref(struct csp *csp, struct csp_id_set *processes);
+csp_process_init(struct csp *csp, const void *temp_ud,
+                 const struct csp_process_iface *iface);
 
 void
 csp_process_build_initials(struct csp *csp, csp_id process,
                            struct csp_id_set_builder *builder);
 
-/* Creates new references to the processes in `builder`. */
 void
 csp_process_build_afters(struct csp *csp, csp_id process, csp_id initial,
                          struct csp_id_set_builder *builder);
@@ -309,29 +312,21 @@ csp_id_add_name(csp_id id, const char *name);
 /* In all of the below:  `p` and `q` are processes.  `ps` is a set of processes.
  * `a` is an event. */
 
-/* Return a reference to the new process.  Steals references to `p` and `q`. */
 csp_id
 csp_external_choice(struct csp *csp, csp_id p, csp_id q);
 
-/* Return a reference to the new process.  Steals references to `p` and `q`. */
 csp_id
 csp_internal_choice(struct csp *csp, csp_id p, csp_id q);
 
-/* Return a reference to the new process.  Steals a reference to `p`. */
 csp_id
 csp_prefix(struct csp *csp, csp_id a, csp_id p);
 
-/* Return a reference to the new process.  Steals references to all processes in
- * `ps`. */
 csp_id
 csp_replicated_external_choice(struct csp *csp, const struct csp_id_set *ps);
 
-/* Return a reference to the new process.  Steals references to all processes in
- * `ps`. */
 csp_id
 csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps);
 
-/* Return a reference to the new process.  Steals references to `p` and `q`. */
 csp_id
 csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
 
@@ -339,9 +334,9 @@ csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
  * CSP₀
  */
 
-/* Load in a CSP₀ process from an in-memory string, placing a reference to the
- * new process in `dest`.  Returns 0 on success.  If the CSP₀ process is
- * invalid, returns -1. */
+/* Load in a CSP₀ process from an in-memory string, placing the ID of the new
+ * process in `dest`.  Returns 0 on success.  If the CSP₀ process is invalid,
+ * returns -1. */
 int
 csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest);
 

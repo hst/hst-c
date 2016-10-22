@@ -10,31 +10,10 @@
 
 #include "hst.h"
 
-static struct csp_id_scope  prefix;
-
-static csp_id
-csp_prefix_id(csp_id a, csp_id p)
-{
-    csp_id  id = csp_id_start(&prefix);
-    id = csp_id_add_id(id, a);
-    id = csp_id_add_id(id, p);
-    return id;
-}
-
 struct csp_prefix {
     csp_id  a;
     csp_id  p;
 };
-
-static struct csp_prefix *
-csp_prefix_new(csp_id a, csp_id p)
-{
-    struct csp_prefix  *prefix = malloc(sizeof(struct csp_prefix));
-    assert(prefix != NULL);
-    prefix->a = a;
-    prefix->p = p;
-    return prefix;
-}
 
 /* Operational semantics for a → P
  *
@@ -58,29 +37,54 @@ csp_prefix_afters(struct csp *csp, csp_id initial,
     /* afters(a → P, a) = P */
     struct csp_prefix  *prefix = vprefix;
     if (initial == prefix->a) {
-        csp_id_set_builder_add(builder, csp_process_ref(csp, prefix->p));
+        csp_id_set_builder_add(builder, prefix->p);
     }
 }
 
+static csp_id
+csp_prefix_get_id(struct csp *csp, const void *vinput)
+{
+    const struct csp_prefix  *input = vinput;
+    static struct csp_id_scope  prefix;
+    csp_id  id = csp_id_start(&prefix);
+    id = csp_id_add_id(id, input->a);
+    id = csp_id_add_id(id, input->p);
+    return id;
+}
+
+static size_t
+csp_prefix_ud_size(struct csp *csp, const void *vinput)
+{
+    return sizeof(struct csp_prefix);
+}
+
 static void
-csp_prefix_free(struct csp *csp, void *vprefix)
+csp_prefix_init(struct csp *csp, void *vprefix, const void *vinput)
 {
     struct csp_prefix  *prefix = vprefix;
-    csp_process_deref(csp, prefix->p);
-    free(prefix);
+    const struct csp_prefix  *input = vinput;
+    prefix->a = input->a;
+    prefix->p = input->p;
+}
+
+static void
+csp_prefix_done(struct csp *csp, void *vprefix)
+{
+    /* nothing to do */
 }
 
 const struct csp_process_iface  csp_prefix_iface = {
     &csp_prefix_initials,
     &csp_prefix_afters,
-    &csp_prefix_free
+    &csp_prefix_get_id,
+    &csp_prefix_ud_size,
+    &csp_prefix_init,
+    &csp_prefix_done
 };
 
 csp_id
 csp_prefix(struct csp *csp, csp_id a, csp_id p)
 {
-    csp_id  id = csp_prefix_id(a, p);
-    struct csp_prefix  *prefix = csp_prefix_new(a, p);
-    csp_process_init(csp, id, prefix, &csp_prefix_iface);
-    return id;
+    struct csp_prefix  input = { a, p };
+    return csp_process_init(csp, &input, &csp_prefix_iface);
 }

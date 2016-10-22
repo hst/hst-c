@@ -67,7 +67,7 @@
 
 /* Adds processes to a cset.  `processes` should be a (possibly empty)
  * parenthesized list of CSP₀ process descriptions.  We automatically parse
- * those into process IDs and add new references to those processes to `set`. */
+ * those into process IDs and add those processes to `set`. */
 #define fill_csp0_set(set, processes) \
     fill_id_set(add_csp0_process, set, processes)
 #define add_csp0_process(str) \
@@ -98,7 +98,6 @@
                 CPPMAGIC_JOIN(",", CPPMAGIC_UNPACK(events)) \
                 "}"); \
         csp_id_set_builder_done(&__builder); \
-        csp_process_deref(csp, __process); \
         csp_id_set_done(&__actual); \
         csp_id_set_done(&__expected); \
     } while (0)
@@ -127,9 +126,6 @@
                 CPPMAGIC_JOIN(", ", CPPMAGIC_UNPACK(afters)) \
                 "}"); \
         csp_id_set_builder_done(&__builder); \
-        csp_process_deref(csp, __process); \
-        csp_process_set_deref(csp, &__actual); \
-        csp_process_set_deref(csp, &__expected); \
         csp_id_set_done(&__actual); \
         csp_id_set_done(&__expected); \
     } while (0)
