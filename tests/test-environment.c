@@ -79,12 +79,10 @@ TEST_CASE("predefined STOP process exists") {
     csp_process_build_afters(csp, csp->stop, csp->tau, &builder);
     csp_id_set_build(&set, &builder);
     check_set_size(set, 0);
-    csp_process_set_deref(csp, &set);
     /* Verify the afters of ✔. */
     csp_process_build_afters(csp, csp->stop, csp->tick, &builder);
     csp_id_set_build(&set, &builder);
     check_set_size(set, 0);
-    csp_process_set_deref(csp, &set);
     /* Clean up. */
     csp_id_set_builder_done(&builder);
     csp_id_set_done(&set);
@@ -111,13 +109,11 @@ TEST_CASE("predefined SKIP process exists") {
     csp_process_build_afters(csp, csp->skip, csp->tau, &builder);
     csp_id_set_build(&set, &builder);
     check_set_size(set, 0);
-    csp_process_set_deref(csp, &set);
     /* Verify the afters of ✔. */
     csp_process_build_afters(csp, csp->skip, csp->tick, &builder);
     csp_id_set_build(&set, &builder);
     check_set_size(set, 1);
     check_set_elements(set, csp->stop);
-    csp_process_set_deref(csp, &set);
     /* Clean up. */
     csp_id_set_builder_done(&builder);
     csp_id_set_done(&set);

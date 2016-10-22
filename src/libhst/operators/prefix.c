@@ -58,7 +58,7 @@ csp_prefix_afters(struct csp *csp, csp_id initial,
     /* afters(a → P, a) = P */
     struct csp_prefix  *prefix = vprefix;
     if (initial == prefix->a) {
-        csp_id_set_builder_add(builder, csp_process_ref(csp, prefix->p));
+        csp_id_set_builder_add(builder, prefix->p);
     }
 }
 
@@ -66,7 +66,6 @@ static void
 csp_prefix_free(struct csp *csp, void *vprefix)
 {
     struct csp_prefix  *prefix = vprefix;
-    csp_process_deref(csp, prefix->p);
     free(prefix);
 }
 

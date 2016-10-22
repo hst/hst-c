@@ -57,8 +57,7 @@ csp_internal_choice_afters(struct csp *csp, csp_id initial,
     /* afters(⊓ Ps, τ) = Ps */
     struct csp_internal_choice  *choice = vchoice;
     if (initial == csp->tau) {
-        csp_id_set_builder_merge(
-                builder, csp_process_set_ref(csp, &choice->ps));
+        csp_id_set_builder_merge(builder, &choice->ps);
     }
 }
 
@@ -66,7 +65,6 @@ static void
 csp_internal_choice_free(struct csp *csp, void *vchoice)
 {
     struct csp_internal_choice  *choice = vchoice;
-    csp_process_set_deref(csp, &choice->ps);
     csp_id_set_done(&choice->ps);
     free(choice);
 }
@@ -82,13 +80,6 @@ csp_internal_choice(struct csp *csp, csp_id a, csp_id b)
 {
     csp_id  id;
     struct csp_internal_choice  *choice;
-    /* If `a` and `b` are the same, we're given two references to a single
-     * process.  We're going to merge them into a set in a couple of lines,
-     * which means our destructor will only free one of those references.  Free
-     * the other one now to prevent a memory leak. */
-    if (unlikely(a == b)) {
-        csp_process_deref(csp, a);
-    }
     choice = csp_internal_choice_new();
     csp_id_set_fill_double(&choice->ps, a, b);
     id = csp_internal_choice_id(&choice->ps);

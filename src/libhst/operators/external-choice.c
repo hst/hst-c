@@ -112,14 +112,12 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
                  * work. */
                 csp_id_set_build_and_keep(&ps_prime, &ps_prime_builder);
                 csp_id_set_builder_add(builder,
-                        csp_replicated_external_choice(
-                            csp, csp_process_set_ref(csp, &ps_prime)));
+                        csp_replicated_external_choice(csp, &ps_prime));
                 /* Reset Ps' back to Ps ∖ {P}. */
                 csp_id_set_builder_remove(&ps_prime_builder, p_prime);
             }
             /* Reset Ps' back to Ps. */
             csp_id_set_builder_add(&ps_prime_builder, p);
-            csp_process_set_deref(csp, &p_afters);
         }
         csp_id_set_done(&p_afters);
         csp_id_set_builder_done(&p_afters_builder);
@@ -138,7 +136,6 @@ static void
 csp_external_choice_free(struct csp *csp, void *vchoice)
 {
     struct csp_external_choice  *choice = vchoice;
-    csp_process_set_deref(csp, &choice->ps);
     csp_id_set_done(&choice->ps);
     free(choice);
 }
@@ -154,13 +151,6 @@ csp_external_choice(struct csp *csp, csp_id a, csp_id b)
 {
     csp_id  id;
     struct csp_external_choice  *choice;
-    /* If `a` and `b` are the same, we're given two references to a single
-     * process.  We're going to merge them into a set in a couple of lines,
-     * which means our destructor will only free one of those references.  Free
-     * the other one now to prevent a memory leak. */
-    if (unlikely(a == b)) {
-        csp_process_deref(csp, a);
-    }
     choice = csp_external_choice_new();
     csp_id_set_fill_double(&choice->ps, a, b);
     id = csp_external_choice_id(&choice->ps);

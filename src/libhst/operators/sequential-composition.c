@@ -97,12 +97,7 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
     csp_id_set_build(&afters, &afters_builder);
     for (i = 0; i < afters.count; i++) {
         csp_id  p_prime = afters.ids[i];
-        /* P';Q will want to steal references to P' and Q.  We already have a
-         * reference to P' that we can give it (via csp_process_build_afters);
-         * we have to create a new reference to Q since we want to hang on to
-         * our reference to it. */
-        csp_id  seq_prime = csp_sequential_composition(
-                csp, p_prime, csp_process_ref(csp, seq->q));
+        csp_id  seq_prime = csp_sequential_composition(csp, p_prime, seq->q);
         csp_id_set_builder_add(builder, seq_prime);
     }
 
@@ -114,9 +109,8 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
         if (afters.count > 0) {
             /* A can perform ✔, and we don't actually care what it leads to,
              * since we're going to lead to Q no matter what. */
-            csp_id_set_builder_add(builder, csp_process_ref(csp, seq->q));
+            csp_id_set_builder_add(builder, seq->q);
         }
-        csp_process_set_deref(csp, &afters);
     }
 
     csp_id_set_builder_done(&afters_builder);
@@ -127,8 +121,6 @@ static void
 csp_sequential_composition_free(struct csp *csp, void *vseq)
 {
     struct csp_sequential_composition  *seq = vseq;
-    csp_process_deref(csp, seq->p);
-    csp_process_deref(csp, seq->q);
     free(seq);
 }
 
