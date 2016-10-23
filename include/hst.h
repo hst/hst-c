@@ -157,8 +157,9 @@ csp_id_set_builder_init(struct csp_id_set_builder *builder);
 void
 csp_id_set_builder_done(struct csp_id_set_builder *builder);
 
-/* Add a single ID to a set builder. */
-void
+/* Add a single ID to a set builder.  Return whether the ID is new (i.e., it
+ * wasn't already in `builder`.) */
+bool
 csp_id_set_builder_add(struct csp_id_set_builder *builder, csp_id id);
 
 /* Add several IDs to a set builder.  `ids` does not need to be sorted, and it's
@@ -339,6 +340,22 @@ csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
  * returns -1. */
 int
 csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest);
+
+/*------------------------------------------------------------------------------
+ * Refinement
+ */
+
+/* Finds the closure of a set of initial processes for a particular event.  This
+ * is the set of processes that can be reached from any of the initial processes
+ * by only following (any number of occurrences of) that event.  The event will
+ * usually be τ.
+ *
+ * `processes` should contain the initial processes to calculate the closure
+ * for; it will be updated to contain all of the processes in the closure (which
+ * must always include the initial processes). */
+void
+csp_process_find_closure(struct csp *csp, csp_id event,
+                         struct csp_id_set *processes);
 
 #ifdef __cplusplus
 }

@@ -13,7 +13,8 @@ check_PROGRAMS = \
 	tests/test-csp0 \
 	tests/test-environment \
 	tests/test-id-sets \
-	tests/test-operators
+	tests/test-operators \
+	tests/test-refinement
 bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
@@ -26,6 +27,7 @@ libhst_la_SOURCES = \
 	src/libhst/csp0.c \
 	src/libhst/environment.c \
 	src/libhst/id-set.c \
+	src/libhst/refinement.c \
 	src/libhst/operators/external-choice.c \
 	src/libhst/operators/internal-choice.c \
 	src/libhst/operators/prefix.c \
@@ -53,5 +55,6 @@ tests_test_csp0_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
+tests_test_refinement_LDFLAGS = -no-install
 
 dist_doc_DATA = README
