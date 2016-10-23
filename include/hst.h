@@ -341,6 +341,22 @@ csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
 int
 csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest);
 
+/*------------------------------------------------------------------------------
+ * Refinement
+ */
+
+/* Finds the closure of a set of initial processes for a particular event.  This
+ * is the set of processes that can be reached from any of the initial processes
+ * by only following (any number of occurrences of) that event.  The event will
+ * usually be τ.
+ *
+ * `processes` should contain the initial processes to calculate the closure
+ * for; it will be updated to contain all of the processes in the closure (which
+ * must always include the initial processes). */
+void
+csp_process_find_closure(struct csp *csp, csp_id event,
+                         struct csp_id_set *processes);
+
 #ifdef __cplusplus
 }
 #endif
