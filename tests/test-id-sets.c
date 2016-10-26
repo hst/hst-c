@@ -39,7 +39,7 @@ TEST_CASE("can create empty set") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_done(&set);
-    check_set_size(set, 0);
+    check_set_empty(set);
     csp_id_set_builder_done(&builder);
 }
 
@@ -53,7 +53,6 @@ TEST_CASE("can add individual ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 3);
     check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
@@ -71,7 +70,6 @@ TEST_CASE("can add duplicate individual ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 3);
     check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
@@ -88,7 +86,6 @@ TEST_CASE("can remove individual ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 2);
     check_set_elements(set, 0, 1);
     csp_id_set_done(&set);
 }
@@ -105,7 +102,6 @@ TEST_CASE("can remove missing individual ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 2);
     check_set_elements(set, 0, 1);
     csp_id_set_done(&set);
 }
@@ -120,7 +116,6 @@ TEST_CASE("can add bulk ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 3);
     check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
@@ -135,7 +130,6 @@ TEST_CASE("can add duplicate bulk ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 3);
     check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
@@ -153,7 +147,6 @@ TEST_CASE("can remove bulk ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 2);
     check_set_elements(set, 0, 6);
     csp_id_set_done(&set);
 }
@@ -171,7 +164,6 @@ TEST_CASE("can remove missing bulk ids") {
     csp_id_set_init(&set);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 3);
     check_set_elements(set, 0, 5, 6);
     csp_id_set_done(&set);
 }
@@ -190,7 +182,6 @@ TEST_CASE("can merge sets") {
     csp_id_set_init(&set2);
     csp_id_set_build(&set2, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set2, 3);
     check_set_elements(set2, 0, 1, 5);
     csp_id_set_done(&set1);
     csp_id_set_done(&set2);
@@ -207,7 +198,7 @@ TEST_CASE("can empty a builder when building a set") {
     csp_id_set_build(&set, &builder);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 0);
+    check_set_empty(set);
     csp_id_set_done(&set);
 }
 
@@ -222,7 +213,6 @@ TEST_CASE("can keep a builder full when building a set") {
     csp_id_set_build_and_keep(&set, &builder);
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
-    check_set_size(set, 3);
     check_set_elements(set, 0, 1, 5);
     csp_id_set_done(&set);
 }
@@ -243,7 +233,6 @@ TEST_CASE("can clone a small set") {
     csp_id_set_init(&set2);
     csp_id_set_clone(&set2, &set1);
     /* And verify its contents. */
-    check_set_size(set2, 3);
     check_set_elements(set2, 0, 1, 5);
     /* Clean up. */
     csp_id_set_done(&set1);
@@ -308,7 +297,6 @@ TEST_CASE("can build a singleton set via shortcut") {
     struct csp_id_set  set;
     csp_id_set_init(&set);
     csp_id_set_fill_single(&set, 0);
-    check_set_size(set, 1);
     check_set_elements(set, 0);
     csp_id_set_done(&set);
 }
@@ -317,7 +305,6 @@ TEST_CASE("can build a doubleton set via shortcut") {
     struct csp_id_set  set;
     csp_id_set_init(&set);
     csp_id_set_fill_double(&set, 0, 1);
-    check_set_size(set, 2);
     check_set_elements(set, 0, 1);
     csp_id_set_done(&set);
 }
@@ -326,7 +313,6 @@ TEST_CASE("doubleton shortcut builder sorts events") {
     struct csp_id_set  set;
     csp_id_set_init(&set);
     csp_id_set_fill_double(&set, 1, 0);
-    check_set_size(set, 2);
     check_set_elements(set, 0, 1);
     csp_id_set_done(&set);
 }
@@ -335,7 +321,6 @@ TEST_CASE("doubleton shortcut builder deduplicates events") {
     struct csp_id_set  set;
     csp_id_set_init(&set);
     csp_id_set_fill_double(&set, 0, 0);
-    check_set_size(set, 1);
     check_set_elements(set, 0);
     csp_id_set_done(&set);
 }
