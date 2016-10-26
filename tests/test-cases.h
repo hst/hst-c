@@ -255,12 +255,12 @@ exit_status(void)
 
 #define check_id_eq(id1, id2) \
     check_with_msg((id1) == (id2), \
-            "Expected IDs to be equal, got 0x%08lx and 0x%08lx", \
+            "Expected IDs to be equal, got " CSP_ID_FMT " and " CSP_ID_FMT, \
             (id1), (id2))
 
 #define check_id_ne(id1, id2) \
     check_with_msg((id1) != (id2), \
-            "Expected IDs to be unequal, got 0x%08lx", (id1))
+            "Expected IDs to be unequal, got " CSP_ID_FMT, (id1))
 
 #define check_streq(actual, expected) \
     check_with_msg(strcmp((actual), (expected)) == 0, \

@@ -35,10 +35,10 @@ csp_process_find_closure(struct csp *csp, csp_id event,
         size_t  i;
         for (i = 0; i < processes->count; i++) {
             csp_id  process = processes->ids[i];
-            DEBUG("process 0x%08lx", process);
+            DEBUG("process " CSP_ID_FMT, process);
             /* Don't handle this process more than once. */
             if (csp_id_set_builder_add(&seen, process)) {
-                DEBUG("NEW     0x%08lx", process);
+                DEBUG("NEW     " CSP_ID_FMT, process);
                 /* Add this process to the final result. */
                 csp_id_set_builder_add(&result, process);
                 /* Enqueue each of the states that we can reach from `process`

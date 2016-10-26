@@ -11,15 +11,18 @@
 extern "C" {
 #endif
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /*------------------------------------------------------------------------------
  * Environments
  */
 
 /* Each process and event is identified by a number. */
-typedef unsigned long csp_id;
+typedef uint64_t csp_id;
+#define CSP_ID_FMT  "0x%016" PRIx64
 
 #define CSP_PROCESS_NONE  ((csp_id) 0)
 
@@ -83,13 +86,21 @@ csp_get_process_by_sized_name(struct csp *csp, const char *name,
  */
 
 /* We preallocate a certain number of entries in the csp_id_set struct itself,
- * to minimize malloc overhead for small sets.  We've chosen 13 to make the set
- * of the csp_id_set itself a nice multiple of sizeof(void*). */
-#define CSP_ID_SET_INTERNAL_SIZE  13
+ * to minimize malloc overhead for small sets.  We automatically calculate a
+ * number that makes the size of the csp_id_set itself a nice multiple of
+ * sizeof(void *).  On 64-bit platforms this should currently evaluate to 12. */
+#define CSP_ID_SET_INTERNAL_SIZE \
+    (((sizeof(void *) * 16) \
+      - sizeof(csp_id)    /* hash */ \
+      - sizeof(csp_id *)  /* ids */ \
+      - sizeof(size_t)    /* count */ \
+      - sizeof(size_t)    /* allocated_count */ \
+     ) / sizeof(void *))
 
 /* A set of IDs, stored as a sorted array.  This type is read-only; to construct
  * a set, use a csp_id_set_builder. */
 struct csp_id_set {
+    csp_id  hash;
     csp_id  *ids;
     size_t  count;
     size_t  allocated_count;
@@ -147,6 +158,7 @@ csp_id_set_fill_double(struct csp_id_set *set, csp_id e1, csp_id e2);
 
 /* A writeable view of a set of IDs. */
 struct csp_id_set_builder {
+    csp_id  hash;
     void  *working_set;
 };
 

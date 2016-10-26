@@ -217,21 +217,21 @@ parse_process1(struct csp0_parse_state *state, csp_id *dest)
         require(parse_process(state, dest));
         skip_whitespace(state);
         require(parse_token(state, ")"));
-        DEBUG("ACCEPT (P) 0x%08lx", *dest);
+        DEBUG("ACCEPT (P) " CSP_ID_FMT, *dest);
         return 0;
     }
 
     // STOP
     if (parse_token(state, "STOP") == 0) {
         *dest = state->csp->stop;
-        DEBUG("ACCEPT STOP 0x%08lx", state->csp->stop);
+        DEBUG("ACCEPT STOP " CSP_ID_FMT, state->csp->stop);
         return 0;
     }
 
     // SKIP
     if (parse_token(state, "SKIP") == 0) {
         *dest = state->csp->skip;
-        DEBUG("ACCEPT SKIP 0x%08lx", state->csp->skip);
+        DEBUG("ACCEPT SKIP " CSP_ID_FMT, state->csp->skip);
         return 0;
     }
 
@@ -266,7 +266,7 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
     require(parse_process2(state, &after));
     event = csp_get_sized_event_id(state->csp, id.start, id.length);
     *dest = csp_prefix(state->csp, event, after);
-    DEBUG("ACCEPT process2 → 0x%08lx", *dest);
+    DEBUG("ACCEPT process2 → " CSP_ID_FMT, *dest);
     return 0;
 }
 
@@ -293,7 +293,7 @@ parse_process3(struct csp0_parse_state *state, csp_id *dest)
         return -1;
     }
     *dest = csp_sequential_composition(state->csp, lhs, rhs);
-    DEBUG("ACCEPT process3 ; 0x%08lx", *dest);
+    DEBUG("ACCEPT process3 ; " CSP_ID_FMT, *dest);
     return 0;
 }
 
@@ -322,7 +322,7 @@ parse_process6(struct csp0_parse_state *state, csp_id *dest)
         return -1;
     }
     *dest = csp_external_choice(state->csp, lhs, rhs);
-    DEBUG("ACCEPT process6 □ 0x%08lx", *dest);
+    DEBUG("ACCEPT process6 □ " CSP_ID_FMT, *dest);
     return 0;
 }
 
@@ -349,7 +349,7 @@ parse_process7(struct csp0_parse_state *state, csp_id *dest)
         return -1;
     }
     *dest = csp_internal_choice(state->csp, lhs, rhs);
-    DEBUG("ACCEPT process7 ⊓ 0x%08lx", *dest);
+    DEBUG("ACCEPT process7 ⊓ " CSP_ID_FMT, *dest);
     return 0;
 }
 
@@ -374,7 +374,7 @@ parse_process11(struct csp0_parse_state *state, csp_id *dest)
         }
         *dest = csp_replicated_external_choice(state->csp, &processes);
         csp_id_set_done(&processes);
-        DEBUG("ACCEPT process11 0x%08lx", *dest);
+        DEBUG("ACCEPT process11 " CSP_ID_FMT, *dest);
         return 0;
     }
 
@@ -389,7 +389,7 @@ parse_process11(struct csp0_parse_state *state, csp_id *dest)
         }
         *dest = csp_replicated_internal_choice(state->csp, &processes);
         csp_id_set_done(&processes);
-        DEBUG("ACCEPT process11 0x%08lx", *dest);
+        DEBUG("ACCEPT process11 " CSP_ID_FMT, *dest);
         return 0;
     }
 
