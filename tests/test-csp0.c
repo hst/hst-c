@@ -293,10 +293,6 @@ TEST_CASE("can parse replicated external choice") {
     a = csp_get_event_id(csp, "a");
     p1 = csp_prefix(csp, a, csp->stop);
     root = csp_external_choice(csp, p1, csp->skip);
-    fprintf(stderr, "STOP = 0x%08lx\n", csp->stop);
-    fprintf(stderr, "SKIP = 0x%08lx\n", csp->skip);
-    fprintf(stderr, "p1   = 0x%08lx\n", p1);
-    fprintf(stderr, "root = 0x%08lx\n", root);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("[]{a->STOP,SKIP}", root);
     check_csp0_eq(" []{a->STOP,SKIP}", root);
@@ -343,10 +339,6 @@ TEST_CASE("can parse replicated internal choice") {
     a = csp_get_event_id(csp, "a");
     p1 = csp_prefix(csp, a, csp->stop);
     root = csp_internal_choice(csp, p1, csp->skip);
-    fprintf(stderr, "STOP = 0x%08lx\n", csp->stop);
-    fprintf(stderr, "SKIP = 0x%08lx\n", csp->skip);
-    fprintf(stderr, "p1   = 0x%08lx\n", p1);
-    fprintf(stderr, "root = 0x%08lx\n", root);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("|~|{a->STOP,SKIP}", root);
     check_csp0_eq(" |~|{a->STOP,SKIP}", root);
