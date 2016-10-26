@@ -27,6 +27,7 @@ libhst_la_SOURCES = \
 	src/libhst/csp0.c \
 	src/libhst/environment.c \
 	src/libhst/id-set.c \
+	src/libhst/normalized-lts.c \
 	src/libhst/refinement.c \
 	src/libhst/operators/external-choice.c \
 	src/libhst/operators/internal-choice.c \
