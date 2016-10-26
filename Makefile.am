@@ -44,6 +44,7 @@ libtests_la_SOURCES = \
 	tests/test-cases.h \
 	tests/test-case-harness.h \
 	third_party/ccan/compiler/compiler.h \
+	third_party/ccan/cppmagic/cppmagic.h \
 	third_party/ccan/likely/likely.h
 
 hst_SOURCES = \
