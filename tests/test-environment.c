@@ -74,15 +74,15 @@ TEST_CASE("predefined STOP process exists") {
     /* Verify the initials set of the STOP process. */
     csp_process_build_initials(csp, csp->stop, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_size(set, 0);
+    check_set_empty(set);
     /* Verify the afters of τ. */
     csp_process_build_afters(csp, csp->stop, csp->tau, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_size(set, 0);
+    check_set_empty(set);
     /* Verify the afters of ✔. */
     csp_process_build_afters(csp, csp->stop, csp->tick, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_size(set, 0);
+    check_set_empty(set);
     /* Clean up. */
     csp_id_set_builder_done(&builder);
     csp_id_set_done(&set);
@@ -103,16 +103,14 @@ TEST_CASE("predefined SKIP process exists") {
     /* Verify the initials set of the SKIP process. */
     csp_process_build_initials(csp, csp->skip, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_size(set, 1);
     check_set_elements(set, csp->tick);
     /* Verify the afters of τ. */
     csp_process_build_afters(csp, csp->skip, csp->tau, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_size(set, 0);
+    check_set_empty(set);
     /* Verify the afters of ✔. */
     csp_process_build_afters(csp, csp->skip, csp->tick, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_size(set, 1);
     check_set_elements(set, csp->stop);
     /* Clean up. */
     csp_id_set_builder_done(&builder);

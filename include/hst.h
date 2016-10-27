@@ -354,6 +354,49 @@ int
 csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest);
 
 /*------------------------------------------------------------------------------
+ * Normalized LTS
+ */
+
+#define CSP_NODE_NONE  ((csp_id) 0)
+
+struct csp_normalized_lts;
+
+struct csp_normalized_lts *
+csp_normalized_lts_new(struct csp *csp);
+
+void
+csp_normalized_lts_free(struct csp_normalized_lts *lts);
+
+/* Create a new normalized LTS node for the given set of processes, and return
+ * the ID of the new node.  If the node already exists, we return the ID of the
+ * existing node.  We will make a copy of `processes` if needed, so it's safe
+ * for you to reuse it after this function returns. */
+csp_id
+csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
+                            const struct csp_id_set *processes);
+
+/* Adds a new edge to a normalized LTS.  `from` and `to` must the IDs of nodes
+ * that you've already created via csp_normalized_lts_add_node.  `event` must be
+ * an event ID.  There must not already be an edge with the same `from` and
+ * `event`. */
+void
+csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
+                            csp_id event, csp_id to);
+
+/* Return the set of processes for a normalized LTS node.  `id` must a node that
+ * you've already created via csp_normalized_lts_add_node.  We retain ownership
+ * of the returned set. */
+const struct csp_id_set *
+csp_normalized_lts_get_node_processes(struct csp_normalized_lts *lts,
+                                      csp_id id);
+
+/* Return the normalized node that can be reached by following `event` from the
+ * given `from` process.  Returns CSP_NODE_NONE if there is no such node. */
+csp_id
+csp_normalized_lts_get_edge(struct csp_normalized_lts *lts, csp_id from,
+                            csp_id event);
+
+/*------------------------------------------------------------------------------
  * Refinement
  */
 

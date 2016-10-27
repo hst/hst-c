@@ -14,6 +14,99 @@
 /* The test cases in this file verify that we've implemented refinement
  * correctly. */
 
+/*------------------------------------------------------------------------------
+ * Normalized LTS
+ */
+
+#define add_normalized_node(lts, id, processes) \
+    do { \
+        struct csp_id_set  __set; \
+        csp_id_set_init(&__set); \
+        fill_csp0_set(&__set, processes); \
+        (id) = csp_normalized_lts_add_node((lts), &__set); \
+        csp_id_set_done(&__set); \
+    } while (0)
+
+#define check_normalized_node(lts, id, processes) \
+    do { \
+        struct csp_id_set  __expected; \
+        const struct csp_id_set  *__actual; \
+        csp_id_set_init(&__expected); \
+        fill_csp0_set(&__expected, processes); \
+        __actual = csp_normalized_lts_get_node_processes((lts), (id)); \
+        check(csp_id_set_eq(__actual, &__expected)); \
+        csp_id_set_done(&__expected); \
+    } while (0)
+
+TEST_CASE_GROUP("normalized LTSes");
+
+TEST_CASE("can build normalized LTS") {
+    struct csp  *csp;
+    struct csp_normalized_lts  *lts;
+    csp_id  id1;
+    csp_id  id2;
+    csp_id  id3;
+    csp_id  id4;
+    /* Create the CSP environment and LTS. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp));
+    /* Add some nodes to the normalized LTS. */
+    add_normalized_node(lts, id1, ("STOP"));
+    add_normalized_node(lts, id2, ("a → STOP", "b → c → STOP"));
+    add_normalized_node(lts, id3, ("a → STOP"));
+    add_normalized_node(lts, id4, ("a → STOP □ b → STOP"));
+    /* Verify that the nodes map to the right process sets. */
+    check_normalized_node(lts, id1, ("STOP"));
+    check_normalized_node(lts, id2, ("a → STOP", "b → c → STOP"));
+    check_normalized_node(lts, id3, ("a → STOP"));
+    check_normalized_node(lts, id4, ("a → STOP □ b → STOP"));
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}
+
+#define check_normalized_edge(lts, from, event, expected) \
+    do { \
+        csp_id  __actual = \
+            csp_normalized_lts_get_edge((lts), (from), (event)); \
+        check_id_eq(__actual, (expected)); \
+    } while (0)
+
+TEST_CASE("can add edges to normalized LTS") {
+    struct csp  *csp;
+    struct csp_normalized_lts  *lts;
+    csp_id  id1;
+    csp_id  id2;
+    csp_id  id3;
+    csp_id  id4;
+    /* Create the CSP environment and LTS. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp));
+    /* Add some nodes to the normalized LTS. */
+    add_normalized_node(lts, id1, ("STOP"));
+    add_normalized_node(lts, id2, ("a → STOP", "b → c → STOP"));
+    add_normalized_node(lts, id3, ("a → STOP"));
+    add_normalized_node(lts, id4, ("a → STOP □ b → STOP"));
+    /* Then add some edges. */
+    csp_normalized_lts_add_edge(lts, id1, 1, id2);
+    csp_normalized_lts_add_edge(lts, id1, 2, id2);
+    csp_normalized_lts_add_edge(lts, id1, 3, id3);
+    csp_normalized_lts_add_edge(lts, id2, 1, id4);
+    /* Verify that the edges exist. */
+    check_normalized_edge(lts, id1, 1, id2);
+    check_normalized_edge(lts, id1, 2, id2);
+    check_normalized_edge(lts, id1, 3, id3);
+    check_normalized_edge(lts, id2, 1, id4);
+    check_normalized_edge(lts, id2, 2, CSP_NODE_NONE);
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}
+
+/*------------------------------------------------------------------------------
+ * Closures
+ */
+
 /* Verify the closure of the given CSP₀ process.  `event` should be event to
  * calculate the closure for.  `expected` should be a (possibly empty)
  * parenthesized list of CSP₀ processes. */

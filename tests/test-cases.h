@@ -271,6 +271,8 @@ exit_status(void)
             "Expected set to have size %zu, got %zu", \
             (size_t) (expected), (set).count)
 
+#define check_set_empty(set)  check_set_size(set, 0)
+
 UNNEEDED
 static int
 compare_ids(const void *vid1, const void *vid2)
@@ -291,6 +293,7 @@ compare_ids(const void *vid1, const void *vid2)
         csp_id  __expected[] = { __VA_ARGS__ }; \
         size_t  __count = sizeof(__expected) / sizeof(__expected[0]); \
         size_t  __i; \
+        check_set_size(set, __count); \
         /* Sort the expected elements before comparing */ \
         qsort(__expected, __count, sizeof(csp_id), compare_ids); \
         for (__i = 0; __i < __count; __i++) { \
