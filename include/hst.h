@@ -412,6 +412,12 @@ void
 csp_process_find_closure(struct csp *csp, csp_id event,
                          struct csp_id_set *processes);
 
+/* Prenormalizes a process, adding it to a normalized LTS.  Returns the ID of
+ * the normalized LTS node representing the process. */
+csp_id
+csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
+                         csp_id process);
+
 #ifdef __cplusplus
 }
 #endif

@@ -96,7 +96,7 @@ TEST_CASE("can detect duplicate normalized LTS nodes") {
     csp_free(csp);
 }
 
-#define check_normalized_edge(lts, from, event, expected) \
+#define check_normalized_edge_by_id(lts, from, event, expected) \
     do { \
         csp_id  __actual = \
             csp_normalized_lts_get_edge((lts), (from), (event)); \
@@ -124,11 +124,11 @@ TEST_CASE("can add edges to normalized LTS") {
     csp_normalized_lts_add_edge(lts, id1, 3, id3);
     csp_normalized_lts_add_edge(lts, id2, 1, id4);
     /* Verify that the edges exist. */
-    check_normalized_edge(lts, id1, 1, id2);
-    check_normalized_edge(lts, id1, 2, id2);
-    check_normalized_edge(lts, id1, 3, id3);
-    check_normalized_edge(lts, id2, 1, id4);
-    check_normalized_edge(lts, id2, 2, CSP_NODE_NONE);
+    check_normalized_edge_by_id(lts, id1, 1, id2);
+    check_normalized_edge_by_id(lts, id1, 2, id2);
+    check_normalized_edge_by_id(lts, id1, 3, id3);
+    check_normalized_edge_by_id(lts, id2, 1, id4);
+    check_normalized_edge_by_id(lts, id2, 2, CSP_NODE_NONE);
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);
@@ -206,5 +206,111 @@ TEST_CASE("a → STOP ⊓ (b → STOP ⊓ c → STOP)") {
     check_closure("a → STOP ⊓ (b → STOP ⊓ c → STOP)", "b",
                   ("a → STOP ⊓ (b → STOP ⊓ c → STOP)"));
     /* Clean up. */
+    csp_free(csp);
+}
+
+/*------------------------------------------------------------------------------
+ * Prenormalization
+ */
+
+TEST_CASE_GROUP("prenormalization");
+
+#define check_prenormalize(lts, csp0, expected_closure) \
+    do { \
+        csp_id  __process; \
+        csp_id  __normalized_node; \
+        const struct csp_id_set  *__processes; \
+        struct csp_id_set  __expected_processes; \
+        csp_id_set_init(&__expected_processes); \
+        check0(csp_load_csp0_string(csp, (csp0), &__process)); \
+        __normalized_node = csp_process_prenormalize(csp, (lts), __process); \
+        __processes = csp_normalized_lts_get_node_processes( \
+                (lts), __normalized_node); \
+        fill_csp0_set(&__expected_processes, expected_closure); \
+        check(csp_id_set_eq(__processes, &__expected_processes)); \
+        csp_id_set_done(&__expected_processes); \
+    } while (0)
+
+#define check_normalized_edge(lts, from_csp0, event_name, to_csp0) \
+    do { \
+        struct csp_id_set  __from; \
+        struct csp_id_set  __to; \
+        csp_id  __event; \
+        csp_id  __from_node; \
+        csp_id  __actual; \
+        csp_id  __expected; \
+        csp_id_set_init(&__from); \
+        csp_id_set_init(&__to); \
+        __event = csp_get_event_id(csp, (event_name)); \
+        fill_csp0_set(&__from, from_csp0); \
+        fill_csp0_set(&__to, to_csp0); \
+        check(!csp_normalized_lts_add_node((lts), &__from, &__from_node)); \
+        check(!csp_normalized_lts_add_node((lts), &__to, &__expected)); \
+        __actual = csp_normalized_lts_get_edge((lts), __from_node, __event); \
+        check_id_eq(__actual, __expected); \
+        csp_id_set_done(&__from); \
+        csp_id_set_done(&__to); \
+    } while (0)
+
+TEST_CASE("a → STOP") {
+    struct csp  *csp;
+    struct csp_normalized_lts  *lts;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp));
+    /* Prenormalize the process and verify we get all of the edges we expect. */
+    check_prenormalize(lts, "a → STOP", ("a → STOP"));
+    check_normalized_edge(lts, ("a → STOP"), "a", ("STOP"));
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}
+
+TEST_CASE("a → STOP □ b → STOP") {
+    struct csp  *csp;
+    struct csp_normalized_lts  *lts;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp));
+    /* Prenormalize the process and verify we get all of the edges we expect. */
+    check_prenormalize(lts, "a → STOP □ b → STOP", ("a → STOP □ b → STOP"));
+    check_normalized_edge(lts, ("a → STOP □ b → STOP"), "a", ("STOP"));
+    check_normalized_edge(lts, ("a → STOP □ b → STOP"), "b", ("STOP"));
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP") {
+    struct csp  *csp;
+    struct csp_normalized_lts  *lts;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp));
+    /* Prenormalize the process and verify we get all of the edges we expect. */
+    check_prenormalize(lts, "a → STOP ⊓ b → STOP",
+                       ("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"));
+    check_normalized_edge(lts, ("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"),
+                          "a", ("STOP"));
+    check_normalized_edge(lts, ("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"),
+                          "b", ("STOP"));
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}
+
+TEST_CASE("a → SKIP ; b → STOP") {
+    struct csp  *csp;
+    struct csp_normalized_lts  *lts;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp));
+    /* Prenormalize the process and verify we get all of the edges we expect. */
+    check_prenormalize(lts, "a → SKIP ; b → STOP", ("a → SKIP ; b → STOP"));
+    check_normalized_edge(lts, ("a → SKIP ; b → STOP"), "a",
+                          ("SKIP ; b → STOP", "b → STOP"));
+    check_normalized_edge(lts, ("SKIP ; b → STOP", "b → STOP"), "b", ("STOP"));
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
     csp_free(csp);
 }
