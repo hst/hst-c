@@ -23,7 +23,7 @@
         struct csp_id_set  __set; \
         csp_id_set_init(&__set); \
         fill_csp0_set(&__set, processes); \
-        (id) = csp_normalized_lts_add_node((lts), &__set); \
+        check(csp_normalized_lts_add_node((lts), &__set, &(id))); \
         csp_id_set_done(&__set); \
     } while (0)
 
@@ -60,6 +60,37 @@ TEST_CASE("can build normalized LTS") {
     check_normalized_node(lts, id2, ("a → STOP", "b → c → STOP"));
     check_normalized_node(lts, id3, ("a → STOP"));
     check_normalized_node(lts, id4, ("a → STOP □ b → STOP"));
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}
+
+#define add_duplicate_normalized_node(lts, id, processes) \
+    do { \
+        csp_id  __new_id; \
+        struct csp_id_set  __set; \
+        csp_id_set_init(&__set); \
+        fill_csp0_set(&__set, processes); \
+        check(!csp_normalized_lts_add_node((lts), &__set, &__new_id)); \
+        check_id_eq(__new_id, (id)); \
+        csp_id_set_done(&__set); \
+    } while (0)
+
+TEST_CASE("can detect duplicate normalized LTS nodes") {
+    struct csp  *csp;
+    struct csp_normalized_lts  *lts;
+    csp_id  id;
+    /* Create the CSP environment and LTS. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp));
+    /* Add some nodes to the normalized LTS.  Ensure that we are notified when a
+     * duplicate node is added. */
+    add_normalized_node(lts, id, ("STOP"));
+    add_duplicate_normalized_node(lts, id, ("STOP"));
+    /* For sets of processes, the order shouldn't matter. */
+    add_normalized_node(lts, id, ("a → STOP", "b → c → STOP"));
+    add_duplicate_normalized_node(lts, id, ("a → STOP", "b → c → STOP"));
+    add_duplicate_normalized_node(lts, id, ("b → c → STOP", "a → STOP"));
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);

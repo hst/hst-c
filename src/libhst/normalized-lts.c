@@ -94,19 +94,22 @@ csp_normalized_lts_free(struct csp_normalized_lts *lts)
     free(lts);
 }
 
-csp_id
+bool
 csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
-                            const struct csp_id_set *processes)
+                            const struct csp_id_set *processes, csp_id *dest)
 {
     csp_id  id = processes->hash;
     Word_t  *vnode;
+    *dest = id;
     JLI(vnode, lts->nodes, id);
     if (*vnode == 0) {
         struct csp_normalized_lts_node  *node =
             csp_normalized_lts_node_new(processes);
         *vnode = (Word_t) node;
+        return true;
+    } else {
+        return false;
     }
-    return id;
 }
 
 static struct csp_normalized_lts_node *
