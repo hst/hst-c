@@ -367,13 +367,13 @@ csp_normalized_lts_new(struct csp *csp);
 void
 csp_normalized_lts_free(struct csp_normalized_lts *lts);
 
-/* Create a new normalized LTS node for the given set of processes, and return
- * the ID of the new node.  If the node already exists, we return the ID of the
- * existing node.  We will make a copy of `processes` if needed, so it's safe
- * for you to reuse it after this function returns. */
-csp_id
+/* Create a new normalized LTS node for the given set of processes, if it
+ * doesn't already exist.  Returns whether a new node was created.  Places the
+ * ID of the node into `id` either way.  We will make a copy of `processes` if
+ * needed, so it's safe for you to reuse it after this function returns. */
+bool
 csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
-                            const struct csp_id_set *processes);
+                            const struct csp_id_set *processes, csp_id *id);
 
 /* Adds a new edge to a normalized LTS.  `from` and `to` must the IDs of nodes
  * that you've already created via csp_normalized_lts_add_node.  `event` must be
@@ -411,6 +411,12 @@ csp_normalized_lts_get_edge(struct csp_normalized_lts *lts, csp_id from,
 void
 csp_process_find_closure(struct csp *csp, csp_id event,
                          struct csp_id_set *processes);
+
+/* Prenormalizes a process, adding it to a normalized LTS.  Returns the ID of
+ * the normalized LTS node representing the process. */
+csp_id
+csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
+                         csp_id process);
 
 #ifdef __cplusplus
 }
