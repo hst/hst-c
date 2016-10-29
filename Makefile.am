@@ -18,7 +18,7 @@ check_PROGRAMS = \
 bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
-	     $(top_srcdir)/build-aux/tap-driver.sh
+	     $(top_srcdir)/tap-driver.sh
 @VALGRIND_CHECK_RULES@
 
 EXTRA_DIST = third_party
