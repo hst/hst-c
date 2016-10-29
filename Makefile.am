@@ -59,4 +59,4 @@ tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
 tests_test_refinement_LDFLAGS = -no-install
 
-dist_doc_DATA = README
+dist_doc_DATA = README.md
