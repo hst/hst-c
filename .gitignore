@@ -7,7 +7,6 @@
 /build-aux/depcomp
 /build-aux/install-sh
 /build-aux/missing
-/build-aux/tap-driver.sh
 /build-aux/test-driver
 /config.h.in
 /configure

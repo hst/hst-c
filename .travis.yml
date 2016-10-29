@@ -1,0 +1,12 @@
+# Run a CI test every time we merge in a pull request.
+branches:
+  only:
+    - master
+
+language: c
+script: .travis/test.sh
+addons:
+  apt:
+    packages:
+      - libjudy-dev
+      - valgrind

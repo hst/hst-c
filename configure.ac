@@ -33,7 +33,6 @@ AC_DEFINE([HAVE_ATTRIBUTE_UNUSED], [HAVE_FUNC_ATTRIBUTE_UNUSED],
           [CCAN uses a different name for HAVE_FUNC_ATTRIBUTE_UNUSED])
 
 # TAP support
-AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_PROG_AWK
 
 # Valgrind support
