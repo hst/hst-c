@@ -148,3 +148,17 @@ csp_normalized_lts_get_edge(struct csp_normalized_lts *lts, csp_id from,
     assert(from_node != NULL);
     return csp_normalized_lts_node_get_edge(from_node, event);
 }
+
+void
+csp_normalized_lts_build_all_nodes(struct csp_normalized_lts *lts,
+                                   struct csp_id_set_builder *builder)
+{
+    UNNEEDED Word_t dummy;
+    Word_t *vnode;
+    csp_id id = 0;
+    JLF(vnode, lts->nodes, id);
+    while (vnode != NULL) {
+        csp_id_set_builder_add(builder, id);
+        JLN(vnode, lts->nodes, id);
+    }
+}

@@ -38,6 +38,23 @@ check_normalized_node(struct csp *csp, struct csp_normalized_lts *lts,
     check_set_eq(actual, process_ids);
 }
 
+static void
+check_normalized_node_set(struct csp *csp, struct csp_normalized_lts *lts,
+                          struct csp_id_set_factory ids)
+{
+    struct csp_id_set_builder builder;
+    struct csp_id_set actual;
+    const struct csp_id_set *id_set;
+    csp_id_set_builder_init(&builder);
+    csp_id_set_init(&actual);
+    id_set = csp_id_set_factory_create(csp, ids);
+    csp_normalized_lts_build_all_nodes(lts, &builder);
+    csp_id_set_build(&actual, &builder);
+    check_set_eq(&actual, id_set);
+    csp_id_set_builder_done(&builder);
+    csp_id_set_done(&actual);
+}
+
 TEST_CASE_GROUP("normalized LTSes");
 
 TEST_CASE("can build normalized LTS")
@@ -56,6 +73,8 @@ TEST_CASE("can build normalized LTS")
     add_normalized_node(csp, lts, &id2, csp0s("a → STOP", "b → c → STOP"));
     add_normalized_node(csp, lts, &id3, csp0s("a → STOP"));
     add_normalized_node(csp, lts, &id4, csp0s("a → STOP □ b → STOP"));
+    /* Verify that all of the nodes exist. */
+    check_normalized_node_set(csp, lts, ids(id1, id2, id3, id4));
     /* Verify that the nodes map to the right process sets. */
     check_normalized_node(csp, lts, id1, csp0s("STOP"));
     check_normalized_node(csp, lts, id2, csp0s("a → STOP", "b → c → STOP"));

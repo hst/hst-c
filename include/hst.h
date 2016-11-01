@@ -428,6 +428,11 @@ csp_id
 csp_normalized_lts_get_edge(struct csp_normalized_lts *lts, csp_id from,
                             csp_id event);
 
+/* Add the IDs of all of the normalized nodes in `lts` to `builder`. */
+void
+csp_normalized_lts_build_all_nodes(struct csp_normalized_lts *lts,
+                                   struct csp_id_set_builder *builder);
+
 /*------------------------------------------------------------------------------
  * Refinement
  */

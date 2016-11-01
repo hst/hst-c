@@ -567,6 +567,24 @@ csp_id_set_factory_create(struct csp *csp, struct csp_id_set_factory factory)
     return factory.create(csp, factory.ud);
 }
 
+/* Creates a new ID set factory that returns the given set of IDs. */
+#define ids(...) ids_(id_set(__VA_ARGS__))
+
+static struct csp_id_set *
+ids_factory(struct csp *csp, void *vset)
+{
+    struct csp_id_set *set = vset;
+    return set;
+}
+
+UNNEEDED
+static struct csp_id_set_factory
+ids_(struct csp_id_set *set)
+{
+    struct csp_id_set_factory factory = {ids_factory, set};
+    return factory;
+}
+
 /* Creates a new ID factory that returns the ID of an event. */
 UNNEEDED
 static struct csp_id_factory
