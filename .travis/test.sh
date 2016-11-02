@@ -7,3 +7,4 @@ cd .build
 make
 make check
 make check-valgrind
+make distcheck

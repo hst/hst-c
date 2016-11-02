@@ -17,11 +17,16 @@ check_PROGRAMS = \
 	tests/test-refinement
 bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
-LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
-	     $(top_srcdir)/tap-driver.sh
+LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 @VALGRIND_CHECK_RULES@
 
-EXTRA_DIST = third_party
+EXTRA_DIST = tap-driver.sh third_party
+dist-hook:
+	@rm -f `find $(top_distdir)/third_party -name $(am__dirstamp)`
+	@rm -f `find $(top_distdir)/third_party -name '*.o'`
+	@rm -f `find $(top_distdir)/third_party -name '*.lo'`
+	@rm -rf `find $(top_distdir)/third_party -type d -name $(DEPDIR)`
+	@rm -rf `find $(top_distdir)/third_party -type d -name .libs`
 
 libhst_la_SOURCES = \
 	src/libhst/csp0.c \
