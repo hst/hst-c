@@ -3,6 +3,11 @@ branches:
   only:
     - master
 
+# Test both in-source and out-of-source builds.
+env:
+  - BUILD_TYPE=in_source
+  - BUILD_TYPE=out_of_source
+
 language: c
 script: .travis/test.sh
 addons:
