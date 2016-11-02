@@ -29,6 +29,7 @@ dist-hook:
 	@rm -rf `find $(top_distdir)/third_party -type d -name .libs`
 
 libhst_la_SOURCES = \
+	src/libhst/behavior.c \
 	src/libhst/csp0.c \
 	src/libhst/environment.c \
 	src/libhst/id-set.c \
