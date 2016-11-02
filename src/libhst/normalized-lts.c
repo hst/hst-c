@@ -16,17 +16,21 @@
 
 struct csp_normalized_lts_node {
     struct csp_id_set processes;
+    struct csp_behavior behavior;
     void *edges;
 };
 
 static struct csp_normalized_lts_node *
-csp_normalized_lts_node_new(const struct csp_id_set *processes)
+csp_normalized_lts_node_new(struct csp *csp, enum csp_semantic_model model,
+                            const struct csp_id_set *processes)
 {
     struct csp_normalized_lts_node *node =
             malloc(sizeof(struct csp_normalized_lts_node));
     assert(node != NULL);
     csp_id_set_init(&node->processes);
+    csp_behavior_init(&node->behavior);
     csp_id_set_clone(&node->processes, processes);
+    csp_process_set_get_behavior(csp, processes, model, &node->behavior);
     node->edges = NULL;
     return node;
 }
@@ -36,6 +40,7 @@ csp_normalized_lts_node_free(struct csp_normalized_lts_node *node)
 {
     UNNEEDED Word_t dummy;
     csp_id_set_done(&node->processes);
+    csp_behavior_done(&node->behavior);
     JLFA(dummy, node->edges);
     free(node);
 }
@@ -64,14 +69,18 @@ csp_normalized_lts_node_get_edge(struct csp_normalized_lts_node *node,
 }
 
 struct csp_normalized_lts {
+    struct csp *csp;
+    enum csp_semantic_model model;
     void *nodes;
 };
 
 struct csp_normalized_lts *
-csp_normalized_lts_new(struct csp *csp)
+csp_normalized_lts_new(struct csp *csp, enum csp_semantic_model model)
 {
     struct csp_normalized_lts *lts = malloc(sizeof(struct csp_normalized_lts));
     assert(lts != NULL);
+    lts->csp = csp;
+    lts->model = model;
     lts->nodes = NULL;
     return lts;
 }
@@ -104,7 +113,7 @@ csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
     JLI(vnode, lts->nodes, id);
     if (*vnode == 0) {
         struct csp_normalized_lts_node *node =
-                csp_normalized_lts_node_new(processes);
+                csp_normalized_lts_node_new(lts->csp, lts->model, processes);
         *vnode = (Word_t) node;
         return true;
     } else {
@@ -130,6 +139,13 @@ csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
     assert(from_node != NULL);
     assert(csp_normalized_lts_get_node(lts, to) != NULL);
     csp_normalized_lts_node_add_edge(from_node, event, to);
+}
+
+const struct csp_behavior *
+csp_normalized_lts_get_node_behavior(struct csp_normalized_lts *lts, csp_id id)
+{
+    struct csp_normalized_lts_node *node = csp_normalized_lts_get_node(lts, id);
+    return &node->behavior;
 }
 
 const struct csp_id_set *

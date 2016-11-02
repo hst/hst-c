@@ -413,6 +413,15 @@ csp_process_get_behavior(struct csp *csp, csp_id process,
                          enum csp_semantic_model model,
                          struct csp_behavior *behavior);
 
+/* Fill in `behavior` with the behavior of a set of `processes` in the given
+ * semantic model.  `processes` should be τ-closed, and so τ won't be included
+ * in the set's behavior.  You must have already initialized `behavior`. */
+void
+csp_process_set_get_behavior(struct csp *csp,
+                             const struct csp_id_set *processes,
+                             enum csp_semantic_model model,
+                             struct csp_behavior *behavior);
+
 /*------------------------------------------------------------------------------
  * Normalized LTS
  */
@@ -422,7 +431,7 @@ csp_process_get_behavior(struct csp *csp, csp_id process,
 struct csp_normalized_lts;
 
 struct csp_normalized_lts *
-csp_normalized_lts_new(struct csp *csp);
+csp_normalized_lts_new(struct csp *csp, enum csp_semantic_model model);
 
 void
 csp_normalized_lts_free(struct csp_normalized_lts *lts);
@@ -442,6 +451,12 @@ csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
 void
 csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
                             csp_id event, csp_id to);
+
+/* Return the behavior for a normalized LTS node.  `id` must a node that you've
+ * already created via csp_normalized_lts_add_node.  We retain ownership of the
+ * returned behavior. */
+const struct csp_behavior *
+csp_normalized_lts_get_node_behavior(struct csp_normalized_lts *lts, csp_id id);
 
 /* Return the set of processes for a normalized LTS node.  `id` must a node that
  * you've already created via csp_normalized_lts_add_node.  We retain ownership

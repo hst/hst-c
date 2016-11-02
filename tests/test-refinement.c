@@ -55,6 +55,23 @@ check_normalized_node_set(struct csp *csp, struct csp_normalized_lts *lts,
     csp_id_set_done(&actual);
 }
 
+static void
+check_normalized_node_traces_behavior(struct csp *csp,
+                                      struct csp_normalized_lts *lts,
+                                      struct csp_id_set_factory processes,
+                                      struct csp_id_set_factory events)
+{
+    csp_id id;
+    const struct csp_id_set *process_set;
+    const struct csp_id_set *event_set;
+    const struct csp_behavior *behavior;
+    process_set = csp_id_set_factory_create(csp, processes);
+    event_set = csp_id_set_factory_create(csp, events);
+    check(!csp_normalized_lts_add_node(lts, process_set, &id));
+    behavior = csp_normalized_lts_get_node_behavior(lts, id);
+    check_set_eq(&behavior->initials, event_set);
+}
+
 TEST_CASE_GROUP("normalized LTSes");
 
 TEST_CASE("can build normalized LTS")
@@ -67,7 +84,7 @@ TEST_CASE("can build normalized LTS")
     csp_id id4;
     /* Create the CSP environment and LTS. */
     check_alloc(csp, csp_new());
-    check_alloc(lts, csp_normalized_lts_new(csp));
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     /* Add some nodes to the normalized LTS. */
     add_normalized_node(csp, lts, &id1, csp0s("STOP"));
     add_normalized_node(csp, lts, &id2, csp0s("a → STOP", "b → c → STOP"));
@@ -80,6 +97,14 @@ TEST_CASE("can build normalized LTS")
     check_normalized_node(csp, lts, id2, csp0s("a → STOP", "b → c → STOP"));
     check_normalized_node(csp, lts, id3, csp0s("a → STOP"));
     check_normalized_node(csp, lts, id4, csp0s("a → STOP □ b → STOP"));
+    /* Verify that the nodes have the expected merged behavior. */
+    check_normalized_node_traces_behavior(csp, lts, csp0s("STOP"), events());
+    check_normalized_node_traces_behavior(
+            csp, lts, csp0s("a → STOP", "b → c → STOP"), events("a", "b"));
+    check_normalized_node_traces_behavior(csp, lts, csp0s("a → STOP"),
+                                          events("a"));
+    check_normalized_node_traces_behavior(
+            csp, lts, csp0s("a → STOP □ b → STOP"), events("a", "b"));
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);
@@ -103,7 +128,7 @@ TEST_CASE("can detect duplicate normalized LTS nodes")
     csp_id id;
     /* Create the CSP environment and LTS. */
     check_alloc(csp, csp_new());
-    check_alloc(lts, csp_normalized_lts_new(csp));
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     /* Add some nodes to the normalized LTS.  Ensure that we are notified when a
      * duplicate node is added. */
     add_normalized_node(csp, lts, &id, csp0s("STOP"));
@@ -137,7 +162,7 @@ TEST_CASE("can add edges to normalized LTS")
     csp_id id4;
     /* Create the CSP environment and LTS. */
     check_alloc(csp, csp_new());
-    check_alloc(lts, csp_normalized_lts_new(csp));
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     /* Add some nodes to the normalized LTS. */
     add_normalized_node(csp, lts, &id1, csp0s("STOP"));
     add_normalized_node(csp, lts, &id2, csp0s("a → STOP", "b → c → STOP"));
@@ -285,11 +310,14 @@ TEST_CASE("a → STOP")
     struct csp_normalized_lts *lts;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    check_alloc(lts, csp_normalized_lts_new(csp));
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     /* Prenormalize the process and verify we get all of the edges we expect. */
     check_prenormalize(csp, lts, csp0("a → STOP"), csp0s("a → STOP"));
     check_normalized_edge(csp, lts, csp0s("a → STOP"), event("a"),
                           csp0s("STOP"));
+    /* And verify that the normalized nodes have the behavior we expect. */
+    check_normalized_node_traces_behavior(csp, lts, csp0s("a → STOP"),
+                                          events("a"));
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);
@@ -301,7 +329,7 @@ TEST_CASE("a → STOP □ b → STOP")
     struct csp_normalized_lts *lts;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    check_alloc(lts, csp_normalized_lts_new(csp));
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     /* Prenormalize the process and verify we get all of the edges we expect. */
     check_prenormalize(csp, lts, csp0("a → STOP □ b → STOP"),
                        csp0s("a → STOP □ b → STOP"));
@@ -309,6 +337,9 @@ TEST_CASE("a → STOP □ b → STOP")
                           csp0s("STOP"));
     check_normalized_edge(csp, lts, csp0s("a → STOP □ b → STOP"), event("b"),
                           csp0s("STOP"));
+    /* And verify that the normalized nodes have the behavior we expect. */
+    check_normalized_node_traces_behavior(
+            csp, lts, csp0s("a → STOP □ b → STOP"), events("a", "b"));
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);
@@ -320,7 +351,7 @@ TEST_CASE("a → STOP ⊓ b → STOP")
     struct csp_normalized_lts *lts;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    check_alloc(lts, csp_normalized_lts_new(csp));
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     /* Prenormalize the process and verify we get all of the edges we expect. */
     check_prenormalize(csp, lts, csp0("a → STOP ⊓ b → STOP"),
                        csp0s("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"));
@@ -330,6 +361,10 @@ TEST_CASE("a → STOP ⊓ b → STOP")
     check_normalized_edge(csp, lts,
                           csp0s("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"),
                           event("b"), csp0s("STOP"));
+    /* And verify that the normalized nodes have the behavior we expect. */
+    check_normalized_node_traces_behavior(
+            csp, lts, csp0s("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"),
+            events("a", "b"));
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);
@@ -341,7 +376,7 @@ TEST_CASE("a → SKIP ; b → STOP")
     struct csp_normalized_lts *lts;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    check_alloc(lts, csp_normalized_lts_new(csp));
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     /* Prenormalize the process and verify we get all of the edges we expect. */
     check_prenormalize(csp, lts, csp0("a → SKIP ; b → STOP"),
                        csp0s("a → SKIP ; b → STOP"));
@@ -349,6 +384,11 @@ TEST_CASE("a → SKIP ; b → STOP")
                           csp0s("SKIP ; b → STOP", "b → STOP"));
     check_normalized_edge(csp, lts, csp0s("SKIP ; b → STOP", "b → STOP"),
                           event("b"), csp0s("STOP"));
+    /* And verify that the normalized nodes have the behavior we expect. */
+    check_normalized_node_traces_behavior(
+            csp, lts, csp0s("a → SKIP ; b → STOP"), events("a"));
+    check_normalized_node_traces_behavior(
+            csp, lts, csp0s("SKIP ; b → STOP", "b → STOP"), events("b"));
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);
