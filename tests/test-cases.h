@@ -567,6 +567,26 @@ csp_id_set_factory_create(struct csp *csp, struct csp_id_set_factory factory)
     return factory.create(csp, factory.ud);
 }
 
+/* Creates a new ID factory that returns the given ID. */
+UNNEEDED
+static struct csp_id_factory
+id(csp_id id);
+
+static csp_id
+id_factory(struct csp *csp, void *vid)
+{
+    csp_id id = (csp_id) vid;
+    return id;
+}
+
+UNNEEDED
+static struct csp_id_factory
+id(csp_id id)
+{
+    struct csp_id_factory factory = {id_factory, (void *) id};
+    return factory;
+}
+
 /* Creates a new ID set factory that returns the given set of IDs. */
 #define ids(...) ids_(id_set(__VA_ARGS__))
 
@@ -693,6 +713,63 @@ csp0s_(struct string_array *processes)
 {
     struct csp_id_set_factory factory = {csp0s_factory, processes};
     return factory;
+}
+
+/* Verify which equivalence class a member belongs to. */
+UNNEEDED
+static void
+check_equivalence_classes(struct csp *csp, struct csp_equivalences *equiv,
+                          struct csp_id_set_factory classes)
+{
+    struct csp_id_set_builder builder;
+    struct csp_id_set actual;
+    const struct csp_id_set *class_set;
+    csp_id_set_builder_init(&builder);
+    csp_id_set_init(&actual);
+    csp_equivalences_build_classes(equiv, &builder);
+    csp_id_set_build(&actual, &builder);
+    class_set = csp_id_set_factory_create(csp, classes);
+    check_set_eq(&actual, class_set);
+    csp_id_set_builder_done(&builder);
+    csp_id_set_done(&actual);
+}
+
+/* Verify which equivalence class a member belongs to. */
+UNNEEDED
+static void
+check_equivalence_class(struct csp *csp, struct csp_equivalences *equiv,
+                        struct csp_id_factory clazz,
+                        struct csp_id_factory member)
+{
+    csp_id class_id;
+    csp_id member_id;
+    csp_id actual;
+    class_id = csp_id_factory_create(csp, clazz);
+    member_id = csp_id_factory_create(csp, member);
+    actual = csp_equivalences_get_class(equiv, member_id);
+    check_id_eq(actual, class_id);
+}
+
+/* Verify the members of an equivalence class. */
+UNNEEDED
+static void
+check_equivalence_class_members(struct csp *csp, struct csp_equivalences *equiv,
+                                struct csp_id_factory clazz,
+                                struct csp_id_set_factory members)
+{
+    csp_id class_id;
+    const struct csp_id_set *member_set;
+    struct csp_id_set_builder builder;
+    struct csp_id_set actual;
+    csp_id_set_builder_init(&builder);
+    csp_id_set_init(&actual);
+    class_id = csp_id_factory_create(csp, clazz);
+    member_set = csp_id_set_factory_create(csp, members);
+    csp_equivalences_build_members(equiv, class_id, &builder);
+    csp_id_set_build(&actual, &builder);
+    check_set_eq(&actual, member_set);
+    csp_id_set_builder_done(&builder);
+    csp_id_set_done(&actual);
 }
 
 #endif /* TEST_CASES_H */

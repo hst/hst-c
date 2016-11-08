@@ -12,6 +12,7 @@ check_LTLIBRARIES = libtests.la
 check_PROGRAMS = \
 	tests/test-csp0 \
 	tests/test-environment \
+	tests/test-equivalences \
 	tests/test-id-sets \
 	tests/test-operators \
 	tests/test-refinement
@@ -32,6 +33,7 @@ libhst_la_SOURCES = \
 	src/libhst/behavior.c \
 	src/libhst/csp0.c \
 	src/libhst/environment.c \
+	src/libhst/equivalence.c \
 	src/libhst/id-set.c \
 	src/libhst/normalized-lts.c \
 	src/libhst/refinement.c \
@@ -62,6 +64,7 @@ hst_LDADD = libhst.la
 LDADD = libhst.la libtests.la
 tests_test_csp0_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install
+tests_test_equivalences_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
 tests_test_refinement_LDFLAGS = -no-install

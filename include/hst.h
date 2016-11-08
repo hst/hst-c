@@ -24,7 +24,8 @@ extern "C" {
 typedef uint64_t csp_id;
 #define CSP_ID_FMT "0x%016" PRIx64
 
-#define CSP_PROCESS_NONE ((csp_id) 0)
+#define CSP_ID_NONE ((csp_id) 0)
+#define CSP_PROCESS_NONE CSP_ID_NONE
 
 struct csp {
     csp_id tau;
@@ -182,6 +183,46 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder);
 void
 csp_id_set_build_and_keep(struct csp_id_set *set,
                           struct csp_id_set_builder *builder);
+
+/*------------------------------------------------------------------------------
+ * Equivalences
+ */
+
+/* Stores information about the "equivalence classes" of a set of processes.
+ * All of the processes that have "equivalent" behavior (according to one of
+ * CSP's semantic models) belong to the same equivalence class. */
+struct csp_equivalences {
+    void *classes;
+    void *members;
+};
+
+void
+csp_equivalences_init(struct csp_equivalences *equiv);
+
+void
+csp_equivalences_done(struct csp_equivalences *equiv);
+
+/* Add a member to an equivalence class.  If the member was already in an
+ * equivalence class, it is removed from that one before adding it to the new
+ * one. */
+void
+csp_equivalences_add(struct csp_equivalences *equiv, csp_id class_id,
+                     csp_id member_id);
+
+/* Add the IDs of all of the equivalence classes to a set builder. */
+void
+csp_equivalences_build_classes(struct csp_equivalences *equiv,
+                               struct csp_id_set_builder *builder);
+
+/* Return the class that a member belongs to, or CSP_ID_NONE if that member
+ * hasn't been added to an equivalence class yet. */
+csp_id
+csp_equivalences_get_class(struct csp_equivalences *equiv, csp_id member_id);
+
+/* Add all of the members of an equivalence class to a set builder. */
+void
+csp_equivalences_build_members(struct csp_equivalences *equiv, csp_id class_id,
+                               struct csp_id_set_builder *builder);
 
 /*------------------------------------------------------------------------------
  * Processes
@@ -426,7 +467,7 @@ csp_process_set_get_behavior(struct csp *csp,
  * Normalized LTS
  */
 
-#define CSP_NODE_NONE ((csp_id) 0)
+#define CSP_NODE_NONE CSP_ID_NONE
 
 struct csp_normalized_lts;
 
