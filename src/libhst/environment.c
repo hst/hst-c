@@ -59,7 +59,6 @@ struct csp_priv {
     struct csp  public;
     void  *events;
     void  *processes;
-    void  *process_names;
     struct csp_process  *stop;
     struct csp_process  *skip;
 };
@@ -174,14 +173,11 @@ csp_new(void)
     }
     csp->events = NULL;
     csp->processes = NULL;
-    csp->process_names = NULL;
     csp->public.tau = csp_get_event_id(&csp->public, TAU);
     csp->public.tick = csp_get_event_id(&csp->public, TICK);
     csp->public.stop = csp_process_init(&csp->public, NULL, &csp_stop_iface);
-    csp_add_process_name(&csp->public, csp->public.stop, "STOP");
     csp->stop = csp_process_get(csp, csp->public.stop);
     csp->public.skip = csp_process_init(&csp->public, NULL, &csp_skip_iface);
-    csp_add_process_name(&csp->public, csp->public.skip, "SKIP");
     csp->skip = csp_process_get(csp, csp->public.skip);
     return &csp->public;
 }
@@ -191,8 +187,6 @@ csp_free(struct csp *pcsp)
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
     UNNEEDED Word_t  dummy;
-
-    JHSFA(dummy, csp->process_names);
 
     {
         Word_t  *vname;
@@ -261,47 +255,6 @@ csp_get_event_name(struct csp *pcsp, csp_id event)
         return NULL;
     } else {
         return (void *) *vname;
-    }
-}
-
-bool
-csp_add_process_name(struct csp *csp, csp_id process, const char *name)
-{
-    return csp_add_process_sized_name(csp, process, name, strlen(name));
-}
-
-bool
-csp_add_process_sized_name(struct csp *pcsp, csp_id process, const char *name,
-                           size_t name_length)
-{
-    struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
-    Word_t  *vprocess;
-    JHSI(vprocess, csp->process_names, (uint8_t *) name, name_length);
-    if (*vprocess == 0) {
-        *vprocess = process;
-        return true;
-    } else {
-        return false;
-    }
-}
-
-csp_id
-csp_get_process_by_name(struct csp *csp, const char *name)
-{
-    return csp_get_process_by_sized_name(csp, name, strlen(name));
-}
-
-csp_id
-csp_get_process_by_sized_name(struct csp *pcsp, const char *name,
-                              size_t name_length)
-{
-    struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
-    Word_t  *vprocess;
-    JHSG(vprocess, csp->process_names, (uint8_t *) name, name_length);
-    if (vprocess == NULL) {
-        return CSP_PROCESS_NONE;
-    } else {
-        return *vprocess;
     }
 }
 
