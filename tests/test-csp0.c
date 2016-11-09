@@ -70,7 +70,7 @@ TEST_CASE("can parse identifiers") {
 
 TEST_CASE_GROUP("CSP₀ primitives");
 
-TEST_CASE("can parse STOP") {
+TEST_CASE("parse: STOP") {
     struct csp  *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
@@ -83,7 +83,7 @@ TEST_CASE("can parse STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("can parse SKIP") {
+TEST_CASE("parse: SKIP") {
     struct csp  *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
@@ -98,7 +98,7 @@ TEST_CASE("can parse SKIP") {
 
 TEST_CASE_GROUP("CSP₀ operators");
 
-TEST_CASE("can parse external choice") {
+TEST_CASE("parse: a → STOP □ SKIP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  p1;
@@ -131,7 +131,7 @@ TEST_CASE("can parse external choice") {
     csp_free(csp);
 }
 
-TEST_CASE("external choice is right-associative") {
+TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  b;
@@ -158,7 +158,7 @@ TEST_CASE("external choice is right-associative") {
     csp_free(csp);
 }
 
-TEST_CASE("can parse internal choice") {
+TEST_CASE("parse: a → STOP ⊓ SKIP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  p1;
@@ -191,7 +191,7 @@ TEST_CASE("can parse internal choice") {
     csp_free(csp);
 }
 
-TEST_CASE("internal choice is right-associative") {
+TEST_CASE("associativity: a → STOP ⊓ b → STOP ⊓ c → STOP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  b;
@@ -218,7 +218,7 @@ TEST_CASE("internal choice is right-associative") {
     csp_free(csp);
 }
 
-TEST_CASE("can parse parentheses") {
+TEST_CASE("parse: (STOP)") {
     struct csp  *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
@@ -234,7 +234,7 @@ TEST_CASE("can parse parentheses") {
     csp_free(csp);
 }
 
-TEST_CASE("can parse prefix") {
+TEST_CASE("parse: a → STOP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  root;
@@ -264,7 +264,7 @@ TEST_CASE("can parse prefix") {
     csp_free(csp);
 }
 
-TEST_CASE("prefix is right-associative") {
+TEST_CASE("associativity: a → b → STOP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  b;
@@ -283,7 +283,7 @@ TEST_CASE("prefix is right-associative") {
     csp_free(csp);
 }
 
-TEST_CASE("can parse replicated external choice") {
+TEST_CASE("parse: □ {a → STOP, SKIP}") {
     struct csp  *csp;
     csp_id  a;
     csp_id  p1;
@@ -329,7 +329,7 @@ TEST_CASE("can parse replicated external choice") {
     csp_free(csp);
 }
 
-TEST_CASE("can parse replicated internal choice") {
+TEST_CASE("parse: ⊓ {a → STOP, SKIP}") {
     struct csp  *csp;
     csp_id  a;
     csp_id  p1;
@@ -375,7 +375,7 @@ TEST_CASE("can parse replicated internal choice") {
     csp_free(csp);
 }
 
-TEST_CASE("can parse sequential composition") {
+TEST_CASE("parse: a → SKIP ; STOP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  p1;
@@ -405,7 +405,7 @@ TEST_CASE("can parse sequential composition") {
     csp_free(csp);
 }
 
-TEST_CASE("sequential composition is right-associative") {
+TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  b;
@@ -431,7 +431,7 @@ TEST_CASE("sequential composition is right-associative") {
     csp_free(csp);
 }
 
-TEST_CASE("verify precedence of a → STOP □ b → STOP ⊓ c → STOP") {
+TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  b;
@@ -460,7 +460,7 @@ TEST_CASE("verify precedence of a → STOP □ b → STOP ⊓ c → STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("verify precedence of a → STOP □ b → SKIP ; c → STOP") {
+TEST_CASE("precedence: a → STOP □ b → SKIP ; c → STOP") {
     struct csp  *csp;
     csp_id  a;
     csp_id  b;
