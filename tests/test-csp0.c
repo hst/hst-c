@@ -283,6 +283,47 @@ TEST_CASE("associativity: a → b → STOP") {
     csp_free(csp);
 }
 
+TEST_CASE("parse: let X = a → STOP within X") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* Verify that we can parse the process, with and without whitespace. */
+    check_csp0_valid("let X=a→STOP within X");
+    check_csp0_valid(" let X=a→STOP within X");
+    check_csp0_valid(" let X =a→STOP within X");
+    check_csp0_valid(" let X = a→STOP within X");
+    check_csp0_valid(" let X = a →STOP within X");
+    check_csp0_valid(" let X = a → STOP within X");
+    check_csp0_valid(" let X = a → STOP within X ");
+    /* Fail to parse a bunch of invalid statements. */
+    /* missing process definition */
+    check_csp0_invalid("let within X");
+    /* undefined process */
+    check_csp0_invalid("let X = a → Y within X");
+    /* Clean up. */
+    csp_free(csp);
+}
+
+TEST_CASE("parse: let X = a → Y Y = b → X within X") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* Verify that we can parse the process, with and without whitespace. */
+    check_csp0_valid("let X=a→Y Y=b→X within X");
+    check_csp0_valid(" let X=a→Y Y=b→X within X");
+    check_csp0_valid(" let X =a→Y Y=b→X within X");
+    check_csp0_valid(" let X = a→Y Y=b→X within X");
+    check_csp0_valid(" let X = a →Y Y=b→X within X");
+    check_csp0_valid(" let X = a → Y Y=b→X within X");
+    check_csp0_valid(" let X = a → Y Y =b→X within X");
+    check_csp0_valid(" let X = a → Y Y = b→X within X");
+    check_csp0_valid(" let X = a → Y Y = b →X within X");
+    check_csp0_valid(" let X = a → Y Y = b → X within X");
+    check_csp0_valid(" let X = a → Y Y = b → X within X ");
+    /* Clean up. */
+    csp_free(csp);
+}
+
 TEST_CASE("parse: □ {a → STOP, SKIP}") {
     struct csp  *csp;
     csp_id  a;

@@ -5,6 +5,7 @@
  * -----------------------------------------------------------------------------
  */
 
+#include <assert.h>
 #include <string.h>
 
 #include "ccan/likely/likely.h"
@@ -39,6 +40,7 @@
 
 struct csp0_parse_state {
     struct csp  *csp;
+    struct csp_recursion_scope  *current_scope;
     const char  *p;
     const char  *eof;
 };
@@ -190,7 +192,7 @@ parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
 /*
  * Precedence order (tightest first)
  *  1. () STOP SKIP
- *  2. →
+ *  2. → identifier
  *  3. ;
  *  4. timeout
  *  5. interrupt
@@ -200,6 +202,7 @@ parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
  *  9. |||
  * 10. \
  * 11. replicated operators (prefix)
+ * 12. let
  */
 
 /* Each of these numbered parse_process functions corresponds to one of the
@@ -208,7 +211,7 @@ parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
 static int
 parse_process1(struct csp0_parse_state *state, csp_id *dest)
 {
-    // process1 = (process) | STOP | SKIP
+    // process1 = (process) | STOP | SKIP | [identifier]
     DEBUG("ENTER  process1");
 
     // (P)
@@ -243,11 +246,9 @@ parse_process1(struct csp0_parse_state *state, csp_id *dest)
 static int
 parse_process2(struct csp0_parse_state *state, csp_id *dest)
 {
-    // process2 = process1 | event → process2
+    // process2 = process1 | identifier | event → process2
 
     struct csp0_identifier  id;
-    csp_id  event;
-    csp_id  after;
     DEBUG("ENTER  process2");
 
     if (parse_process1(state, dest) == 0) {
@@ -257,16 +258,30 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
 
     require(parse_identifier(state, &id));
     skip_whitespace(state);
-    if (parse_token(state, "->") != 0 && parse_token(state, "→") != 0) {
-        // Expected -> or →
+
+    // prefix
+    if (parse_token(state, "->") == 0 || parse_token(state, "→") == 0) {
+        csp_id  event;
+        csp_id  after;
+        skip_whitespace(state);
+        require(parse_process2(state, &after));
+        event = csp_get_sized_event_id(state->csp, id.start, id.length);
+        *dest = csp_prefix(state->csp, event, after);
+        DEBUG("ACCEPT process2 → " CSP_ID_FMT, *dest);
+        return 0;
+    }
+
+    // identifier
+    if (state->current_scope == NULL) {
+        // Undefined identifier (not in a let)
         DEBUG("FAIL   process2");
         return -1;
     }
-    skip_whitespace(state);
-    require(parse_process2(state, &after));
-    event = csp_get_sized_event_id(state->csp, id.start, id.length);
-    *dest = csp_prefix(state->csp, event, after);
-    DEBUG("ACCEPT process2 → " CSP_ID_FMT, *dest);
+
+    *dest = csp_recursion_scope_get_sized(
+            state->csp, state->current_scope, id.start, id.length);
+    DEBUG("ACCEPT process2 %.*s = " CSP_ID_FMT,
+          (int) id.length, id.start, *dest);
     return 0;
 }
 
@@ -404,9 +419,99 @@ parse_process11(struct csp0_parse_state *state, csp_id *dest)
 }
 
 static int
+parse_recursive_definition(struct csp0_parse_state *state)
+{
+    struct csp0_identifier  name;
+    csp_id  process_id;
+    struct csp_recursion_scope  *scope = state->current_scope;
+    assert(scope != NULL);
+    DEBUG("ENTER  recursive_def");
+
+    require(parse_identifier(state, &name));
+    csp_recursion_scope_get_sized(state->csp, scope, name.start, name.length);
+    skip_whitespace(state);
+    require(parse_token(state, "="));
+    skip_whitespace(state);
+    require(parse_process(state, &process_id));
+    if (unlikely(!csp_recursion_scope_fill_sized(
+                    scope, name.start, name.length, process_id))) {
+        /* Process redefined */
+        DEBUG("FAIL   recursive_def");
+        return -1;
+    }
+
+    DEBUG("ACCEPT recursive_def");
+    return 0;
+}
+
+static int
+parse_process12(struct csp0_parse_state *state, csp_id *dest)
+{
+    // process12 = process11 | let [id = process...] within [process]
+
+    DEBUG("ENTER  process12");
+
+    // let
+    if (parse_token(state, "let") == 0) {
+        struct csp_recursion_scope  *old_scope = state->current_scope;
+        struct csp_recursion_scope  scope;
+        csp_recursion_scope_init(state->csp, &scope);
+        state->current_scope = &scope;
+        skip_whitespace(state);
+        if (unlikely(parse_recursive_definition(state) != 0)) {
+            state->current_scope = old_scope;
+            csp_recursion_scope_done(&scope);
+            return -1;
+        }
+        skip_whitespace(state);
+        while (parse_token(state, "within") != 0) {
+            if (unlikely(parse_recursive_definition(state) != 0)) {
+                state->current_scope = old_scope;
+                csp_recursion_scope_done(&scope);
+                return -1;
+            }
+            skip_whitespace(state);
+        }
+        /* After parsing the `within`, verify that any identifiers used in the
+         * definitions of each of the recursive processes were eventually
+         * defined.  (We have to wait to check for that here because we want to
+         * allow you to refer to a process that appears later on in the
+         * definition with having to forward-declare it.) */
+        if (scope.unfilled_count > 0) {
+            // TODO: Detect which particular processes were undefined.
+            DEBUG("FAIL   process12");
+            state->current_scope = old_scope;
+            csp_recursion_scope_done(&scope);
+            return -1;
+        }
+        skip_whitespace(state);
+        if (likely(parse_process(state, dest) == 0)) {
+            DEBUG("PASS   process12");
+            state->current_scope = old_scope;
+            csp_recursion_scope_done(&scope);
+            return 0;
+        } else {
+            DEBUG("FAIL   process12");
+            state->current_scope = old_scope;
+            csp_recursion_scope_done(&scope);
+            return -1;
+        }
+    }
+
+    // process11
+    if (likely(parse_process11(state, dest) == 0)) {
+        DEBUG("PASS   process12");
+        return 0;
+    } else {
+        DEBUG("FAIL   process12");
+        return -1;
+    }
+}
+
+static int
 parse_process(struct csp0_parse_state *state, csp_id *dest)
 {
-    return parse_process11(state, dest);
+    return parse_process12(state, dest);
 }
 
 int
@@ -414,6 +519,7 @@ csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest)
 {
     struct csp0_parse_state  state;
     state.csp = csp;
+    state.current_scope = NULL;
     state.p = str;
     state.eof = strchr(str, '\0');
     XDEBUG("====== `%s`", str);

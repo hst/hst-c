@@ -192,6 +192,29 @@ TEST_CASE("a → b → STOP") {
     csp_free(csp);
 }
 
+TEST_CASE_GROUP("recursion");
+
+TEST_CASE("let X=a → STOP within X") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* STOP □ STOP */
+    check_csp0_initials("let X=a → STOP within X", ("a"));
+    check_csp0_afters("let X=a → STOP within X", "a", ("STOP"));
+    /* Clean up. */
+    csp_free(csp);
+}
+
+TEST_CASE("let X=a → Y Y=b → X within X") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* STOP □ STOP */
+    check_csp0_initials("let X=a → Y Y=b → X within X", ("a"));
+    /* Clean up. */
+    csp_free(csp);
+}
+
 TEST_CASE_GROUP("sequential composition");
 
 TEST_CASE("SKIP ; STOP") {

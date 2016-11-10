@@ -57,6 +57,7 @@ csp_process_free(struct csp *csp, struct csp_process *process)
 
 struct csp_priv {
     struct csp  public;
+    csp_id  next_recursion_scope_id;
     void  *events;
     void  *processes;
     struct csp_process  *stop;
@@ -173,11 +174,14 @@ csp_new(void)
     }
     csp->events = NULL;
     csp->processes = NULL;
+    csp->next_recursion_scope_id = 0;
     csp->public.tau = csp_get_event_id(&csp->public, TAU);
     csp->public.tick = csp_get_event_id(&csp->public, TICK);
-    csp->public.stop = csp_process_init(&csp->public, NULL, &csp_stop_iface);
+    csp->public.stop = csp_process_init(
+            &csp->public, NULL, NULL, &csp_stop_iface);
     csp->stop = csp_process_get(csp, csp->public.stop);
-    csp->public.skip = csp_process_init(&csp->public, NULL, &csp_skip_iface);
+    csp->public.skip = csp_process_init(
+            &csp->public, NULL, NULL, &csp_skip_iface);
     csp->skip = csp_process_get(csp, csp->public.skip);
     return &csp->public;
 }
@@ -259,17 +263,22 @@ csp_get_event_name(struct csp *pcsp, csp_id event)
 }
 
 csp_id
-csp_process_init(struct csp *pcsp, const void *temp_ud,
+csp_process_init(struct csp *pcsp, const void *temp_ud, void **ud,
                  const struct csp_process_iface *iface)
 {
     struct csp_priv  *csp = container_of(pcsp, struct csp_priv, public);
+    struct csp_process  *process;
     csp_id  process_id = iface->get_id(&csp->public, temp_ud);
     Word_t  *vprocess;
     JLI(vprocess, csp->processes, process_id);
     if (*vprocess == 0) {
-        struct csp_process  *process =
-            csp_process_new(&csp->public, temp_ud, iface);
+        process = csp_process_new(&csp->public, temp_ud, iface);
         *vprocess = (Word_t) process;
+    } else {
+        process = (void *) *vprocess;
+    }
+    if (ud != NULL) {
+        *ud = csp_process_ud(process);
     }
     return process_id;
 }
@@ -326,4 +335,10 @@ csp_id
 csp_id_add_name(csp_id id, const char *name)
 {
     return hash64_any(name, strlen(name), id);
+}
+
+csp_id
+csp_id_add_name_sized(csp_id id, const char *name, size_t name_length)
+{
+    return hash64_any(name, name_length, id);
 }

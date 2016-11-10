@@ -215,7 +215,8 @@ exit_status(void)
 
 #define check_with_msg(call, ...) \
     do { \
-        if (unlikely(!(call))) { \
+        bool  __result = (call); \
+        if (unlikely(!__result)) { \
             fail_at(__FILE__, __LINE__, __VA_ARGS__); \
             return; \
         } \
@@ -225,7 +226,8 @@ exit_status(void)
 
 #define check0_with_msg(call, ...) \
     do { \
-        if (unlikely((call) != 0)) { \
+        int  __rc = (call); \
+        if (unlikely(__rc != 0)) { \
             fail_at(__FILE__, __LINE__, __VA_ARGS__); \
             return; \
         } \
@@ -235,7 +237,8 @@ exit_status(void)
 
 #define checkx0_with_msg(call, ...) \
     do { \
-        if (unlikely((call) == 0)) { \
+        int  __rc = (call); \
+        if (unlikely(__rc == 0)) { \
             fail_at(__FILE__, __LINE__, __VA_ARGS__); \
             return; \
         } \
@@ -245,7 +248,8 @@ exit_status(void)
 
 #define check_nonnull_with_msg(call, ...) \
     do { \
-        if (unlikely((call) == NULL)) { \
+        void  *__result = (call); \
+        if (unlikely(__result == NULL)) { \
             fail_at(__FILE__, __LINE__, __VA_ARGS__); \
             return; \
         } \

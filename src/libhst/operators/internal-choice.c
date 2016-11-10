@@ -72,7 +72,7 @@ csp_internal_choice_done(struct csp *csp, void *vchoice)
     csp_id_set_done(&choice->ps);
 }
 
-const struct csp_process_iface  csp_internal_choice_iface = {
+static const struct csp_process_iface  csp_internal_choice_iface = {
     &csp_internal_choice_initials,
     &csp_internal_choice_afters,
     &csp_internal_choice_get_id,
@@ -88,7 +88,7 @@ csp_internal_choice(struct csp *csp, csp_id a, csp_id b)
     struct csp_id_set  ps;
     csp_id_set_init(&ps);
     csp_id_set_fill_double(&ps, a, b);
-    id = csp_process_init(csp, &ps, &csp_internal_choice_iface);
+    id = csp_process_init(csp, &ps, NULL, &csp_internal_choice_iface);
     csp_id_set_done(&ps);
     return id;
 }
@@ -96,5 +96,5 @@ csp_internal_choice(struct csp *csp, csp_id a, csp_id b)
 csp_id
 csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps)
 {
-    return csp_process_init(csp, ps, &csp_internal_choice_iface);
+    return csp_process_init(csp, ps, NULL, &csp_internal_choice_iface);
 }
