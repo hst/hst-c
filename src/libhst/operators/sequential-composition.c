@@ -127,7 +127,7 @@ csp_sequential_composition_done(struct csp *csp, void *vseq)
     /* nothing to do */
 }
 
-const struct csp_process_iface  csp_sequential_composition_iface = {
+static const struct csp_process_iface  csp_sequential_composition_iface = {
     &csp_sequential_composition_initials,
     &csp_sequential_composition_afters,
     &csp_sequential_composition_get_id,
@@ -140,5 +140,6 @@ csp_id
 csp_sequential_composition(struct csp *csp, csp_id p, csp_id q)
 {
     struct csp_sequential_composition  input = { p, q };
-    return csp_process_init(csp, &input, &csp_sequential_composition_iface);
+    return csp_process_init(
+            csp, &input, NULL, &csp_sequential_composition_iface);
 }

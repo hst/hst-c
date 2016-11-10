@@ -73,7 +73,7 @@ csp_prefix_done(struct csp *csp, void *vprefix)
     /* nothing to do */
 }
 
-const struct csp_process_iface  csp_prefix_iface = {
+static const struct csp_process_iface  csp_prefix_iface = {
     &csp_prefix_initials,
     &csp_prefix_afters,
     &csp_prefix_get_id,
@@ -86,5 +86,5 @@ csp_id
 csp_prefix(struct csp *csp, csp_id a, csp_id p)
 {
     struct csp_prefix  input = { a, p };
-    return csp_process_init(csp, &input, &csp_prefix_iface);
+    return csp_process_init(csp, &input, NULL, &csp_prefix_iface);
 }
