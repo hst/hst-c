@@ -51,6 +51,12 @@ struct csp0_identifier {
 };
 
 static bool
+is_digit(char ch)
+{
+    return ch >= '0' && ch <= '9';
+}
+
+static bool
 is_space(char ch)
 {
     return ch == ' ' || ch == '\f' || ch == '\n' || ch == '\r'
@@ -82,6 +88,34 @@ skip_whitespace(struct csp0_parse_state *state)
     DEBUG("skip whitespace");
     while (likely(p < eof) && is_space(*p)) { p++; }
     state->p = p;
+}
+
+static int
+parse_numeric_identifier(struct csp0_parse_state *state, csp_id *dest)
+{
+    const char  *p = state->p;
+    const char  *eof = state->eof;
+    csp_id  result;
+    DEBUG("ENTER  numeric");
+    if (unlikely(p == eof)) {
+        // Unexpected end of input
+        DEBUG("FAIL   numeric");
+        return -1;
+    }
+    if (!is_digit(*p)) {
+        // Expected a digit
+        DEBUG("FAIL   numeric");
+        return -1;
+    }
+    result = (*p++ - '0');
+    while (likely(p < eof) && is_digit(*p)) {
+        result *= 10;
+        result += (*p++ - '0');
+    }
+    DEBUG("ACCEPT numeric " CSP_ID_FMT, result);
+    *dest = result;
+    state->p = p;
+    return 0;
 }
 
 static int
@@ -243,6 +277,10 @@ parse_process1(struct csp0_parse_state *state, csp_id *dest)
     return -1;
 }
 
+/* Kind of C's equivalent of a friend declaration! */
+csp_id
+csp__recursion_create_id(csp_id scope, const char *name, size_t name_length);
+
 static int
 parse_process2(struct csp0_parse_state *state, csp_id *dest)
 {
@@ -257,6 +295,17 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
     }
 
     require(parse_identifier(state, &id));
+
+    // identifier@scope
+    if (parse_token(state, "@") == 0) {
+        csp_id  scope;
+        require(parse_numeric_identifier(state, &scope));
+        *dest = csp__recursion_create_id(scope, id.start, id.length);
+        DEBUG("ACCEPT process2 %.*s@%lu = " CSP_ID_FMT,
+              (int) id.length, id.start, (unsigned long) scope, *dest);
+        return 0;
+    }
+
     skip_whitespace(state);
 
     // prefix

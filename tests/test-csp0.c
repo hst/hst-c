@@ -68,6 +68,22 @@ TEST_CASE("can parse identifiers") {
     csp_free(csp);
 }
 
+TEST_CASE("can parse debug recursion identifiers") {
+    struct csp  *csp;
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    /* Parse a bunch of valid identifiers. */
+    check_csp0_valid("a → X@0");
+    check_csp0_valid("a → X@1");
+    check_csp0_valid("a → X@10");
+    check_csp0_valid("a → X@010");
+    /* Fail to parse a bunch of invalid identifiers. */
+    check_csp0_invalid("a → X@");
+    check_csp0_invalid("a → X@X");
+    /* Clean up. */
+    csp_free(csp);
+}
+
 TEST_CASE_GROUP("CSP₀ primitives");
 
 TEST_CASE("parse: STOP") {

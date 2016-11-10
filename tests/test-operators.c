@@ -79,6 +79,71 @@
         csp_free(csp); \
     } while (0)
 
+/* Verify the `initials` of a subprocess.  `subprocess` should be a process that
+ * has been defined as part of `csp0`.  `events` should be a (possibly empty)
+ * parenthesized list of event names. */
+#define check_csp0_sub_initials(csp0, subprocess, events) \
+    do { \
+        struct csp  *csp; \
+        csp_id  __process; \
+        csp_id  __subprocess; \
+        struct csp_id_set_builder  __builder; \
+        struct csp_id_set  __actual; \
+        struct csp_id_set  __expected; \
+        check_alloc(csp, csp_new()); \
+        csp_id_set_builder_init(&__builder); \
+        csp_id_set_init(&__actual); \
+        csp_id_set_init(&__expected); \
+        check0(csp_load_csp0_string(csp, (csp0), &__process)); \
+        check0(csp_load_csp0_string(csp, (subprocess), &__subprocess)); \
+        csp_process_build_initials(csp, __subprocess, &__builder); \
+        csp_id_set_build(&__actual, &__builder); \
+        fill_event_id_set(&__expected, events); \
+        check_with_msg( \
+                csp_id_set_eq(&__actual, &__expected), \
+                "initials(" subprocess ") == {" \
+                CPPMAGIC_JOIN(",", CPPMAGIC_UNPACK(events)) \
+                "}"); \
+        csp_id_set_builder_done(&__builder); \
+        csp_id_set_done(&__actual); \
+        csp_id_set_done(&__expected); \
+        csp_free(csp); \
+    } while (0)
+
+/* Verify the `afters` of a subprocess after performing `initial`.  `subprocess`
+ * should be a process that has been defined as part of `csp0`.  `initial`
+ * should be an event name.  `afters` should be a (possibly empty) parenthesized
+ * list of CSP₀ processes. */
+#define check_csp0_sub_afters(csp0, subprocess, initial, afters) \
+    do { \
+        struct csp  *csp; \
+        csp_id  __process; \
+        csp_id  __subprocess; \
+        csp_id  __initial; \
+        struct csp_id_set_builder  __builder; \
+        struct csp_id_set  __actual; \
+        struct csp_id_set  __expected; \
+        check_alloc(csp, csp_new()); \
+        csp_id_set_builder_init(&__builder); \
+        csp_id_set_init(&__actual); \
+        csp_id_set_init(&__expected); \
+        check0(csp_load_csp0_string(csp, (csp0), &__process)); \
+        check0(csp_load_csp0_string(csp, (subprocess), &__subprocess)); \
+        __initial = csp_get_event_id(csp, (initial)); \
+        csp_process_build_afters(csp, __subprocess, __initial, &__builder); \
+        csp_id_set_build(&__actual, &__builder); \
+        fill_csp0_set(&__expected, afters); \
+        check_with_msg( \
+                csp_id_set_eq(&__actual, &__expected), \
+                "afters(" subprocess ", " initial ") == {" \
+                CPPMAGIC_JOIN(", ", CPPMAGIC_UNPACK(afters)) \
+                "}"); \
+        csp_id_set_builder_done(&__builder); \
+        csp_id_set_done(&__actual); \
+        csp_id_set_done(&__expected); \
+        csp_free(csp); \
+    } while (0)
+
 TEST_CASE_GROUP("external choice");
 
 TEST_CASE("STOP □ STOP") {
@@ -153,6 +218,9 @@ TEST_CASE("let X=a → STOP within X") {
 
 TEST_CASE("let X=a → Y Y=b → X within X") {
     check_csp0_initials("let X=a → Y Y=b → X within X", ("a"));
+    check_csp0_afters("let X=a → Y Y=b → X within X", "a", ("Y@0"));
+    check_csp0_sub_initials("let X=a → Y Y=b → X within X", "Y@0", ("b"));
+    check_csp0_sub_afters("let X=a → Y Y=b → X within X", "Y@0", "b", ("X@0"));
 }
 
 TEST_CASE_GROUP("sequential composition");

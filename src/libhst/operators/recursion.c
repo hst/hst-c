@@ -103,8 +103,11 @@ csp_recursion(struct csp *csp, csp_id id, struct csp_recursion **recursion)
     csp_process_init(csp, &id, (void **) recursion, &csp_recursion_iface);
 }
 
-static csp_id
-csp_recursion_create_id(csp_id scope, const char *name, size_t name_length)
+/* The double-underscore will cause the linker to not expose this as a public
+ * part of the API, but we can still use it in other files.  We use this is the
+ * CSP₀ to support the (somewhat-hacky, testing-only) X@0 syntax. */
+csp_id
+csp__recursion_create_id(csp_id scope, const char *name, size_t name_length)
 {
     static struct csp_id_scope  recursion;
     csp_id  id = csp_id_start(&recursion);
@@ -126,7 +129,7 @@ csp_recursion_scope_get_sized(struct csp *csp,
                               const char *name, size_t name_length)
 {
     Word_t  *vrecursion;
-    csp_id  id = csp_recursion_create_id(scope->scope, name, name_length);
+    csp_id  id = csp__recursion_create_id(scope->scope, name, name_length);
     JLI(vrecursion, scope->names, id);
     if (*vrecursion == 0) {
         struct csp_recursion  *recursion = NULL;
@@ -150,7 +153,7 @@ csp_recursion_scope_fill_sized(struct csp_recursion_scope *scope,
                                csp_id process)
 {
     Word_t  *vrecursion;
-    csp_id  id = csp_recursion_create_id(scope->scope, name, name_length);
+    csp_id  id = csp__recursion_create_id(scope->scope, name, name_length);
     JLG(vrecursion, scope->names, id);
     if (unlikely(vrecursion == NULL)) {
         return false;
