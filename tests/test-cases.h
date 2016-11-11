@@ -11,6 +11,7 @@
 #include "config.h"
 
 #include <assert.h>
+#include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -115,22 +116,32 @@ static unsigned int  test_case_number;
 static bool  test_case_failed;
 static bool  any_test_case_failed;
 
+UNNEEDED
 static void
-fail_at(const char* filename, unsigned int line, const char* fmt, ...)
+vfail_at(const char* filename, unsigned int line, const char* fmt, va_list args)
 {
-    va_list args;
     if (!test_case_failed) {
         printf("not ok %u - %s\n", test_case_number,
                current_test_case->description);
     }
     printf("# ");
-    va_start(args, fmt);
     vprintf(fmt, args);
-    va_end(args);
     printf("\n# at %s:%u\n", filename, line);
     test_case_failed = true;
     any_test_case_failed = true;
 }
+
+UNNEEDED
+static void
+fail_at(const char* filename, unsigned int line, const char* fmt, ...)
+{
+    va_list  args;
+    va_start(args, fmt);
+    vfail_at(filename, line, fmt, args);
+    va_end(args);
+}
+
+static jmp_buf  test_case_return;
 
 static void
 run_test(struct test_case_descriptor *test)
@@ -141,11 +152,20 @@ run_test(struct test_case_descriptor *test)
         current_test_case = test;
         test_case_failed = false;
         test_case_number++;
-        test->function();
+        if (setjmp(test_case_return) == 0) {
+            test->function();
+        }
         if (likely(!test_case_failed)) {
             printf("ok %u - %s\n", test_case_number, test->description);
         }
     }
+}
+
+NORETURN
+static void
+abort_test(void)
+{
+    longjmp(test_case_return, 1);
 }
 
 static int
@@ -199,76 +219,124 @@ exit_status(void)
  * Helper macros
  */
 
-#define fail(...)  fail_at(__FILE__, __LINE__, __VA_ARGS__)
+/* Calls m with whatever parameter list immediately follows, but with __FILE__
+ * and __LINE__ prepended to it.  For instance,
+ *
+ *     ADD_FILE_AND_LINE(x)(1, 2)
+ *
+ * expands to
+ *
+ *     x(__FILE__, __LINE__, 1, 2)
+ */
+#define ADD_FILE_AND_LINE(m)  m ADD_FILE_AND_LINE_
+#define ADD_FILE_AND_LINE_(...) (__FILE__, __LINE__, __VA_ARGS__)
+
+#define fail  ADD_FILE_AND_LINE(fail_at)
 
 #define check_alloc_with_msg(var, call, ...) \
     do { \
         var = call; \
         if (unlikely(var == NULL)) { \
             fail_at(__FILE__, __LINE__, __VA_ARGS__); \
-            return; \
+            abort_test(); \
         } \
     } while (0)
 
 #define check_alloc(var, call) \
     check_alloc_with_msg(var, call, "Cannot allocate " #var)
 
-#define check_with_msg(call, ...) \
-    do { \
-        bool  __result = (call); \
-        if (unlikely(!__result)) { \
-            fail_at(__FILE__, __LINE__, __VA_ARGS__); \
-            return; \
-        } \
-    } while (0)
-
+UNNEEDED
+static void
+check_with_msg_(const char *filename, unsigned int line, bool result,
+                const char *fmt, ...)
+{
+    if (unlikely(!result)) {
+        va_list  args;
+        va_start(args, fmt);
+        vfail_at(filename, line, fmt, args);
+        va_end(args);
+        abort_test();
+    }
+}
+#define check_with_msg  ADD_FILE_AND_LINE(check_with_msg_)
 #define check(call)  check_with_msg(call, "Error occurred")
 
-#define check0_with_msg(call, ...) \
-    do { \
-        int  __rc = (call); \
-        if (unlikely(__rc != 0)) { \
-            fail_at(__FILE__, __LINE__, __VA_ARGS__); \
-            return; \
-        } \
-    } while (0)
-
+UNNEEDED
+static void
+check0_with_msg_(const char *filename, unsigned int line, int result,
+                 const char *fmt, ...)
+{
+    if (unlikely(result != 0)) {
+        va_list  args;
+        va_start(args, fmt);
+        vfail_at(filename, line, fmt, args);
+        va_end(args);
+        abort_test();
+    }
+}
+#define check0_with_msg  ADD_FILE_AND_LINE(check0_with_msg_)
 #define check0(call)  check0_with_msg(call, "Error occurred")
 
-#define checkx0_with_msg(call, ...) \
-    do { \
-        int  __rc = (call); \
-        if (unlikely(__rc == 0)) { \
-            fail_at(__FILE__, __LINE__, __VA_ARGS__); \
-            return; \
-        } \
-    } while (0)
-
+UNNEEDED
+static void
+checkx0_with_msg_(const char *filename, unsigned int line, int result,
+                  const char *fmt, ...)
+{
+    if (unlikely(result == 0)) {
+        va_list  args;
+        va_start(args, fmt);
+        vfail_at(filename, line, fmt, args);
+        va_end(args);
+        abort_test();
+    }
+}
+#define checkx0_with_msg  ADD_FILE_AND_LINE(checkx0_with_msg_)
 #define checkx0(call)  checkx0_with_msg(call, "Error should have occurred")
 
-#define check_nonnull_with_msg(call, ...) \
-    do { \
-        void  *__result = (call); \
-        if (unlikely(__result == NULL)) { \
-            fail_at(__FILE__, __LINE__, __VA_ARGS__); \
-            return; \
-        } \
-    } while (0)
-
+UNNEEDED
+static void
+check_nonnull_with_msg_(const char *filename, unsigned int line, void *result,
+                        const char *fmt, ...)
+{
+    if (unlikely(result == NULL)) {
+        va_list  args;
+        va_start(args, fmt);
+        vfail_at(filename, line, fmt, args);
+        va_end(args);
+        abort_test();
+    }
+}
+#define check_nonnull_with_msg  ADD_FILE_AND_LINE(check_nonnull_with_msg_)
 #define check_nonnull(call)  check_nonnull_with_msg(call, "Error occurred")
 
-#define check_id_eq(id1, id2) \
-    check_with_msg((id1) == (id2), \
-            "Expected IDs to be equal, got " CSP_ID_FMT " and " CSP_ID_FMT, \
-            (id1), (id2))
+UNNEEDED
+static void
+check_id_eq_(const char *filename, unsigned int line, csp_id id1, csp_id id2)
+{
+    check_with_msg_(filename, line, (id1 == id2),
+            "Expected IDs to be equal, got " CSP_ID_FMT " and " CSP_ID_FMT,
+            id1, id2);
+}
+#define check_id_eq  ADD_FILE_AND_LINE(check_id_eq_)
 
-#define check_id_ne(id1, id2) \
-    check_with_msg((id1) != (id2), \
-            "Expected IDs to be unequal, got " CSP_ID_FMT, (id1))
+UNNEEDED
+static void
+check_id_ne_(const char *filename, unsigned int line, csp_id id1, csp_id id2)
+{
+    check_with_msg_(filename, line, (id1 != id2),
+            "Expected IDs to be unequal, got " CSP_ID_FMT, id1);
+}
+#define check_id_ne  ADD_FILE_AND_LINE(check_id_ne_)
 
-#define check_streq(actual, expected) \
-    check_with_msg(strcmp((actual), (expected)) == 0, \
-            "Expected \"%s\", got \"%s\"", (expected), (actual))
+UNNEEDED
+static void
+check_streq_(const char *filename, unsigned int line, const char *actual,
+             const char *expected)
+{
+    check_with_msg_(filename, line, strcmp(actual, expected) == 0,
+            "Expected \"%s\", got \"%s\"", expected, actual);
+}
+#define check_streq  ADD_FILE_AND_LINE(check_streq_)
 
 #define check_set_size(set, expected) \
     check_with_msg((set).count == (expected), \
