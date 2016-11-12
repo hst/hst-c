@@ -31,6 +31,7 @@ csp_id_set_init(struct csp_id_set *set)
     set->hash = CSP_ID_SET_INITIAL_HASH;
     set->ids = set->internal;
     set->allocated_count = CSP_ID_SET_INTERNAL_SIZE;
+    set->count = 0;
 }
 
 void
@@ -169,12 +170,14 @@ csp_id_set_build_and_keep(struct csp_id_set *set,
                           struct csp_id_set_builder *builder)
 {
     int  found;
+    Word_t  count;
     size_t  i;
     csp_id  id;
 
     /* First make sure that the `ids` array is large enough to hold all of the
      * ids that have been added to the set. */
-    J1C(set->count, builder->working_set, 0, -1);
+    J1C(count, builder->working_set, 0, -1);
+    set->count = count;
     csp_id_set_ensure_size(set);
 
     /* Then fill in the array. */
@@ -195,6 +198,7 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
     UNNEEDED Word_t  dummy;
     csp_id_set_build_and_keep(set, builder);
     J1FA(dummy, builder->working_set);
+    builder->hash = CSP_ID_SET_INITIAL_HASH;
 }
 
 void

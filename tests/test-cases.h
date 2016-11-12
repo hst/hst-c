@@ -38,6 +38,52 @@
 #endif
 
 /*------------------------------------------------------------------------------
+ * Cleaning up test cases
+ */
+
+typedef void test_case_cleanup_f(void *);
+
+struct test_case_cleanup {
+    test_case_cleanup_f  *func;
+    void  *ud;
+    struct test_case_cleanup  *next;
+};
+
+static struct test_case_cleanup  *cleanup_routines;
+
+static void
+test_case_cleanup_start(void)
+{
+    cleanup_routines = NULL;
+}
+
+UNNEEDED
+static void
+test_case_cleanup_register(test_case_cleanup_f *func, void *ud)
+{
+    struct test_case_cleanup  *routine =
+        malloc(sizeof(struct test_case_cleanup));
+    assert(routine != NULL);
+    routine->func = func;
+    routine->ud = ud;
+    routine->next = cleanup_routines;
+    cleanup_routines = routine;
+}
+
+static void
+test_case_cleanup_finish(void)
+{
+    struct test_case_cleanup  *curr;
+    struct test_case_cleanup  *next;
+    for (curr = cleanup_routines; curr != NULL; curr = next) {
+        next = curr->next;
+        curr->func(curr->ud);
+        free(curr);
+    }
+    cleanup_routines = NULL;
+}
+
+/*------------------------------------------------------------------------------
  * Test cases
  */
 
@@ -149,12 +195,14 @@ run_test(struct test_case_descriptor *test)
     if (test->function == NULL) {
         printf("# %s\n", test->description);
     } else {
+        test_case_cleanup_start();
         current_test_case = test;
         test_case_failed = false;
         test_case_number++;
         if (setjmp(test_case_return) == 0) {
             test->function();
         }
+        test_case_cleanup_finish();
         if (likely(!test_case_failed)) {
             printf("ok %u - %s\n", test_case_number, test->description);
         }
@@ -216,7 +264,7 @@ exit_status(void)
 }
 
 /*-----------------------------------------------------------------------------
- * Helper macros
+ * More preprocessor nonsense
  */
 
 /* Calls m with whatever parameter list immediately follows, but with __FILE__
@@ -230,6 +278,91 @@ exit_status(void)
  */
 #define ADD_FILE_AND_LINE(m)  m ADD_FILE_AND_LINE_
 #define ADD_FILE_AND_LINE_(...) (__FILE__, __LINE__, __VA_ARGS__)
+
+/* Expands to the length of __VA_ARGS__ */
+#define LENGTH(...) CPPMAGIC_JOIN(+, CPPMAGIC_MAP(LENGTH1_, __VA_ARGS__))
+#define LENGTH1_(x) 1
+
+/*-----------------------------------------------------------------------------
+ * Data constructors
+ */
+
+UNNEEDED
+static void
+csp_id_set_free_(void *vset)
+{
+    struct csp_id_set  *set = vset;
+    csp_id_set_done(set);
+    free(set);
+}
+
+/* Creates a new empty set.  The set will be automatically freed for you at the
+ * end of the test case. */
+UNNEEDED
+static struct csp_id_set *
+empty_set(void)
+{
+    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    assert(set != NULL);
+    csp_id_set_init(set);
+    test_case_cleanup_register(csp_id_set_free_, set);
+    return set;
+}
+
+/* Creates a new set containing the given IDs.  The set will be automatically
+ * freed for you at the end of the test case. */
+#define id_set(...) \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
+        (id_set_(LENGTH(__VA_ARGS__), __VA_ARGS__)) \
+        (empty_set())
+
+UNNEEDED
+static struct csp_id_set *
+id_set_(size_t count, ...)
+{
+    size_t  i;
+    va_list  args;
+    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder  builder;
+    assert(set != NULL);
+    csp_id_set_init(set);
+    test_case_cleanup_register(csp_id_set_free_, set);
+    csp_id_set_builder_init(&builder);
+    va_start(args, count);
+    for (i = 0; i < count; i++) {
+        csp_id  id = va_arg(args, csp_id);
+        csp_id_set_builder_add(&builder, id);
+    }
+    va_end(args);
+    csp_id_set_build(set, &builder);
+    csp_id_set_builder_done(&builder);
+    return set;
+}
+
+/* Creates a new set containing the given range of IDs.  The set will be
+ * automatically freed for you at the end of the test case. */
+UNNEEDED
+static struct csp_id_set *
+id_range_set(size_t start, size_t end)
+{
+    size_t  i;
+    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder  builder;
+    assert(set != NULL);
+    csp_id_set_init(set);
+    test_case_cleanup_register(csp_id_set_free_, set);
+    csp_id_set_builder_init(&builder);
+    for (i = start; i < end; i++) {
+        csp_id_set_builder_add(&builder, i);
+    }
+    csp_id_set_build(set, &builder);
+    csp_id_set_builder_done(&builder);
+    return set;
+}
+
+/*-----------------------------------------------------------------------------
+ * Check macros
+ */
 
 #define fail  ADD_FILE_AND_LINE(fail_at)
 
@@ -338,42 +471,48 @@ check_streq_(const char *filename, unsigned int line, const char *actual,
 }
 #define check_streq  ADD_FILE_AND_LINE(check_streq_)
 
-#define check_set_size(set, expected) \
-    check_with_msg((set).count == (expected), \
-            "Expected set to have size %zu, got %zu", \
-            (size_t) (expected), (set).count)
-
-#define check_set_empty(set)  check_set_size(set, 0)
-
 UNNEEDED
-static int
-compare_ids(const void *vid1, const void *vid2)
+static void
+check_set_eq_(const char *filename, unsigned int line,
+              const struct csp_id_set *actual,
+              const struct csp_id_set *expected)
 {
-    const csp_id  *id1 = vid1;
-    const csp_id  *id2 = vid2;
-    if (*id1 < *id2) {
-        return -1;
-    } else if (*id1 == *id2) {
-        return 0;
-    } else {
-        return 1;
+    if (unlikely(!csp_id_set_eq(actual, expected))) {
+        size_t  i;
+        struct csp_id_set_builder  builder;
+        struct csp_id_set  diff;
+        fail_at(filename, line, "Expected sets to be equal");
+        printf("# hash of actual   = " CSP_ID_FMT "\n", actual->hash);
+        printf("# hash of expected = " CSP_ID_FMT "\n", expected->hash);
+        csp_id_set_builder_init(&builder);
+        csp_id_set_init(&diff);
+
+        printf("# Elements only in actual:\n");
+        csp_id_set_builder_merge(&builder, expected);
+        for (i = 0; i < actual->count; i++) {
+            csp_id  curr = actual->ids[i];
+            if (!csp_id_set_builder_remove(&builder, curr)) {
+                printf("#   " CSP_ID_FMT "\n", curr);
+            }
+        }
+        csp_id_set_build(&diff, &builder);
+
+        printf("# Elements only in expected:\n");
+        csp_id_set_builder_merge(&builder, actual);
+        for (i = 0; i < expected->count; i++) {
+            csp_id  curr = expected->ids[i];
+            if (!csp_id_set_builder_remove(&builder, curr)) {
+                printf("#   " CSP_ID_FMT "\n", curr);
+            }
+        }
+        csp_id_set_build(&diff, &builder);
+
+        csp_id_set_builder_done(&builder);
+        csp_id_set_done(&diff);
+        abort_test();
     }
 }
-
-#define check_set_elements(set, ...) \
-    do { \
-        csp_id  __expected[] = { __VA_ARGS__ }; \
-        size_t  __count = sizeof(__expected) / sizeof(__expected[0]); \
-        size_t  __i; \
-        check_set_size(set, __count); \
-        /* Sort the expected elements before comparing */ \
-        qsort(__expected, __count, sizeof(csp_id), compare_ids); \
-        for (__i = 0; __i < __count; __i++) { \
-            check_with_msg((set).ids[__i] == __expected[__i], \
-                    "Expected set[%zu] to be %lu, got %lu", \
-                    __i, __expected[__i], (set).ids[__i]); \
-        } \
-    } while (0)
+#define check_set_eq  ADD_FILE_AND_LINE(check_set_eq_)
 
 /**
  * CPPMAGIC_MAP_SEMICOLONS - iterate another macro across arguments

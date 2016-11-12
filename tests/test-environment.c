@@ -11,17 +11,6 @@
 #include "test-cases.h"
 #include "test-case-harness.h"
 
-#define build_set(set, ...) \
-    do { \
-        csp_id  __to_add[] = { __VA_ARGS__ }; \
-        size_t  __count = sizeof(__to_add) / sizeof(__to_add[0]); \
-        struct csp_id_set_builder  builder; \
-        csp_id_set_builder_init(&builder); \
-        csp_id_set_builder_add_many(&builder, __count, __to_add); \
-        csp_id_set_build((set), &builder); \
-        csp_id_set_builder_done(&builder); \
-    } while (0)
-
 TEST_CASE_GROUP("environments");
 
 TEST_CASE("predefined events exist") {
@@ -59,15 +48,15 @@ TEST_CASE("predefined STOP process exists") {
     /* Verify the initials set of the STOP process. */
     csp_process_build_initials(csp, csp->stop, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_empty(set);
+    check_set_eq(&set, id_set());
     /* Verify the afters of τ. */
     csp_process_build_afters(csp, csp->stop, csp->tau, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_empty(set);
+    check_set_eq(&set, id_set());
     /* Verify the afters of ✔. */
     csp_process_build_afters(csp, csp->stop, csp->tick, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_empty(set);
+    check_set_eq(&set, id_set());
     /* Clean up. */
     csp_id_set_builder_done(&builder);
     csp_id_set_done(&set);
@@ -85,15 +74,15 @@ TEST_CASE("predefined SKIP process exists") {
     /* Verify the initials set of the SKIP process. */
     csp_process_build_initials(csp, csp->skip, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_elements(set, csp->tick);
+    check_set_eq(&set, id_set(csp->tick));
     /* Verify the afters of τ. */
     csp_process_build_afters(csp, csp->skip, csp->tau, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_empty(set);
+    check_set_eq(&set, id_set());
     /* Verify the afters of ✔. */
     csp_process_build_afters(csp, csp->skip, csp->tick, &builder);
     csp_id_set_build(&set, &builder);
-    check_set_elements(set, csp->stop);
+    check_set_eq(&set, id_set(csp->stop));
     /* Clean up. */
     csp_id_set_builder_done(&builder);
     csp_id_set_done(&set);
@@ -129,31 +118,23 @@ TEST_CASE("distinct IDs should produce different IDs") {
 
 TEST_CASE("set-derived process IDs should be reproducible") {
     static struct csp_id_scope  scope;
-    struct csp_id_set  set1;
-    struct csp_id_set  set2;
+    struct csp_id_set  *set1;
+    struct csp_id_set  *set2;
     csp_id  base = csp_id_start(&scope);
-    csp_id_set_init(&set1);
-    csp_id_set_init(&set2);
-    build_set(&set1, 1, 2, 3, 4);
-    build_set(&set2, 1, 2, 3, 4);
-    check_id_eq(csp_id_add_id_set(base, &set1), csp_id_add_id_set(base, &set1));
-    check_id_eq(csp_id_add_id_set(base, &set1), csp_id_add_id_set(base, &set2));
-    csp_id_set_done(&set1);
-    csp_id_set_done(&set2);
+    set1 = id_set(1, 2, 3, 4);
+    set2 = id_set(1, 2, 3, 4);
+    check_id_eq(csp_id_add_id_set(base, set1), csp_id_add_id_set(base, set1));
+    check_id_eq(csp_id_add_id_set(base, set1), csp_id_add_id_set(base, set2));
 }
 
 TEST_CASE("distinct sets should produce different IDs") {
     static struct csp_id_scope  scope;
-    struct csp_id_set  set1;
-    struct csp_id_set  set2;
+    struct csp_id_set  *set1;
+    struct csp_id_set  *set2;
     csp_id  base = csp_id_start(&scope);
-    csp_id_set_init(&set1);
-    csp_id_set_init(&set2);
-    build_set(&set1, 1, 2, 3, 4);
-    build_set(&set2, 5, 6, 7, 8);
-    check_id_ne(csp_id_add_id_set(base, &set1), csp_id_add_id_set(base, &set2));
-    csp_id_set_done(&set1);
-    csp_id_set_done(&set2);
+    set1 = id_set(1, 2, 3, 4);
+    set2 = id_set(5, 6, 7, 8);
+    check_id_ne(csp_id_add_id_set(base, set1), csp_id_add_id_set(base, set2));
 }
 
 TEST_CASE("name-derived process IDs should be reproducible") {
