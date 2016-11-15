@@ -22,15 +22,15 @@ extern "C" {
 
 /* Each process and event is identified by a number. */
 typedef uint64_t csp_id;
-#define CSP_ID_FMT  "0x%016" PRIx64
+#define CSP_ID_FMT "0x%016" PRIx64
 
-#define CSP_PROCESS_NONE  ((csp_id) 0)
+#define CSP_PROCESS_NONE ((csp_id) 0)
 
 struct csp {
-    csp_id  tau;
-    csp_id  tick;
-    csp_id  skip;
-    csp_id  stop;
+    csp_id tau;
+    csp_id tick;
+    csp_id skip;
+    csp_id stop;
 };
 
 struct csp *
@@ -63,22 +63,22 @@ csp_get_event_name(struct csp *csp, csp_id event);
  * to minimize malloc overhead for small sets.  We automatically calculate a
  * number that makes the size of the csp_id_set itself a nice multiple of
  * sizeof(void *).  On 64-bit platforms this should currently evaluate to 12. */
-#define CSP_ID_SET_INTERNAL_SIZE \
-    (((sizeof(void *) * 16) \
-      - sizeof(csp_id)    /* hash */ \
-      - sizeof(csp_id *)  /* ids */ \
-      - sizeof(size_t)    /* count */ \
-      - sizeof(size_t)    /* allocated_count */ \
-     ) / sizeof(void *))
+#define CSP_ID_SET_INTERNAL_SIZE                                   \
+    (((sizeof(void *) * 16) - sizeof(csp_id) /* hash */            \
+      - sizeof(csp_id *)                     /* ids */             \
+      - sizeof(size_t)                       /* count */           \
+      - sizeof(size_t)                       /* allocated_count */ \
+      ) /                                                          \
+     sizeof(void *))
 
 /* A set of IDs, stored as a sorted array.  This type is read-only; to construct
  * a set, use a csp_id_set_builder. */
 struct csp_id_set {
-    csp_id  hash;
-    csp_id  *ids;
-    size_t  count;
-    size_t  allocated_count;
-    csp_id  internal[CSP_ID_SET_INTERNAL_SIZE];
+    csp_id hash;
+    csp_id *ids;
+    size_t count;
+    size_t allocated_count;
+    csp_id internal[CSP_ID_SET_INTERNAL_SIZE];
 };
 
 void
@@ -132,8 +132,8 @@ csp_id_set_fill_double(struct csp_id_set *set, csp_id e1, csp_id e2);
 
 /* A writeable view of a set of IDs. */
 struct csp_id_set_builder {
-    csp_id  hash;
-    void  *working_set;
+    csp_id hash;
+    void *working_set;
 };
 
 /* Initialize and clear a set builder. */
@@ -188,24 +188,19 @@ csp_id_set_build_and_keep(struct csp_id_set *set,
  */
 
 struct csp_process_iface {
-    void
-    (*initials)(struct csp *csp, struct csp_id_set_builder *builder, void *ud);
+    void (*initials)(struct csp *csp, struct csp_id_set_builder *builder,
+                     void *ud);
 
-    void
-    (*afters)(struct csp *csp, csp_id initial,
-              struct csp_id_set_builder *builder, void *ud);
+    void (*afters)(struct csp *csp, csp_id initial,
+                   struct csp_id_set_builder *builder, void *ud);
 
-    csp_id
-    (*get_id)(struct csp *csp, const void *temp_ud);
+    csp_id (*get_id)(struct csp *csp, const void *temp_ud);
 
-    size_t
-    (*ud_size)(struct csp *csp, const void *temp_ud);
+    size_t (*ud_size)(struct csp *csp, const void *temp_ud);
 
-    void
-    (*init_ud)(struct csp *csp, void *ud, const void *temp_ud);
+    void (*init_ud)(struct csp *csp, void *ud, const void *temp_ud);
 
-    void
-    (*done_ud)(struct csp *csp, void *ud);
+    void (*done_ud)(struct csp *csp, void *ud);
 };
 
 /* Creates a new process.
@@ -281,7 +276,9 @@ csp_process_build_afters(struct csp *csp, csp_id process, csp_id initial,
  *     }
  */
 
-struct csp_id_scope { unsigned int unused; };
+struct csp_id_scope {
+    unsigned int unused;
+};
 
 csp_id
 csp_id_start(struct csp_id_scope *scope);
@@ -335,9 +332,9 @@ csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
  * in the definition of the process.  Presto, recursion! */
 
 struct csp_recursion_scope {
-    csp_id  scope;
-    size_t  unfilled_count;
-    void  *names;
+    csp_id scope;
+    size_t unfilled_count;
+    void *names;
 };
 
 /* Initialize a new recursion scope.  You are responsible for passing in a
@@ -392,7 +389,7 @@ csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest);
  * Normalized LTS
  */
 
-#define CSP_NODE_NONE  ((csp_id) 0)
+#define CSP_NODE_NONE ((csp_id) 0)
 
 struct csp_normalized_lts;
 

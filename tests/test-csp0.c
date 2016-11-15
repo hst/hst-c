@@ -8,37 +8,38 @@
 #include <string.h>
 
 #include "hst.h"
-#include "test-cases.h"
 #include "test-case-harness.h"
+#include "test-cases.h"
 
 /* Don't check the semantics of any of the operators here; this file just checks
  * that the CSP₀ parser produces the same processes that you'd get constructing
  * things by hand.  Look in test-operators.c for test cases that verify that
  * each operator behaves as we expect it to. */
 
-#define check_csp0_eq(str, expected) \
-    do { \
-        csp_id  __actual; \
+#define check_csp0_eq(str, expected)                         \
+    do {                                                     \
+        csp_id __actual;                                     \
         check0(csp_load_csp0_string(csp, (str), &__actual)); \
-        check_id_eq(__actual, (expected)); \
+        check_id_eq(__actual, (expected));                   \
     } while (0)
 
-#define check_csp0_valid(str) \
-    do { \
-        csp_id  __actual; \
+#define check_csp0_valid(str)                                \
+    do {                                                     \
+        csp_id __actual;                                     \
         check0(csp_load_csp0_string(csp, (str), &__actual)); \
     } while (0)
 
-#define check_csp0_invalid(str) \
-    do { \
-        csp_id  __actual; \
+#define check_csp0_invalid(str)                               \
+    do {                                                      \
+        csp_id __actual;                                      \
         checkx0(csp_load_csp0_string(csp, (str), &__actual)); \
     } while (0)
 
 TEST_CASE_GROUP("CSP₀ syntax");
 
-TEST_CASE("can parse identifiers") {
-    struct csp  *csp;
+TEST_CASE("can parse identifiers")
+{
+    struct csp *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Parse a bunch of valid identifiers. */
@@ -68,8 +69,9 @@ TEST_CASE("can parse identifiers") {
     csp_free(csp);
 }
 
-TEST_CASE("can parse debug recursion identifiers") {
-    struct csp  *csp;
+TEST_CASE("can parse debug recursion identifiers")
+{
+    struct csp *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Parse a bunch of valid identifiers. */
@@ -86,8 +88,9 @@ TEST_CASE("can parse debug recursion identifiers") {
 
 TEST_CASE_GROUP("CSP₀ primitives");
 
-TEST_CASE("parse: STOP") {
-    struct csp  *csp;
+TEST_CASE("parse: STOP")
+{
+    struct csp *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Verify that we can parse the process, with and without whitespace. */
@@ -99,8 +102,9 @@ TEST_CASE("parse: STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: SKIP") {
-    struct csp  *csp;
+TEST_CASE("parse: SKIP")
+{
+    struct csp *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Verify that we can parse the process, with and without whitespace. */
@@ -114,15 +118,16 @@ TEST_CASE("parse: SKIP") {
 
 TEST_CASE_GROUP("CSP₀ operators");
 
-TEST_CASE("parse: a → STOP □ SKIP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  p0;
-    csp_id  root;
+TEST_CASE("parse: a → STOP □ SKIP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id p0;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
-    p0 = csp_prefix(csp, a,  csp->stop);
+    p0 = csp_prefix(csp, a, csp->stop);
     root = csp_external_choice(csp, p0, csp->skip);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a->STOP[]SKIP", root);
@@ -147,16 +152,17 @@ TEST_CASE("parse: a → STOP □ SKIP") {
     csp_free(csp);
 }
 
-TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  b;
-    csp_id  c;
-    csp_id  p1;
-    csp_id  p2;
-    csp_id  p3;
-    csp_id  p4;
-    csp_id  root;
+TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id b;
+    csp_id c;
+    csp_id p1;
+    csp_id p2;
+    csp_id p3;
+    csp_id p4;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -174,11 +180,12 @@ TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: a → STOP ⊓ SKIP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  p1;
-    csp_id  root;
+TEST_CASE("parse: a → STOP ⊓ SKIP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id p1;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -207,16 +214,17 @@ TEST_CASE("parse: a → STOP ⊓ SKIP") {
     csp_free(csp);
 }
 
-TEST_CASE("associativity: a → STOP ⊓ b → STOP ⊓ c → STOP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  b;
-    csp_id  c;
-    csp_id  p1;
-    csp_id  p2;
-    csp_id  p3;
-    csp_id  p4;
-    csp_id  root;
+TEST_CASE("associativity: a → STOP ⊓ b → STOP ⊓ c → STOP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id b;
+    csp_id c;
+    csp_id p1;
+    csp_id p2;
+    csp_id p3;
+    csp_id p4;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -234,8 +242,9 @@ TEST_CASE("associativity: a → STOP ⊓ b → STOP ⊓ c → STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: (STOP)") {
-    struct csp  *csp;
+TEST_CASE("parse: (STOP)")
+{
+    struct csp *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Verify that we can parse the process, with and without whitespace. */
@@ -250,10 +259,11 @@ TEST_CASE("parse: (STOP)") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: a → STOP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  root;
+TEST_CASE("parse: a → STOP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -280,12 +290,13 @@ TEST_CASE("parse: a → STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("associativity: a → b → STOP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  b;
-    csp_id  p;
-    csp_id  root;
+TEST_CASE("associativity: a → b → STOP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id b;
+    csp_id p;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -299,8 +310,9 @@ TEST_CASE("associativity: a → b → STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: let X = a → STOP within X") {
-    struct csp  *csp;
+TEST_CASE("parse: let X = a → STOP within X")
+{
+    struct csp *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Verify that we can parse the process, with and without whitespace. */
@@ -320,8 +332,9 @@ TEST_CASE("parse: let X = a → STOP within X") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: let X = a → Y Y = b → X within X") {
-    struct csp  *csp;
+TEST_CASE("parse: let X = a → Y Y = b → X within X")
+{
+    struct csp *csp;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Verify that we can parse the process, with and without whitespace. */
@@ -340,11 +353,12 @@ TEST_CASE("parse: let X = a → Y Y = b → X within X") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: □ {a → STOP, SKIP}") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  p1;
-    csp_id  root;
+TEST_CASE("parse: □ {a → STOP, SKIP}")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id p1;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -386,11 +400,12 @@ TEST_CASE("parse: □ {a → STOP, SKIP}") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: ⊓ {a → STOP, SKIP}") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  p1;
-    csp_id  root;
+TEST_CASE("parse: ⊓ {a → STOP, SKIP}")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id p1;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -432,11 +447,12 @@ TEST_CASE("parse: ⊓ {a → STOP, SKIP}") {
     csp_free(csp);
 }
 
-TEST_CASE("parse: a → SKIP ; STOP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  p1;
-    csp_id  root;
+TEST_CASE("parse: a → SKIP ; STOP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id p1;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -462,16 +478,17 @@ TEST_CASE("parse: a → SKIP ; STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  b;
-    csp_id  c;
-    csp_id  p1;
-    csp_id  p2;
-    csp_id  p3;
-    csp_id  p4;
-    csp_id  root;
+TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id b;
+    csp_id c;
+    csp_id p1;
+    csp_id p2;
+    csp_id p3;
+    csp_id p4;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
@@ -488,16 +505,17 @@ TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP") {
     csp_free(csp);
 }
 
-TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  b;
-    csp_id  c;
-    csp_id  p1;
-    csp_id  p2;
-    csp_id  p3;
-    csp_id  p4;
-    csp_id  root;
+TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id b;
+    csp_id c;
+    csp_id p1;
+    csp_id p2;
+    csp_id p3;
+    csp_id p4;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Expected result is
@@ -517,16 +535,17 @@ TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP") {
     csp_free(csp);
 }
 
-TEST_CASE("precedence: a → STOP □ b → SKIP ; c → STOP") {
-    struct csp  *csp;
-    csp_id  a;
-    csp_id  b;
-    csp_id  c;
-    csp_id  p1;
-    csp_id  p2;
-    csp_id  p3;
-    csp_id  p4;
-    csp_id  root;
+TEST_CASE("precedence: a → STOP □ b → SKIP ; c → STOP")
+{
+    struct csp *csp;
+    csp_id a;
+    csp_id b;
+    csp_id c;
+    csp_id p1;
+    csp_id p2;
+    csp_id p3;
+    csp_id p4;
+    csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Expected result is

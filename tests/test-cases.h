@@ -41,15 +41,16 @@
  * Cleaning up test cases
  */
 
-typedef void test_case_cleanup_f(void *);
+typedef void
+test_case_cleanup_f(void *);
 
 struct test_case_cleanup {
-    test_case_cleanup_f  *func;
-    void  *ud;
-    struct test_case_cleanup  *next;
+    test_case_cleanup_f *func;
+    void *ud;
+    struct test_case_cleanup *next;
 };
 
-static struct test_case_cleanup  *cleanup_routines;
+static struct test_case_cleanup *cleanup_routines;
 
 static void
 test_case_cleanup_start(void)
@@ -61,8 +62,8 @@ UNNEEDED
 static void
 test_case_cleanup_register(test_case_cleanup_f *func, void *ud)
 {
-    struct test_case_cleanup  *routine =
-        malloc(sizeof(struct test_case_cleanup));
+    struct test_case_cleanup *routine =
+            malloc(sizeof(struct test_case_cleanup));
     assert(routine != NULL);
     routine->func = func;
     routine->ud = ud;
@@ -73,8 +74,8 @@ test_case_cleanup_register(test_case_cleanup_f *func, void *ud)
 static void
 test_case_cleanup_finish(void)
 {
-    struct test_case_cleanup  *curr;
-    struct test_case_cleanup  *next;
+    struct test_case_cleanup *curr;
+    struct test_case_cleanup *next;
     for (curr = cleanup_routines; curr != NULL; curr = next) {
         next = curr->next;
         curr->func(curr->ud);
@@ -87,7 +88,7 @@ test_case_cleanup_finish(void)
  * Test cases
  */
 
-#define MAX_TEST_CASE_COUNT  100
+#define MAX_TEST_CASE_COUNT 100
 
 /* Each descriptor defines either a test case or a test comment.  For a test
  * comment, we just display the description as a comment, and do nothing else.
@@ -98,14 +99,14 @@ test_case_cleanup_finish(void)
  * print the test case's description as a comment. */
 
 struct test_case_descriptor {
-    struct test_case_descriptor  *next;
+    struct test_case_descriptor *next;
     void (*function)(void);
-    const char  *description;
-    unsigned int  line;
+    const char *description;
+    unsigned int line;
 };
 
-static struct test_case_descriptor  *test_cases[MAX_TEST_CASE_COUNT];
-static unsigned int  test_case_descriptor_count = 0;
+static struct test_case_descriptor *test_cases[MAX_TEST_CASE_COUNT];
+static unsigned int test_case_descriptor_count = 0;
 
 static void
 register_test_case(struct test_case_descriptor *test)
@@ -115,56 +116,44 @@ register_test_case(struct test_case_descriptor *test)
 }
 
 
-#define TEST_CASE(description)           TEST_CASE_AT(description, __LINE__)
-#define TEST_CASE_AT(description, line)  TEST_CASE_AT_(description, line)
-#define TEST_CASE_AT_(description, line) \
-static void \
-test_case__##line(void); \
-\
-static struct test_case_descriptor test_case_##line = { \
-    NULL, \
-    test_case__##line, \
-    description, \
-    line \
-}; \
-\
-CONSTRUCTOR \
-static void \
-register_test_case_##line(void) \
-{ \
-    register_test_case(&test_case_##line); \
-} \
-\
-static void \
-test_case__##line(void)
+#define TEST_CASE(description) TEST_CASE_AT(description, __LINE__)
+#define TEST_CASE_AT(description, line) TEST_CASE_AT_(description, line)
+#define TEST_CASE_AT_(description, line)                    \
+    static void test_case__##line(void);                    \
+                                                            \
+    static struct test_case_descriptor test_case_##line = { \
+            NULL, test_case__##line, description, line};    \
+                                                            \
+    CONSTRUCTOR                                             \
+    static void register_test_case_##line(void)             \
+    {                                                       \
+        register_test_case(&test_case_##line);              \
+    }                                                       \
+                                                            \
+    static void test_case__##line(void)
 
 
-#define TEST_CASE_GROUP(desc)           TEST_CASE_GROUP_AT(desc, __LINE__)
-#define TEST_CASE_GROUP_AT(desc, line)  TEST_CASE_GROUP_AT_(desc, line)
-#define TEST_CASE_GROUP_AT_(description, line) \
-static struct test_case_descriptor test_case_group_##line = { \
-    NULL, \
-    NULL, \
-    description, \
-    line \
-}; \
-\
-CONSTRUCTOR \
-static void \
-register_test_case_group_##line(void) \
-{ \
-    register_test_case(&test_case_group_##line); \
-}
+#define TEST_CASE_GROUP(desc) TEST_CASE_GROUP_AT(desc, __LINE__)
+#define TEST_CASE_GROUP_AT(desc, line) TEST_CASE_GROUP_AT_(desc, line)
+#define TEST_CASE_GROUP_AT_(description, line)                    \
+    static struct test_case_descriptor test_case_group_##line = { \
+            NULL, NULL, description, line};                       \
+                                                                  \
+    CONSTRUCTOR                                                   \
+    static void register_test_case_group_##line(void)             \
+    {                                                             \
+        register_test_case(&test_case_group_##line);              \
+    }
 
 
-static struct test_case_descriptor  *current_test_case;
-static unsigned int  test_case_number;
-static bool  test_case_failed;
-static bool  any_test_case_failed;
+static struct test_case_descriptor *current_test_case;
+static unsigned int test_case_number;
+static bool test_case_failed;
+static bool any_test_case_failed;
 
 UNNEEDED
 static void
-vfail_at(const char* filename, unsigned int line, const char* fmt, va_list args)
+vfail_at(const char *filename, unsigned int line, const char *fmt, va_list args)
 {
     if (!test_case_failed) {
         printf("not ok %u - %s\n", test_case_number,
@@ -179,15 +168,15 @@ vfail_at(const char* filename, unsigned int line, const char* fmt, va_list args)
 
 UNNEEDED
 static void
-fail_at(const char* filename, unsigned int line, const char* fmt, ...)
+fail_at(const char *filename, unsigned int line, const char *fmt, ...)
 {
-    va_list  args;
+    va_list args;
     va_start(args, fmt);
     vfail_at(filename, line, fmt, args);
     va_end(args);
 }
 
-static jmp_buf  test_case_return;
+static jmp_buf test_case_return;
 
 static void
 run_test(struct test_case_descriptor *test)
@@ -219,8 +208,8 @@ abort_test(void)
 static int
 compare_test_cases(const void *vtest1, const void *vtest2)
 {
-    const struct test_case_descriptor * const  *test1 = vtest1;
-    const struct test_case_descriptor * const  *test2 = vtest2;
+    const struct test_case_descriptor *const *test1 = vtest1;
+    const struct test_case_descriptor *const *test2 = vtest2;
     if ((*test1)->line < (*test2)->line) {
         return -1;
     } else if ((*test1)->line == (*test2)->line) {
@@ -233,8 +222,8 @@ compare_test_cases(const void *vtest1, const void *vtest2)
 static unsigned int
 count_test_cases(void)
 {
-    unsigned int  i;
-    unsigned int  count = 0;
+    unsigned int i;
+    unsigned int count = 0;
     for (i = 0; i < test_case_descriptor_count; i++) {
         if (test_cases[i]->function != NULL) {
             count++;
@@ -246,7 +235,7 @@ count_test_cases(void)
 static void
 run_tests(void)
 {
-    unsigned int  i;
+    unsigned int i;
     qsort(test_cases, test_case_descriptor_count,
           sizeof(struct test_case_descriptor *), compare_test_cases);
     printf("1..%u\n", count_test_cases());
@@ -260,7 +249,7 @@ run_tests(void)
 static int
 exit_status(void)
 {
-    return any_test_case_failed? 1: 0;
+    return any_test_case_failed ? 1 : 0;
 }
 
 /*-----------------------------------------------------------------------------
@@ -276,7 +265,7 @@ exit_status(void)
  *
  *     x(__FILE__, __LINE__, 1, 2)
  */
-#define ADD_FILE_AND_LINE(m)  m ADD_FILE_AND_LINE_
+#define ADD_FILE_AND_LINE(m) m ADD_FILE_AND_LINE_
 #define ADD_FILE_AND_LINE_(...) (__FILE__, __LINE__, __VA_ARGS__)
 
 /* Expands to the length of __VA_ARGS__ */
@@ -287,15 +276,15 @@ exit_status(void)
  * Check macros
  */
 
-#define fail  ADD_FILE_AND_LINE(fail_at)
+#define fail ADD_FILE_AND_LINE(fail_at)
 
-#define check_alloc_with_msg(var, call, ...) \
-    do { \
-        var = call; \
-        if (unlikely(var == NULL)) { \
+#define check_alloc_with_msg(var, call, ...)          \
+    do {                                              \
+        var = call;                                   \
+        if (unlikely(var == NULL)) {                  \
             fail_at(__FILE__, __LINE__, __VA_ARGS__); \
-            abort_test(); \
-        } \
+            abort_test();                             \
+        }                                             \
     } while (0)
 
 #define check_alloc(var, call) \
@@ -307,15 +296,15 @@ check_with_msg_(const char *filename, unsigned int line, bool result,
                 const char *fmt, ...)
 {
     if (unlikely(!result)) {
-        va_list  args;
+        va_list args;
         va_start(args, fmt);
         vfail_at(filename, line, fmt, args);
         va_end(args);
         abort_test();
     }
 }
-#define check_with_msg  ADD_FILE_AND_LINE(check_with_msg_)
-#define check(call)  check_with_msg(call, "Error occurred")
+#define check_with_msg ADD_FILE_AND_LINE(check_with_msg_)
+#define check(call) check_with_msg(call, "Error occurred")
 
 UNNEEDED
 static void
@@ -323,15 +312,15 @@ check0_with_msg_(const char *filename, unsigned int line, int result,
                  const char *fmt, ...)
 {
     if (unlikely(result != 0)) {
-        va_list  args;
+        va_list args;
         va_start(args, fmt);
         vfail_at(filename, line, fmt, args);
         va_end(args);
         abort_test();
     }
 }
-#define check0_with_msg  ADD_FILE_AND_LINE(check0_with_msg_)
-#define check0(call)  check0_with_msg(call, "Error occurred")
+#define check0_with_msg ADD_FILE_AND_LINE(check0_with_msg_)
+#define check0(call) check0_with_msg(call, "Error occurred")
 
 UNNEEDED
 static void
@@ -339,15 +328,15 @@ checkx0_with_msg_(const char *filename, unsigned int line, int result,
                   const char *fmt, ...)
 {
     if (unlikely(result == 0)) {
-        va_list  args;
+        va_list args;
         va_start(args, fmt);
         vfail_at(filename, line, fmt, args);
         va_end(args);
         abort_test();
     }
 }
-#define checkx0_with_msg  ADD_FILE_AND_LINE(checkx0_with_msg_)
-#define checkx0(call)  checkx0_with_msg(call, "Error should have occurred")
+#define checkx0_with_msg ADD_FILE_AND_LINE(checkx0_with_msg_)
+#define checkx0(call) checkx0_with_msg(call, "Error should have occurred")
 
 UNNEEDED
 static void
@@ -355,34 +344,35 @@ check_nonnull_with_msg_(const char *filename, unsigned int line, void *result,
                         const char *fmt, ...)
 {
     if (unlikely(result == NULL)) {
-        va_list  args;
+        va_list args;
         va_start(args, fmt);
         vfail_at(filename, line, fmt, args);
         va_end(args);
         abort_test();
     }
 }
-#define check_nonnull_with_msg  ADD_FILE_AND_LINE(check_nonnull_with_msg_)
-#define check_nonnull(call)  check_nonnull_with_msg(call, "Error occurred")
+#define check_nonnull_with_msg ADD_FILE_AND_LINE(check_nonnull_with_msg_)
+#define check_nonnull(call) check_nonnull_with_msg(call, "Error occurred")
 
 UNNEEDED
 static void
 check_id_eq_(const char *filename, unsigned int line, csp_id id1, csp_id id2)
 {
     check_with_msg_(filename, line, (id1 == id2),
-            "Expected IDs to be equal, got " CSP_ID_FMT " and " CSP_ID_FMT,
-            id1, id2);
+                    "Expected IDs to be equal, got " CSP_ID_FMT
+                    " and " CSP_ID_FMT,
+                    id1, id2);
 }
-#define check_id_eq  ADD_FILE_AND_LINE(check_id_eq_)
+#define check_id_eq ADD_FILE_AND_LINE(check_id_eq_)
 
 UNNEEDED
 static void
 check_id_ne_(const char *filename, unsigned int line, csp_id id1, csp_id id2)
 {
     check_with_msg_(filename, line, (id1 != id2),
-            "Expected IDs to be unequal, got " CSP_ID_FMT, id1);
+                    "Expected IDs to be unequal, got " CSP_ID_FMT, id1);
 }
-#define check_id_ne  ADD_FILE_AND_LINE(check_id_ne_)
+#define check_id_ne ADD_FILE_AND_LINE(check_id_ne_)
 
 UNNEEDED
 static void
@@ -390,9 +380,9 @@ check_streq_(const char *filename, unsigned int line, const char *actual,
              const char *expected)
 {
     check_with_msg_(filename, line, strcmp(actual, expected) == 0,
-            "Expected \"%s\", got \"%s\"", expected, actual);
+                    "Expected \"%s\", got \"%s\"", expected, actual);
 }
-#define check_streq  ADD_FILE_AND_LINE(check_streq_)
+#define check_streq ADD_FILE_AND_LINE(check_streq_)
 
 UNNEEDED
 static void
@@ -401,9 +391,9 @@ check_set_eq_(const char *filename, unsigned int line,
               const struct csp_id_set *expected)
 {
     if (unlikely(!csp_id_set_eq(actual, expected))) {
-        size_t  i;
-        struct csp_id_set_builder  builder;
-        struct csp_id_set  diff;
+        size_t i;
+        struct csp_id_set_builder builder;
+        struct csp_id_set diff;
         fail_at(filename, line, "Expected sets to be equal");
         printf("# hash of actual   = " CSP_ID_FMT "\n", actual->hash);
         printf("# hash of expected = " CSP_ID_FMT "\n", expected->hash);
@@ -413,7 +403,7 @@ check_set_eq_(const char *filename, unsigned int line,
         printf("# Elements only in actual:\n");
         csp_id_set_builder_merge(&builder, expected);
         for (i = 0; i < actual->count; i++) {
-            csp_id  curr = actual->ids[i];
+            csp_id curr = actual->ids[i];
             if (!csp_id_set_builder_remove(&builder, curr)) {
                 printf("#   " CSP_ID_FMT "\n", curr);
             }
@@ -423,7 +413,7 @@ check_set_eq_(const char *filename, unsigned int line,
         printf("# Elements only in expected:\n");
         csp_id_set_builder_merge(&builder, actual);
         for (i = 0; i < expected->count; i++) {
-            csp_id  curr = expected->ids[i];
+            csp_id curr = expected->ids[i];
             if (!csp_id_set_builder_remove(&builder, curr)) {
                 printf("#   " CSP_ID_FMT "\n", curr);
             }
@@ -435,7 +425,7 @@ check_set_eq_(const char *filename, unsigned int line,
         abort_test();
     }
 }
-#define check_set_eq  ADD_FILE_AND_LINE(check_set_eq_)
+#define check_set_eq ADD_FILE_AND_LINE(check_set_eq_)
 
 /*-----------------------------------------------------------------------------
  * Data constructors
@@ -445,7 +435,7 @@ UNNEEDED
 static void
 csp_id_set_free_(void *vset)
 {
-    struct csp_id_set  *set = vset;
+    struct csp_id_set *set = vset;
     csp_id_set_done(set);
     free(set);
 }
@@ -456,7 +446,7 @@ UNNEEDED
 static struct csp_id_set *
 empty_set(void)
 {
-    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
@@ -465,26 +455,25 @@ empty_set(void)
 
 /* Creates a new set containing the given IDs.  The set will be automatically
  * freed for you at the end of the test case. */
-#define id_set(...) \
+#define id_set(...)                                 \
     CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
-        (id_set_(LENGTH(__VA_ARGS__), __VA_ARGS__)) \
-        (empty_set())
+    (id_set_(LENGTH(__VA_ARGS__), __VA_ARGS__))(empty_set())
 
 UNNEEDED
 static struct csp_id_set *
 id_set_(size_t count, ...)
 {
-    size_t  i;
-    va_list  args;
-    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder  builder;
+    size_t i;
+    va_list args;
+    struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder builder;
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
     csp_id_set_builder_init(&builder);
     va_start(args, count);
     for (i = 0; i < count; i++) {
-        csp_id  id = va_arg(args, csp_id);
+        csp_id id = va_arg(args, csp_id);
         csp_id_set_builder_add(&builder, id);
     }
     va_end(args);
@@ -499,9 +488,9 @@ UNNEEDED
 static struct csp_id_set *
 id_range_set(size_t start, size_t end)
 {
-    size_t  i;
-    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder  builder;
+    size_t i;
+    struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder builder;
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
@@ -517,30 +506,29 @@ id_range_set(size_t start, size_t end)
 /* Creates a new array of strings.  The set (but not the strings in the array)
  * will be automatically freed for you at the end of the test case. */
 struct string_array {
-    size_t  count;
-    const char  **strings;
+    size_t count;
+    const char **strings;
 };
 
-#define strings(...) \
+#define strings(...)                                \
     CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
-        (strings_(LENGTH(__VA_ARGS__), __VA_ARGS__)) \
-        (strings_(0, NULL))
+    (strings_(LENGTH(__VA_ARGS__), __VA_ARGS__))(strings_(0, NULL))
 
 UNNEEDED
 static struct string_array *
 strings_(size_t count, ...)
 {
-    size_t  i;
-    size_t  size = (count * sizeof(const char *)) + sizeof(struct string_array);
-    va_list  args;
-    struct string_array  *array = malloc(size);
+    size_t i;
+    size_t size = (count * sizeof(const char *)) + sizeof(struct string_array);
+    va_list args;
+    struct string_array *array = malloc(size);
     assert(array != NULL);
     test_case_cleanup_register(free, array);
     array->count = count;
     array->strings = (void *) (array + 1);
     va_start(args, count);
     for (i = 0; i < count; i++) {
-        const char  *string = va_arg(args, const char *);
+        const char *string = va_arg(args, const char *);
         array->strings[i] = string;
     }
     va_end(args);
@@ -553,7 +541,7 @@ strings_(size_t count, ...)
  * environment object available. */
 struct csp_id_factory {
     csp_id (*create)(struct csp *csp, void *ud);
-    void  *ud;
+    void *ud;
 };
 
 UNNEEDED
@@ -569,7 +557,7 @@ csp_id_factory_create(struct csp *csp, struct csp_id_factory factory)
  * have a CSP environment object available. */
 struct csp_id_set_factory {
     struct csp_id_set *(*create)(struct csp *csp, void *ud);
-    void  *ud;
+    void *ud;
 };
 
 UNNEEDED
@@ -587,7 +575,7 @@ event(const char *event_name);
 static csp_id
 event_factory(struct csp *csp, void *vevent_name)
 {
-    const char  *event_name = vevent_name;
+    const char *event_name = vevent_name;
     return csp_get_event_id(csp, event_name);
 }
 
@@ -595,28 +583,28 @@ UNNEEDED
 static struct csp_id_factory
 event(const char *event_name)
 {
-    struct csp_id_factory  factory = { event_factory, (void *) event_name };
+    struct csp_id_factory factory = {event_factory, (void *) event_name};
     return factory;
 }
 
 /* Creates a new set factory that creates a set containing the given events.
  * The set will be automatically freed for you at the end of the test case. */
-#define events(...)  events_(strings(__VA_ARGS__))
+#define events(...) events_(strings(__VA_ARGS__))
 
 static struct csp_id_set *
 events_factory(struct csp *csp, void *vnames)
 {
-    struct string_array  *names = vnames;
-    size_t  i;
-    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder  builder;
+    struct string_array *names = vnames;
+    size_t i;
+    struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder builder;
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
     csp_id_set_builder_init(&builder);
     for (i = 0; i < names->count; i++) {
-        const char  *event_name = names->strings[i];
-        csp_id  event = csp_get_event_id(csp, event_name);
+        const char *event_name = names->strings[i];
+        csp_id event = csp_get_event_id(csp, event_name);
         csp_id_set_builder_add(&builder, event);
     }
     csp_id_set_build(set, &builder);
@@ -628,7 +616,7 @@ UNNEEDED
 static struct csp_id_set_factory
 events_(struct string_array *names)
 {
-    struct csp_id_set_factory  factory = { events_factory, names };
+    struct csp_id_set_factory factory = {events_factory, names};
     return factory;
 }
 
@@ -640,8 +628,8 @@ csp0(const char *csp0);
 static csp_id
 csp0_factory(struct csp *csp, void *vcsp0)
 {
-    const char  *csp0 = vcsp0;
-    csp_id  process;
+    const char *csp0 = vcsp0;
+    csp_id process;
     check0(csp_load_csp0_string(csp, csp0, &process));
     return process;
 }
@@ -650,29 +638,29 @@ UNNEEDED
 static struct csp_id_factory
 csp0(const char *csp0)
 {
-    struct csp_id_factory  factory = { csp0_factory, (void *) csp0 };
+    struct csp_id_factory factory = {csp0_factory, (void *) csp0};
     return factory;
 }
 
 /* Creates a new set factory that creates a set containing the given CSP₀
  * processes.  The set will be automatically freed for you at the end of the
  * test case. */
-#define csp0s(...)  csp0s_(strings(__VA_ARGS__))
+#define csp0s(...) csp0s_(strings(__VA_ARGS__))
 
 static struct csp_id_set *
 csp0s_factory(struct csp *csp, void *vprocesses)
 {
-    struct string_array  *processes = vprocesses;
-    size_t  i;
-    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder  builder;
+    struct string_array *processes = vprocesses;
+    size_t i;
+    struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder builder;
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
     csp_id_set_builder_init(&builder);
     for (i = 0; i < processes->count; i++) {
-        const char  *csp0 = processes->strings[i];
-        csp_id  process;
+        const char *csp0 = processes->strings[i];
+        csp_id process;
         check0(csp_load_csp0_string(csp, csp0, &process));
         csp_id_set_builder_add(&builder, process);
     }
@@ -685,7 +673,7 @@ UNNEEDED
 static struct csp_id_set_factory
 csp0s_(struct string_array *processes)
 {
-    struct csp_id_set_factory  factory = { csp0s_factory, processes };
+    struct csp_id_set_factory factory = {csp0s_factory, processes};
     return factory;
 }
 

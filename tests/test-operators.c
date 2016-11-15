@@ -8,8 +8,8 @@
 #include <string.h>
 
 #include "hst.h"
-#include "test-cases.h"
 #include "test-case-harness.h"
+#include "test-cases.h"
 
 /* The test cases in this file verify that we've implemented each of the CSP
  * operators correctly: specifically, that they have the right "initials" and
@@ -25,10 +25,10 @@ static void
 check_process_initials(struct csp_id_factory process,
                        struct csp_id_set_factory expected_initials)
 {
-    struct csp  *csp;
-    csp_id  process_id;
-    struct csp_id_set_builder  builder;
-    struct csp_id_set  actual;
+    struct csp *csp;
+    csp_id process_id;
+    struct csp_id_set_builder builder;
+    struct csp_id_set actual;
     check_alloc(csp, csp_new());
     csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
@@ -47,11 +47,11 @@ check_process_afters(struct csp_id_factory process,
                      struct csp_id_factory initial,
                      struct csp_id_set_factory expected_afters)
 {
-    struct csp  *csp;
-    csp_id  process_id;
-    csp_id  initial_id;
-    struct csp_id_set_builder  builder;
-    struct csp_id_set  actual;
+    struct csp *csp;
+    csp_id process_id;
+    csp_id initial_id;
+    struct csp_id_set_builder builder;
+    struct csp_id_set actual;
     check_alloc(csp, csp_new());
     csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
@@ -72,11 +72,11 @@ check_process_sub_initials(struct csp_id_factory process,
                            struct csp_id_factory subprocess,
                            struct csp_id_set_factory expected_initials)
 {
-    struct csp  *csp;
-    UNNEEDED csp_id  process_id;
-    csp_id  subprocess_id;
-    struct csp_id_set_builder  builder;
-    struct csp_id_set  actual;
+    struct csp *csp;
+    UNNEEDED csp_id process_id;
+    csp_id subprocess_id;
+    struct csp_id_set_builder builder;
+    struct csp_id_set actual;
     check_alloc(csp, csp_new());
     csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
@@ -98,12 +98,12 @@ check_process_sub_afters(struct csp_id_factory process,
                          struct csp_id_factory initial,
                          struct csp_id_set_factory expected_afters)
 {
-    struct csp  *csp;
-    UNNEEDED csp_id  process_id;
-    csp_id  subprocess_id;
-    csp_id  initial_id;
-    struct csp_id_set_builder  builder;
-    struct csp_id_set  actual;
+    struct csp *csp;
+    UNNEEDED csp_id process_id;
+    csp_id subprocess_id;
+    csp_id initial_id;
+    struct csp_id_set_builder builder;
+    struct csp_id_set actual;
     check_alloc(csp, csp_new());
     csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
@@ -120,76 +120,86 @@ check_process_sub_afters(struct csp_id_factory process,
 
 TEST_CASE_GROUP("external choice");
 
-TEST_CASE("STOP □ STOP") {
+TEST_CASE("STOP □ STOP")
+{
     check_process_initials(csp0("STOP □ STOP"), events());
     check_process_afters(csp0("STOP □ STOP"), event("a"), csp0s());
 }
 
-TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)") {
-    check_process_initials(
-            csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), events("a", "τ"));
-    check_process_afters(
-            csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("a"), csp0s("STOP"));
-    check_process_afters(
-            csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("b"), csp0s());
-    check_process_afters(
-            csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("τ"),
-            csp0s("a → STOP □ b → STOP", "a → STOP □ c → STOP"));
+TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)")
+{
+    check_process_initials(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
+                           events("a", "τ"));
+    check_process_afters(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("a"),
+                         csp0s("STOP"));
+    check_process_afters(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("b"),
+                         csp0s());
+    check_process_afters(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("τ"),
+                         csp0s("a → STOP □ b → STOP", "a → STOP □ c → STOP"));
 }
 
-TEST_CASE("(a → STOP) □ (b → STOP)") {
+TEST_CASE("(a → STOP) □ (b → STOP)")
+{
     check_process_initials(csp0("(a → STOP) □ (b → STOP)"), events("a", "b"));
-    check_process_afters(csp0("(a → STOP) □ (b → STOP)"), event("a"), csp0s("STOP"));
-    check_process_afters(csp0("(a → STOP) □ (b → STOP)"), event("b"), csp0s("STOP"));
+    check_process_afters(csp0("(a → STOP) □ (b → STOP)"), event("a"),
+                         csp0s("STOP"));
+    check_process_afters(csp0("(a → STOP) □ (b → STOP)"), event("b"),
+                         csp0s("STOP"));
     check_process_afters(csp0("(a → STOP) □ (b → STOP)"), event("τ"), csp0s());
 }
 
-TEST_CASE("□ {a → STOP, b → STOP, c → STOP}") {
-    check_process_initials(
-            csp0("□ {a → STOP, b → STOP, c → STOP}"), events("a", "b", "c"));
-    check_process_afters(
-            csp0("□ {a → STOP, b → STOP, c → STOP}"), event("a"), csp0s("STOP"));
-    check_process_afters(
-            csp0("□ {a → STOP, b → STOP, c → STOP}"), event("b"), csp0s("STOP"));
-    check_process_afters(
-            csp0("□ {a → STOP, b → STOP, c → STOP}"), event("c"), csp0s("STOP"));
-    check_process_afters(
-            csp0("□ {a → STOP, b → STOP, c → STOP}"), event("τ"), csp0s());
+TEST_CASE("□ {a → STOP, b → STOP, c → STOP}")
+{
+    check_process_initials(csp0("□ {a → STOP, b → STOP, c → STOP}"),
+                           events("a", "b", "c"));
+    check_process_afters(csp0("□ {a → STOP, b → STOP, c → STOP}"), event("a"),
+                         csp0s("STOP"));
+    check_process_afters(csp0("□ {a → STOP, b → STOP, c → STOP}"), event("b"),
+                         csp0s("STOP"));
+    check_process_afters(csp0("□ {a → STOP, b → STOP, c → STOP}"), event("c"),
+                         csp0s("STOP"));
+    check_process_afters(csp0("□ {a → STOP, b → STOP, c → STOP}"), event("τ"),
+                         csp0s());
 }
 
 TEST_CASE_GROUP("internal choice");
 
-TEST_CASE("STOP ⊓ STOP") {
+TEST_CASE("STOP ⊓ STOP")
+{
     check_process_initials(csp0("STOP ⊓ STOP"), events("τ"));
     check_process_afters(csp0("STOP ⊓ STOP"), event("τ"), csp0s("STOP"));
     check_process_afters(csp0("STOP ⊓ STOP"), event("a"), csp0s());
 }
 
-TEST_CASE("(a → STOP) ⊓ (b → STOP)") {
+TEST_CASE("(a → STOP) ⊓ (b → STOP)")
+{
     check_process_initials(csp0("(a → STOP) ⊓ (b → STOP)"), events("τ"));
-    check_process_afters(
-            csp0("(a → STOP) ⊓ (b → STOP)"), event("τ"), csp0s("a → STOP", "b → STOP"));
+    check_process_afters(csp0("(a → STOP) ⊓ (b → STOP)"), event("τ"),
+                         csp0s("a → STOP", "b → STOP"));
     check_process_afters(csp0("(a → STOP) ⊓ (b → STOP)"), event("a"), csp0s());
 }
 
-TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}") {
-    check_process_initials(csp0("⊓ {a → STOP, b → STOP, c → STOP}"), events("τ"));
-    check_process_afters(
-            csp0("⊓ {a → STOP, b → STOP, c → STOP}"), event("τ"),
-            csp0s("a → STOP", "b → STOP", "c → STOP"));
-    check_process_afters(
-            csp0("⊓ {a → STOP, b → STOP, c → STOP}"), event("a"), csp0s());
+TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}")
+{
+    check_process_initials(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
+                           events("τ"));
+    check_process_afters(csp0("⊓ {a → STOP, b → STOP, c → STOP}"), event("τ"),
+                         csp0s("a → STOP", "b → STOP", "c → STOP"));
+    check_process_afters(csp0("⊓ {a → STOP, b → STOP, c → STOP}"), event("a"),
+                         csp0s());
 }
 
 TEST_CASE_GROUP("prefix");
 
-TEST_CASE("a → STOP") {
+TEST_CASE("a → STOP")
+{
     check_process_initials(csp0("a → STOP"), events("a"));
     check_process_afters(csp0("a → STOP"), event("a"), csp0s("STOP"));
     check_process_afters(csp0("a → STOP"), event("b"), csp0s());
 }
 
-TEST_CASE("a → b → STOP") {
+TEST_CASE("a → b → STOP")
+{
     check_process_initials(csp0("a → b → STOP"), events("a"));
     check_process_afters(csp0("a → b → STOP"), event("a"), csp0s("b → STOP"));
     check_process_afters(csp0("a → b → STOP"), event("b"), csp0s());
@@ -197,24 +207,28 @@ TEST_CASE("a → b → STOP") {
 
 TEST_CASE_GROUP("recursion");
 
-TEST_CASE("let X=a → STOP within X") {
+TEST_CASE("let X=a → STOP within X")
+{
     check_process_initials(csp0("let X=a → STOP within X"), events("a"));
-    check_process_afters(csp0("let X=a → STOP within X"), event("a"), csp0s("STOP"));
+    check_process_afters(csp0("let X=a → STOP within X"), event("a"),
+                         csp0s("STOP"));
 }
 
-TEST_CASE("let X=a → Y Y=b → X within X") {
+TEST_CASE("let X=a → Y Y=b → X within X")
+{
     check_process_initials(csp0("let X=a → Y Y=b → X within X"), events("a"));
-    check_process_afters(
-            csp0("let X=a → Y Y=b → X within X"), event("a"), csp0s("Y@0"));
-    check_process_sub_initials(
-            csp0("let X=a → Y Y=b → X within X"), csp0("Y@0"), events("b"));
-    check_process_sub_afters(
-            csp0("let X=a → Y Y=b → X within X"), csp0("Y@0"), event("b"), csp0s("X@0"));
+    check_process_afters(csp0("let X=a → Y Y=b → X within X"), event("a"),
+                         csp0s("Y@0"));
+    check_process_sub_initials(csp0("let X=a → Y Y=b → X within X"),
+                               csp0("Y@0"), events("b"));
+    check_process_sub_afters(csp0("let X=a → Y Y=b → X within X"), csp0("Y@0"),
+                             event("b"), csp0s("X@0"));
 }
 
 TEST_CASE_GROUP("sequential composition");
 
-TEST_CASE("SKIP ; STOP") {
+TEST_CASE("SKIP ; STOP")
+{
     check_process_initials(csp0("SKIP ; STOP"), events("τ"));
     check_process_afters(csp0("SKIP ; STOP"), event("a"), csp0s());
     check_process_afters(csp0("SKIP ; STOP"), event("b"), csp0s());
@@ -222,31 +236,39 @@ TEST_CASE("SKIP ; STOP") {
     check_process_afters(csp0("SKIP ; STOP"), event("✔"), csp0s());
 }
 
-TEST_CASE("a → SKIP ; STOP") {
+TEST_CASE("a → SKIP ; STOP")
+{
     check_process_initials(csp0("a → SKIP ; STOP"), events("a"));
-    check_process_afters(csp0("a → SKIP ; STOP"), event("a"), csp0s("SKIP ; STOP"));
+    check_process_afters(csp0("a → SKIP ; STOP"), event("a"),
+                         csp0s("SKIP ; STOP"));
     check_process_afters(csp0("a → SKIP ; STOP"), event("b"), csp0s());
     check_process_afters(csp0("a → SKIP ; STOP"), event("τ"), csp0s());
     check_process_afters(csp0("a → SKIP ; STOP"), event("✔"), csp0s());
 }
 
-TEST_CASE("(a → b → STOP □ SKIP) ; STOP") {
-    check_process_initials(csp0("(a → b → STOP □ SKIP) ; STOP"), events("a", "τ"));
-    check_process_afters(
-            csp0("(a → b → STOP □ SKIP) ; STOP"), event("a"),
-            csp0s("b → STOP ; STOP"));
-    check_process_afters(
-            csp0("(a → b → STOP □ SKIP) ; STOP"), event("b"), csp0s());
-    check_process_afters(
-            csp0("(a → b → STOP □ SKIP) ; STOP"), event("τ"), csp0s("STOP"));
-    check_process_afters(csp0("(a → b → STOP □ SKIP) ; STOP"), event("✔"), csp0s());
+TEST_CASE("(a → b → STOP □ SKIP) ; STOP")
+{
+    check_process_initials(csp0("(a → b → STOP □ SKIP) ; STOP"),
+                           events("a", "τ"));
+    check_process_afters(csp0("(a → b → STOP □ SKIP) ; STOP"), event("a"),
+                         csp0s("b → STOP ; STOP"));
+    check_process_afters(csp0("(a → b → STOP □ SKIP) ; STOP"), event("b"),
+                         csp0s());
+    check_process_afters(csp0("(a → b → STOP □ SKIP) ; STOP"), event("τ"),
+                         csp0s("STOP"));
+    check_process_afters(csp0("(a → b → STOP □ SKIP) ; STOP"), event("✔"),
+                         csp0s());
 }
 
-TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP") {
+TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
+{
     check_process_initials(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), events("τ"));
-    check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("a"), csp0s());
-    check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("b"), csp0s());
+    check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("a"),
+                         csp0s());
+    check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("b"),
+                         csp0s());
     check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("τ"),
-                      csp0s("a → b → STOP ; STOP", "SKIP ; STOP"));
-    check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("✔"), csp0s());
+                         csp0s("a → b → STOP ; STOP", "SKIP ; STOP"));
+    check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("✔"),
+                         csp0s());
 }
