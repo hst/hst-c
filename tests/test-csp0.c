@@ -117,13 +117,13 @@ TEST_CASE_GROUP("CSP₀ operators");
 TEST_CASE("parse: a → STOP □ SKIP") {
     struct csp  *csp;
     csp_id  a;
-    csp_id  p1;
+    csp_id  p0;
     csp_id  root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     a = csp_get_event_id(csp, "a");
-    p1 = csp_prefix(csp, a,  csp->stop);
-    root = csp_external_choice(csp, p1, csp->skip);
+    p0 = csp_prefix(csp, a,  csp->stop);
+    root = csp_external_choice(csp, p0, csp->skip);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a->STOP[]SKIP", root);
     check_csp0_eq(" a->STOP[]SKIP", root);

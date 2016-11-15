@@ -284,83 +284,6 @@ exit_status(void)
 #define LENGTH1_(x) 1
 
 /*-----------------------------------------------------------------------------
- * Data constructors
- */
-
-UNNEEDED
-static void
-csp_id_set_free_(void *vset)
-{
-    struct csp_id_set  *set = vset;
-    csp_id_set_done(set);
-    free(set);
-}
-
-/* Creates a new empty set.  The set will be automatically freed for you at the
- * end of the test case. */
-UNNEEDED
-static struct csp_id_set *
-empty_set(void)
-{
-    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
-    assert(set != NULL);
-    csp_id_set_init(set);
-    test_case_cleanup_register(csp_id_set_free_, set);
-    return set;
-}
-
-/* Creates a new set containing the given IDs.  The set will be automatically
- * freed for you at the end of the test case. */
-#define id_set(...) \
-    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
-        (id_set_(LENGTH(__VA_ARGS__), __VA_ARGS__)) \
-        (empty_set())
-
-UNNEEDED
-static struct csp_id_set *
-id_set_(size_t count, ...)
-{
-    size_t  i;
-    va_list  args;
-    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder  builder;
-    assert(set != NULL);
-    csp_id_set_init(set);
-    test_case_cleanup_register(csp_id_set_free_, set);
-    csp_id_set_builder_init(&builder);
-    va_start(args, count);
-    for (i = 0; i < count; i++) {
-        csp_id  id = va_arg(args, csp_id);
-        csp_id_set_builder_add(&builder, id);
-    }
-    va_end(args);
-    csp_id_set_build(set, &builder);
-    csp_id_set_builder_done(&builder);
-    return set;
-}
-
-/* Creates a new set containing the given range of IDs.  The set will be
- * automatically freed for you at the end of the test case. */
-UNNEEDED
-static struct csp_id_set *
-id_range_set(size_t start, size_t end)
-{
-    size_t  i;
-    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder  builder;
-    assert(set != NULL);
-    csp_id_set_init(set);
-    test_case_cleanup_register(csp_id_set_free_, set);
-    csp_id_set_builder_init(&builder);
-    for (i = start; i < end; i++) {
-        csp_id_set_builder_add(&builder, i);
-    }
-    csp_id_set_build(set, &builder);
-    csp_id_set_builder_done(&builder);
-    return set;
-}
-
-/*-----------------------------------------------------------------------------
  * Check macros
  */
 
@@ -514,62 +437,256 @@ check_set_eq_(const char *filename, unsigned int line,
 }
 #define check_set_eq  ADD_FILE_AND_LINE(check_set_eq_)
 
-/**
- * CPPMAGIC_MAP_SEMICOLONS - iterate another macro across arguments
- * @m: name of a one argument macro
- *
- * CPPMAGIC_MAP_SEMICOLONS(@m, @a1, @a2, ... @an)
- *     expands to the expansion of @m(@a1) ; @m(@a2) ; ... ; @m(@an)
+/*-----------------------------------------------------------------------------
+ * Data constructors
  */
-#define _CPPMAGIC_MAP_SEMICOLONS_()  _CPPMAGIC_MAP_SEMICOLONS
-#define _CPPMAGIC_MAP_SEMICOLONS(m_, a_, ...) \
-    m_(a_) \
+
+UNNEEDED
+static void
+csp_id_set_free_(void *vset)
+{
+    struct csp_id_set  *set = vset;
+    csp_id_set_done(set);
+    free(set);
+}
+
+/* Creates a new empty set.  The set will be automatically freed for you at the
+ * end of the test case. */
+UNNEEDED
+static struct csp_id_set *
+empty_set(void)
+{
+    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    assert(set != NULL);
+    csp_id_set_init(set);
+    test_case_cleanup_register(csp_id_set_free_, set);
+    return set;
+}
+
+/* Creates a new set containing the given IDs.  The set will be automatically
+ * freed for you at the end of the test case. */
+#define id_set(...) \
     CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
-        (; CPPMAGIC_DEFER2(_CPPMAGIC_MAP_SEMICOLONS_)()(m_, __VA_ARGS__)) \
-        ()
-#define CPPMAGIC_MAP_SEMICOLONS(m_, ...) \
+        (id_set_(LENGTH(__VA_ARGS__), __VA_ARGS__)) \
+        (empty_set())
+
+UNNEEDED
+static struct csp_id_set *
+id_set_(size_t count, ...)
+{
+    size_t  i;
+    va_list  args;
+    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder  builder;
+    assert(set != NULL);
+    csp_id_set_init(set);
+    test_case_cleanup_register(csp_id_set_free_, set);
+    csp_id_set_builder_init(&builder);
+    va_start(args, count);
+    for (i = 0; i < count; i++) {
+        csp_id  id = va_arg(args, csp_id);
+        csp_id_set_builder_add(&builder, id);
+    }
+    va_end(args);
+    csp_id_set_build(set, &builder);
+    csp_id_set_builder_done(&builder);
+    return set;
+}
+
+/* Creates a new set containing the given range of IDs.  The set will be
+ * automatically freed for you at the end of the test case. */
+UNNEEDED
+static struct csp_id_set *
+id_range_set(size_t start, size_t end)
+{
+    size_t  i;
+    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder  builder;
+    assert(set != NULL);
+    csp_id_set_init(set);
+    test_case_cleanup_register(csp_id_set_free_, set);
+    csp_id_set_builder_init(&builder);
+    for (i = start; i < end; i++) {
+        csp_id_set_builder_add(&builder, i);
+    }
+    csp_id_set_build(set, &builder);
+    csp_id_set_builder_done(&builder);
+    return set;
+}
+
+/* Creates a new array of strings.  The set (but not the strings in the array)
+ * will be automatically freed for you at the end of the test case. */
+struct string_array {
+    size_t  count;
+    const char  **strings;
+};
+
+#define strings(...) \
     CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
-        (CPPMAGIC_EVAL(_CPPMAGIC_MAP_SEMICOLONS(m_, __VA_ARGS__))) \
-        ()
+        (strings_(LENGTH(__VA_ARGS__), __VA_ARGS__)) \
+        (strings_(0, NULL))
 
-/* Takes a parenthesized list and removes the parentheses. */
-#define CPPMAGIC_UNPACK(args) CPPMAGIC_UNPACK_ args
-#define CPPMAGIC_UNPACK_(...) __VA_ARGS__
+UNNEEDED
+static struct string_array *
+strings_(size_t count, ...)
+{
+    size_t  i;
+    size_t  size = (count * sizeof(const char *)) + sizeof(struct string_array);
+    va_list  args;
+    struct string_array  *array = malloc(size);
+    assert(array != NULL);
+    test_case_cleanup_register(free, array);
+    array->count = count;
+    array->strings = (void *) (array + 1);
+    va_start(args, count);
+    for (i = 0; i < count; i++) {
+        const char  *string = va_arg(args, const char *);
+        array->strings[i] = string;
+    }
+    va_end(args);
+    return array;
+}
 
-/* Add IDs to a set.  `elements` should be a (possibly empty) parenthesized list
- * of "elements".  `id_adder` should be a macro that takes in one of those
- * elements, translates it into an ID, and adds that ID to an ID set builder
- * named `__builder`. */
-#define fill_id_set(id_adder, set, elements) \
-    do { \
-        struct csp_id_set_builder  __builder; \
-        csp_id_set_builder_init(&__builder); \
-        CPPMAGIC_MAP_SEMICOLONS(id_adder, CPPMAGIC_UNPACK(elements)); \
-        csp_id_set_build((set), &__builder); \
-        csp_id_set_builder_done(&__builder); \
-    } while (0)
+/* ID factories are functions that can create an ID.  We need this thunk layer
+ * to easily define event names and CSP₀ processes in our test cases, because we
+ * want to be able to create the descriptions of the sets before we have a CSP
+ * environment object available. */
+struct csp_id_factory {
+    csp_id (*create)(struct csp *csp, void *ud);
+    void  *ud;
+};
 
-/* Adds events to a set.  `events` should be a (possibly empty) parenthesized
- * list of event names.  We automatically translate those event names into event
- * IDs. */
-#define fill_event_id_set(set, events) \
-    fill_id_set(add_event_id, set, events)
-#define add_event_id(event_name) \
-    do { \
-        csp_id  __event = csp_get_event_id(csp, (event_name)); \
-        csp_id_set_builder_add(&__builder, __event); \
-    } while (0)
+UNNEEDED
+static csp_id
+csp_id_factory_create(struct csp *csp, struct csp_id_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
 
-/* Adds processes to a cset.  `processes` should be a (possibly empty)
- * parenthesized list of CSP₀ process descriptions.  We automatically parse
- * those into process IDs and add those processes to `set`. */
-#define fill_csp0_set(set, processes) \
-    fill_id_set(add_csp0_process, set, processes)
-#define add_csp0_process(str) \
-    do { \
-        csp_id  __process; \
-        check0(csp_load_csp0_string(csp, (str), &__process)); \
-        csp_id_set_builder_add(&__builder, __process); \
-    } while (0)
+/* Set factories are functions that can create a set.  We need this thunk layer
+ * to easily define sets of event names and CSP₀ processes in our test cases,
+ * because we want to be able to create the descriptions of the sets before we
+ * have a CSP environment object available. */
+struct csp_id_set_factory {
+    struct csp_id_set *(*create)(struct csp *csp, void *ud);
+    void  *ud;
+};
+
+UNNEEDED
+static struct csp_id_set *
+csp_id_set_factory_create(struct csp *csp, struct csp_id_set_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
+/* Creates a new ID factory that returns the ID of an event. */
+UNNEEDED
+static struct csp_id_factory
+event(const char *event_name);
+
+static csp_id
+event_factory(struct csp *csp, void *vevent_name)
+{
+    const char  *event_name = vevent_name;
+    return csp_get_event_id(csp, event_name);
+}
+
+UNNEEDED
+static struct csp_id_factory
+event(const char *event_name)
+{
+    struct csp_id_factory  factory = { event_factory, (void *) event_name };
+    return factory;
+}
+
+/* Creates a new set factory that creates a set containing the given events.
+ * The set will be automatically freed for you at the end of the test case. */
+#define events(...)  events_(strings(__VA_ARGS__))
+
+static struct csp_id_set *
+events_factory(struct csp *csp, void *vnames)
+{
+    struct string_array  *names = vnames;
+    size_t  i;
+    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder  builder;
+    assert(set != NULL);
+    csp_id_set_init(set);
+    test_case_cleanup_register(csp_id_set_free_, set);
+    csp_id_set_builder_init(&builder);
+    for (i = 0; i < names->count; i++) {
+        const char  *event_name = names->strings[i];
+        csp_id  event = csp_get_event_id(csp, event_name);
+        csp_id_set_builder_add(&builder, event);
+    }
+    csp_id_set_build(set, &builder);
+    csp_id_set_builder_done(&builder);
+    return set;
+}
+
+UNNEEDED
+static struct csp_id_set_factory
+events_(struct string_array *names)
+{
+    struct csp_id_set_factory  factory = { events_factory, names };
+    return factory;
+}
+
+/* Creates a new ID factory that returns the ID of a CSP₀ process. */
+UNNEEDED
+static struct csp_id_factory
+csp0(const char *csp0);
+
+static csp_id
+csp0_factory(struct csp *csp, void *vcsp0)
+{
+    const char  *csp0 = vcsp0;
+    csp_id  process;
+    check0(csp_load_csp0_string(csp, csp0, &process));
+    return process;
+}
+
+UNNEEDED
+static struct csp_id_factory
+csp0(const char *csp0)
+{
+    struct csp_id_factory  factory = { csp0_factory, (void *) csp0 };
+    return factory;
+}
+
+/* Creates a new set factory that creates a set containing the given CSP₀
+ * processes.  The set will be automatically freed for you at the end of the
+ * test case. */
+#define csp0s(...)  csp0s_(strings(__VA_ARGS__))
+
+static struct csp_id_set *
+csp0s_factory(struct csp *csp, void *vprocesses)
+{
+    struct string_array  *processes = vprocesses;
+    size_t  i;
+    struct csp_id_set  *set = malloc(sizeof(struct csp_id_set));
+    struct csp_id_set_builder  builder;
+    assert(set != NULL);
+    csp_id_set_init(set);
+    test_case_cleanup_register(csp_id_set_free_, set);
+    csp_id_set_builder_init(&builder);
+    for (i = 0; i < processes->count; i++) {
+        const char  *csp0 = processes->strings[i];
+        csp_id  process;
+        check0(csp_load_csp0_string(csp, csp0, &process));
+        csp_id_set_builder_add(&builder, process);
+    }
+    csp_id_set_build(set, &builder);
+    csp_id_set_builder_done(&builder);
+    return set;
+}
+
+UNNEEDED
+static struct csp_id_set_factory
+csp0s_(struct string_array *processes)
+{
+    struct csp_id_set_factory  factory = { csp0s_factory, processes };
+    return factory;
+}
 
 #endif /* TEST_CASES_H */
