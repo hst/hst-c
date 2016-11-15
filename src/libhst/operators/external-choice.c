@@ -12,7 +12,7 @@
 #include "hst.h"
 
 struct csp_external_choice {
-    struct csp_id_set  ps;
+    struct csp_id_set ps;
 };
 
 /* Operational semantics for □ Ps
@@ -38,8 +38,8 @@ csp_external_choice_initials(struct csp *csp,
      *
      *                = ⋃ { initials(P) | P ∈ Ps }
      */
-    struct csp_external_choice  *choice = vchoice;
-    size_t  i;
+    struct csp_external_choice *choice = vchoice;
+    size_t i;
     for (i = 0; i < choice->ps.count; i++) {
         csp_process_build_initials(csp, choice->ps.ids[i], builder);
     }
@@ -53,16 +53,16 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
      *                                                                  [rule 1]
      * afters(□ Ps, a ≠ τ) = ⋃ { P' | P ∈ Ps, P' ∈ afters(P, a) }       [rule 2]
      */
-    struct csp_external_choice  *choice = vchoice;
+    struct csp_external_choice *choice = vchoice;
     if (initial == csp->tau) {
-        size_t  i;
+        size_t i;
         /* We'll need to grab afters(P, τ) for each P ∈ Ps. */
-        struct csp_id_set  p_afters;
-        struct csp_id_set_builder  p_afters_builder;
+        struct csp_id_set p_afters;
+        struct csp_id_set_builder p_afters_builder;
         /* We're going to build up a lot of new Ps' sets that all have the same
          * basic structure: Ps' = Ps ∖ {P} ∪ {P'} */
-        struct csp_id_set  ps_prime;
-        struct csp_id_set_builder  ps_prime_builder;
+        struct csp_id_set ps_prime;
+        struct csp_id_set_builder ps_prime_builder;
         csp_id_set_init(&p_afters);
         csp_id_set_builder_init(&p_afters_builder);
         csp_id_set_init(&ps_prime);
@@ -72,8 +72,8 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
         csp_id_set_builder_merge(&ps_prime_builder, &choice->ps);
         /* For all P ∈ Ps */
         for (i = 0; i < choice->ps.count; i++) {
-            size_t  j;
-            csp_id  p = choice->ps.ids[i];
+            size_t j;
+            csp_id p = choice->ps.ids[i];
             /* Set Ps' to Ps ∖ {P} */
             csp_id_set_builder_remove(&ps_prime_builder, p);
             /* Grab afters(P, τ) */
@@ -81,7 +81,7 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
             csp_id_set_build(&p_afters, &p_afters_builder);
             /* For all P' ∈ afters(P, τ) */
             for (j = 0; j < p_afters.count; j++) {
-                csp_id  p_prime = p_afters.ids[j];
+                csp_id p_prime = p_afters.ids[j];
                 /* ps_prime_builder currently contains Ps.  Add P' and
                  * remove P to produce (Ps ∖ {P} ∪ {P'}) */
                 csp_id_set_builder_add(&ps_prime_builder, p_prime);
@@ -90,8 +90,8 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
                  * build_and_keep variant so that we don't throw away all our
                  * work. */
                 csp_id_set_build_and_keep(&ps_prime, &ps_prime_builder);
-                csp_id_set_builder_add(builder,
-                        csp_replicated_external_choice(csp, &ps_prime));
+                csp_id_set_builder_add(builder, csp_replicated_external_choice(
+                                                        csp, &ps_prime));
                 /* Reset Ps' back to Ps ∖ {P}. */
                 csp_id_set_builder_remove(&ps_prime_builder, p_prime);
             }
@@ -103,9 +103,9 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
         csp_id_set_done(&ps_prime);
         csp_id_set_builder_done(&ps_prime_builder);
     } else {
-        size_t  i;
+        size_t i;
         for (i = 0; i < choice->ps.count; i++) {
-            csp_id  p = choice->ps.ids[i];
+            csp_id p = choice->ps.ids[i];
             csp_process_build_afters(csp, p, initial, builder);
         }
     }
@@ -114,9 +114,9 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
 static csp_id
 csp_external_choice_get_id(struct csp *csp, const void *vps)
 {
-    const struct csp_id_set  *ps = vps;
-    static struct csp_id_scope  external_choice;
-    csp_id  id = csp_id_start(&external_choice);
+    const struct csp_id_set *ps = vps;
+    static struct csp_id_scope external_choice;
+    csp_id id = csp_id_start(&external_choice);
     id = csp_id_add_id_set(id, ps);
     return id;
 }
@@ -130,8 +130,8 @@ csp_external_choice_ud_size(struct csp *csp, const void *vps)
 static void
 csp_external_choice_init(struct csp *csp, void *vchoice, const void *vps)
 {
-    struct csp_external_choice  *choice = vchoice;
-    const struct csp_id_set  *ps = vps;
+    struct csp_external_choice *choice = vchoice;
+    const struct csp_id_set *ps = vps;
     csp_id_set_init(&choice->ps);
     csp_id_set_clone(&choice->ps, ps);
 }
@@ -139,24 +139,20 @@ csp_external_choice_init(struct csp *csp, void *vchoice, const void *vps)
 static void
 csp_external_choice_done(struct csp *csp, void *vchoice)
 {
-    struct csp_external_choice  *choice = vchoice;
+    struct csp_external_choice *choice = vchoice;
     csp_id_set_done(&choice->ps);
 }
 
-static const struct csp_process_iface  csp_external_choice_iface = {
-    &csp_external_choice_initials,
-    &csp_external_choice_afters,
-    &csp_external_choice_get_id,
-    &csp_external_choice_ud_size,
-    &csp_external_choice_init,
-    &csp_external_choice_done
-};
+static const struct csp_process_iface csp_external_choice_iface = {
+        &csp_external_choice_initials, &csp_external_choice_afters,
+        &csp_external_choice_get_id,   &csp_external_choice_ud_size,
+        &csp_external_choice_init,     &csp_external_choice_done};
 
 csp_id
 csp_external_choice(struct csp *csp, csp_id a, csp_id b)
 {
-    csp_id  id;
-    struct csp_id_set  ps;
+    csp_id id;
+    struct csp_id_set ps;
     csp_id_set_init(&ps);
     csp_id_set_fill_double(&ps, a, b);
     id = csp_process_init(csp, &ps, NULL, &csp_external_choice_iface);

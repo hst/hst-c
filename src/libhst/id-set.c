@@ -23,7 +23,7 @@
  * event IDs.  You then simply XOR together the hashes of each element (possibly
  * along with some initial base value) to get the hash of the set. */
 
-#define CSP_ID_SET_INITIAL_HASH  UINT64_C(0x1866bb10b2b2fad7) /* random */
+#define CSP_ID_SET_INITIAL_HASH UINT64_C(0x1866bb10b2b2fad7) /* random */
 
 void
 csp_id_set_init(struct csp_id_set *set)
@@ -64,14 +64,14 @@ csp_id_set_builder_init(struct csp_id_set_builder *builder)
 void
 csp_id_set_builder_done(struct csp_id_set_builder *builder)
 {
-    UNNEEDED Word_t  dummy;
+    UNNEEDED Word_t dummy;
     J1FA(dummy, builder->working_set);
 }
 
 static bool
 csp_id_set_builder_add_one(struct csp_id_set_builder *builder, csp_id id)
 {
-    int  rc;
+    int rc;
     J1S(rc, builder->working_set, id);
     if (rc) {
         /* Only update the set's hash if we actually added a new element. */
@@ -83,7 +83,7 @@ csp_id_set_builder_add_one(struct csp_id_set_builder *builder, csp_id id)
 static bool
 csp_id_set_builder_remove_one(struct csp_id_set_builder *builder, csp_id id)
 {
-    int  rc;
+    int rc;
     J1U(rc, builder->working_set, id);
     if (rc) {
         /* Only update the set's hash if we actually removed an element. */
@@ -102,7 +102,7 @@ void
 csp_id_set_builder_add_many(struct csp_id_set_builder *builder, size_t count,
                             csp_id *ids)
 {
-    size_t  i;
+    size_t i;
     for (i = 0; i < count; i++) {
         csp_id_set_builder_add_one(builder, ids[i]);
     }
@@ -118,7 +118,7 @@ void
 csp_id_set_builder_remove_many(struct csp_id_set_builder *builder, size_t count,
                                csp_id *ids)
 {
-    size_t  i;
+    size_t i;
     for (i = 0; i < count; i++) {
         csp_id_set_builder_remove_one(builder, ids[i]);
     }
@@ -128,13 +128,13 @@ void
 csp_id_set_builder_merge(struct csp_id_set_builder *builder,
                          const struct csp_id_set *set)
 {
-    size_t  i;
+    size_t i;
     for (i = 0; i < set->count; i++) {
         csp_id_set_builder_add_one(builder, set->ids[i]);
     }
 }
 
-#define CSP_ID_SET_FIRST_ALLOCATION_COUNT  32
+#define CSP_ID_SET_FIRST_ALLOCATION_COUNT 32
 
 /* Ensure that `set` is large enough to hold `set->count` elements. */
 static void
@@ -142,7 +142,7 @@ csp_id_set_ensure_size(struct csp_id_set *set)
 {
     if (unlikely(set->count > set->allocated_count)) {
         if (set->ids == set->internal) {
-            size_t  new_count = CSP_ID_SET_FIRST_ALLOCATION_COUNT;
+            size_t new_count = CSP_ID_SET_FIRST_ALLOCATION_COUNT;
             while (set->count > new_count) {
                 new_count *= 2;
             }
@@ -152,8 +152,8 @@ csp_id_set_ensure_size(struct csp_id_set *set)
         } else {
             /* Whenever we reallocate, at least double the size of the existing
              * array. */
-            csp_id  *new_ids;
-            size_t  new_count = set->allocated_count;
+            csp_id *new_ids;
+            size_t new_count = set->allocated_count;
             do {
                 new_count *= 2;
             } while (set->count > new_count);
@@ -169,10 +169,10 @@ void
 csp_id_set_build_and_keep(struct csp_id_set *set,
                           struct csp_id_set_builder *builder)
 {
-    int  found;
-    Word_t  count;
-    size_t  i;
-    csp_id  id;
+    int found;
+    Word_t count;
+    size_t i;
+    csp_id id;
 
     /* First make sure that the `ids` array is large enough to hold all of the
      * ids that have been added to the set. */
@@ -195,7 +195,7 @@ csp_id_set_build_and_keep(struct csp_id_set *set,
 void
 csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
 {
-    UNNEEDED Word_t  dummy;
+    UNNEEDED Word_t dummy;
     csp_id_set_build_and_keep(set, builder);
     J1FA(dummy, builder->working_set);
     builder->hash = CSP_ID_SET_INITIAL_HASH;

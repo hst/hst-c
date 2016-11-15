@@ -9,45 +9,45 @@
 
 #if defined(REFINEMENT_DEBUG)
 #include <stdio.h>
-#define XDEBUG(...)  fprintf(stderr, __VA_ARGS__)
-#define XDEBUG_PROCESS_SET(set) \
-    do { \
-        bool  __first = true; \
-        size_t  __i; \
-        XDEBUG("{"); \
+#define XDEBUG(...) fprintf(stderr, __VA_ARGS__)
+#define XDEBUG_PROCESS_SET(set)                    \
+    do {                                           \
+        bool __first = true;                       \
+        size_t __i;                                \
+        XDEBUG("{");                               \
         for (__i = 0; __i < (set)->count; __i++) { \
-            if (__first) { \
-                __first = false; \
-            } else { \
-                XDEBUG(","); \
-            } \
-            XDEBUG(CSP_ID_FMT, (set)->ids[__i]); \
-        } \
-        XDEBUG("}"); \
+            if (__first) {                         \
+                __first = false;                   \
+            } else {                               \
+                XDEBUG(",");                       \
+            }                                      \
+            XDEBUG(CSP_ID_FMT, (set)->ids[__i]);   \
+        }                                          \
+        XDEBUG("}");                               \
     } while (0)
 #else
-#define XDEBUG(...)   /* do nothing */
-#define XDEBUG_PROCESS_SET(set)  /* do nothing */
+#define XDEBUG(...)             /* do nothing */
+#define XDEBUG_PROCESS_SET(set) /* do nothing */
 #endif
 
-#define DEBUG(...) \
-    do { \
+#define DEBUG(...)           \
+    do {                     \
         XDEBUG(__VA_ARGS__); \
-        XDEBUG("\n"); \
+        XDEBUG("\n");        \
     } while (0)
-#define DEBUG_PROCESS_SET(set) \
-    do { \
+#define DEBUG_PROCESS_SET(set)   \
+    do {                         \
         XDEBUG_PROCESS_SET(set); \
-        XDEBUG("\n"); \
+        XDEBUG("\n");            \
     } while (0)
 
 void
 csp_process_find_closure(struct csp *csp, csp_id event,
                          struct csp_id_set *processes)
 {
-    struct csp_id_set_builder  queue;
-    struct csp_id_set_builder  seen;
-    struct csp_id_set_builder  result;
+    struct csp_id_set_builder queue;
+    struct csp_id_set_builder seen;
+    struct csp_id_set_builder result;
     csp_id_set_builder_init(&queue);
     csp_id_set_builder_init(&seen);
     csp_id_set_builder_init(&result);
@@ -55,9 +55,9 @@ csp_process_find_closure(struct csp *csp, csp_id event,
     csp_id_set_builder_merge(&queue, processes);
     csp_id_set_build(processes, &queue);
     while (processes->count > 0) {
-        size_t  i;
+        size_t i;
         for (i = 0; i < processes->count; i++) {
-            csp_id  process = processes->ids[i];
+            csp_id process = processes->ids[i];
             DEBUG("process " CSP_ID_FMT, process);
             /* Don't handle this process more than once. */
             if (csp_id_set_builder_add(&seen, process)) {
@@ -82,12 +82,12 @@ csp_id
 csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
                          csp_id process)
 {
-    csp_id  node;
-    struct csp_id_set  closure;
-    struct csp_id_set  pending;
-    struct csp_id_set  initials;
-    struct csp_id_set_builder  builder;
-    struct csp_id_set_builder  pending_builder;
+    csp_id node;
+    struct csp_id_set closure;
+    struct csp_id_set pending;
+    struct csp_id_set initials;
+    struct csp_id_set_builder builder;
+    struct csp_id_set_builder pending_builder;
     csp_id_set_init(&closure);
     csp_id_set_init(&pending);
     csp_id_set_init(&initials);
@@ -110,12 +110,12 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
 
     /* Keep processing normalized LTS nodes until we run out. */
     while (pending.count > 0) {
-        size_t  i;
+        size_t i;
         for (i = 0; i < pending.count; i++) {
-            size_t  j;
-            csp_id  current = pending.ids[i];
-            const struct csp_id_set  *current_processes =
-                csp_normalized_lts_get_node_processes(lts, current);
+            size_t j;
+            csp_id current = pending.ids[i];
+            const struct csp_id_set *current_processes =
+                    csp_normalized_lts_get_node_processes(lts, current);
             DEBUG("Process normalized node " CSP_ID_FMT, current);
             XDEBUG("representing processes ");
             DEBUG_PROCESS_SET(current_processes);
@@ -123,7 +123,7 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
             /* Find all of the non-τ events that any of the current processes
              * can perform. */
             for (j = 0; j < current_processes->count; j++) {
-                csp_id  process = current_processes->ids[j];
+                csp_id process = current_processes->ids[j];
                 DEBUG("Get initials of " CSP_ID_FMT, process);
                 csp_process_build_initials(csp, process, &builder);
             }
@@ -135,12 +135,12 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
             /* For each of those events, union together the `afters` of that
              * event for all of the processes in the current set. */
             for (j = 0; j < initials.count; j++) {
-                size_t  k;
-                csp_id  initial = initials.ids[j];
-                csp_id  after;
+                size_t k;
+                csp_id initial = initials.ids[j];
+                csp_id after;
                 DEBUG("Get afters for " CSP_ID_FMT, initial);
                 for (k = 0; k < current_processes->count; k++) {
-                    csp_id  process = current_processes->ids[k];
+                    csp_id process = current_processes->ids[k];
                     DEBUG("Get afters of " CSP_ID_FMT " for " CSP_ID_FMT,
                           process, initial);
                     csp_process_build_afters(csp, process, initial, &builder);

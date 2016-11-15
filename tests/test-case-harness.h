@@ -14,7 +14,8 @@
  * Harness
  */
 
-int main(void)
+int
+main(void)
 {
     run_tests();
     return exit_status();
