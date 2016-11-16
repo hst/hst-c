@@ -24,7 +24,8 @@ extern "C" {
 typedef uint64_t csp_id;
 #define CSP_ID_FMT "0x%016" PRIx64
 
-#define CSP_PROCESS_NONE ((csp_id) 0)
+#define CSP_ID_NONE ((csp_id) 0)
+#define CSP_PROCESS_NONE CSP_ID_NONE
 
 struct csp {
     csp_id tau;
@@ -182,6 +183,46 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder);
 void
 csp_id_set_build_and_keep(struct csp_id_set *set,
                           struct csp_id_set_builder *builder);
+
+/*------------------------------------------------------------------------------
+ * Equivalences
+ */
+
+/* Stores information about the "equivalence classes" of a set of processes.
+ * All of the processes that have "equivalent" behavior (according to one of
+ * CSP's semantic models) belong to the same equivalence class. */
+struct csp_equivalences {
+    void *classes;
+    void *members;
+};
+
+void
+csp_equivalences_init(struct csp_equivalences *equiv);
+
+void
+csp_equivalences_done(struct csp_equivalences *equiv);
+
+/* Add a member to an equivalence class.  If the member was already in an
+ * equivalence class, it is removed from that one before adding it to the new
+ * one. */
+void
+csp_equivalences_add(struct csp_equivalences *equiv, csp_id class_id,
+                     csp_id member_id);
+
+/* Add the IDs of all of the equivalence classes to a set builder. */
+void
+csp_equivalences_build_classes(struct csp_equivalences *equiv,
+                               struct csp_id_set_builder *builder);
+
+/* Return the class that a member belongs to, or CSP_ID_NONE if that member
+ * hasn't been added to an equivalence class yet. */
+csp_id
+csp_equivalences_get_class(struct csp_equivalences *equiv, csp_id member_id);
+
+/* Add all of the members of an equivalence class to a set builder. */
+void
+csp_equivalences_build_members(struct csp_equivalences *equiv, csp_id class_id,
+                               struct csp_id_set_builder *builder);
 
 /*------------------------------------------------------------------------------
  * Processes
@@ -386,15 +427,52 @@ int
 csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest);
 
 /*------------------------------------------------------------------------------
+ * Process behavior
+ */
+
+enum csp_semantic_model { CSP_TRACES };
+
+struct csp_behavior {
+    enum csp_semantic_model model;
+    csp_id hash;
+    struct csp_id_set initials;
+};
+
+void
+csp_behavior_init(struct csp_behavior *behavior);
+
+void
+csp_behavior_done(struct csp_behavior *behavior);
+
+bool
+csp_behavior_eq(const struct csp_behavior *b1, const struct csp_behavior *b2);
+
+/* Fill in `behavior` with the behavior of `process` in the given semantic
+ * model.  You must have already initialized `behavior`. */
+void
+csp_process_get_behavior(struct csp *csp, csp_id process,
+                         enum csp_semantic_model model,
+                         struct csp_behavior *behavior);
+
+/* Fill in `behavior` with the behavior of a set of `processes` in the given
+ * semantic model.  `processes` should be τ-closed, and so τ won't be included
+ * in the set's behavior.  You must have already initialized `behavior`. */
+void
+csp_process_set_get_behavior(struct csp *csp,
+                             const struct csp_id_set *processes,
+                             enum csp_semantic_model model,
+                             struct csp_behavior *behavior);
+
+/*------------------------------------------------------------------------------
  * Normalized LTS
  */
 
-#define CSP_NODE_NONE ((csp_id) 0)
+#define CSP_NODE_NONE CSP_ID_NONE
 
 struct csp_normalized_lts;
 
 struct csp_normalized_lts *
-csp_normalized_lts_new(struct csp *csp);
+csp_normalized_lts_new(struct csp *csp, enum csp_semantic_model model);
 
 void
 csp_normalized_lts_free(struct csp_normalized_lts *lts);
@@ -415,6 +493,12 @@ void
 csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
                             csp_id event, csp_id to);
 
+/* Return the behavior for a normalized LTS node.  `id` must a node that you've
+ * already created via csp_normalized_lts_add_node.  We retain ownership of the
+ * returned behavior. */
+const struct csp_behavior *
+csp_normalized_lts_get_node_behavior(struct csp_normalized_lts *lts, csp_id id);
+
 /* Return the set of processes for a normalized LTS node.  `id` must a node that
  * you've already created via csp_normalized_lts_add_node.  We retain ownership
  * of the returned set. */
@@ -427,6 +511,20 @@ csp_normalized_lts_get_node_processes(struct csp_normalized_lts *lts,
 csp_id
 csp_normalized_lts_get_edge(struct csp_normalized_lts *lts, csp_id from,
                             csp_id event);
+
+/* Add the IDs of all of the normalized nodes in `lts` to `builder`. */
+void
+csp_normalized_lts_build_all_nodes(struct csp_normalized_lts *lts,
+                                   struct csp_id_set_builder *builder);
+
+/* Bisimulate all of the nodes in a normalized LTS, to find nodes that have
+ * equivalent behavior.  Each node in the normalized LTS will have an entry in
+ * `equivalence`; the value of each entry will be the "representative node" for
+ * the equivalence class that the node belongs to.  All nodes in the same
+ * equivalence class will have the same representative node. */
+void
+csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
+                              struct csp_equivalences *equiv);
 
 /*------------------------------------------------------------------------------
  * Refinement

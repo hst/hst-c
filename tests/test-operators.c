@@ -65,6 +65,24 @@ check_process_afters(struct csp_id_factory process,
     csp_free(csp);
 }
 
+/* Verify the traces behavior of the given CSP₀ process. */
+static void
+check_process_traces_behavior(struct csp_id_factory process,
+                              struct csp_id_set_factory expected_initials)
+{
+    struct csp *csp;
+    csp_id process_id;
+    const struct csp_id_set *expected_initials_set;
+    struct csp_behavior behavior;
+    check_alloc(csp, csp_new());
+    csp_behavior_init(&behavior);
+    process_id = csp_id_factory_create(csp, process);
+    expected_initials_set = csp_id_set_factory_create(csp, expected_initials);
+    csp_process_get_behavior(csp, process_id, CSP_TRACES, &behavior);
+    check_set_eq(&behavior.initials, expected_initials_set);
+    csp_free(csp);
+}
+
 /* Verify the `initials` of a subprocess.  `subprocess` should be a process that
  * has been defined as part of `process`. */
 static void
@@ -118,12 +136,35 @@ check_process_sub_afters(struct csp_id_factory process,
     csp_free(csp);
 }
 
+/* Verify the traces behavior of the given CSP₀ process.  `subprocess` should be
+ * a process that has been defined as part of `process`. */
+static void
+check_process_sub_traces_behavior(struct csp_id_factory process,
+                                  struct csp_id_factory subprocess,
+                                  struct csp_id_set_factory expected_initials)
+{
+    struct csp *csp;
+    UNNEEDED csp_id process_id;
+    csp_id subprocess_id;
+    const struct csp_id_set *expected_initials_set;
+    struct csp_behavior behavior;
+    check_alloc(csp, csp_new());
+    csp_behavior_init(&behavior);
+    process_id = csp_id_factory_create(csp, process);
+    subprocess_id = csp_id_factory_create(csp, subprocess);
+    expected_initials_set = csp_id_set_factory_create(csp, expected_initials);
+    csp_process_get_behavior(csp, subprocess_id, CSP_TRACES, &behavior);
+    check_set_eq(&behavior.initials, expected_initials_set);
+    csp_free(csp);
+}
+
 TEST_CASE_GROUP("external choice");
 
 TEST_CASE("STOP □ STOP")
 {
     check_process_initials(csp0("STOP □ STOP"), events());
     check_process_afters(csp0("STOP □ STOP"), event("a"), csp0s());
+    check_process_traces_behavior(csp0("STOP □ STOP"), events());
 }
 
 TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)")
@@ -136,6 +177,8 @@ TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)")
                          csp0s());
     check_process_afters(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("τ"),
                          csp0s("a → STOP □ b → STOP", "a → STOP □ c → STOP"));
+    check_process_traces_behavior(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
+                                  events("a", "τ"));
 }
 
 TEST_CASE("(a → STOP) □ (b → STOP)")
@@ -146,6 +189,8 @@ TEST_CASE("(a → STOP) □ (b → STOP)")
     check_process_afters(csp0("(a → STOP) □ (b → STOP)"), event("b"),
                          csp0s("STOP"));
     check_process_afters(csp0("(a → STOP) □ (b → STOP)"), event("τ"), csp0s());
+    check_process_traces_behavior(csp0("(a → STOP) □ (b → STOP)"),
+                                  events("a", "b"));
 }
 
 TEST_CASE("□ {a → STOP, b → STOP, c → STOP}")
@@ -160,6 +205,8 @@ TEST_CASE("□ {a → STOP, b → STOP, c → STOP}")
                          csp0s("STOP"));
     check_process_afters(csp0("□ {a → STOP, b → STOP, c → STOP}"), event("τ"),
                          csp0s());
+    check_process_traces_behavior(csp0("□ {a → STOP, b → STOP, c → STOP}"),
+                                  events("a", "b", "c"));
 }
 
 TEST_CASE_GROUP("internal choice");
@@ -169,6 +216,7 @@ TEST_CASE("STOP ⊓ STOP")
     check_process_initials(csp0("STOP ⊓ STOP"), events("τ"));
     check_process_afters(csp0("STOP ⊓ STOP"), event("τ"), csp0s("STOP"));
     check_process_afters(csp0("STOP ⊓ STOP"), event("a"), csp0s());
+    check_process_traces_behavior(csp0("STOP ⊓ STOP"), events("τ"));
 }
 
 TEST_CASE("(a → STOP) ⊓ (b → STOP)")
@@ -177,6 +225,7 @@ TEST_CASE("(a → STOP) ⊓ (b → STOP)")
     check_process_afters(csp0("(a → STOP) ⊓ (b → STOP)"), event("τ"),
                          csp0s("a → STOP", "b → STOP"));
     check_process_afters(csp0("(a → STOP) ⊓ (b → STOP)"), event("a"), csp0s());
+    check_process_traces_behavior(csp0("(a → STOP) ⊓ (b → STOP)"), events("τ"));
 }
 
 TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}")
@@ -187,6 +236,8 @@ TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}")
                          csp0s("a → STOP", "b → STOP", "c → STOP"));
     check_process_afters(csp0("⊓ {a → STOP, b → STOP, c → STOP}"), event("a"),
                          csp0s());
+    check_process_traces_behavior(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
+                                  events("τ"));
 }
 
 TEST_CASE_GROUP("prefix");
@@ -196,6 +247,7 @@ TEST_CASE("a → STOP")
     check_process_initials(csp0("a → STOP"), events("a"));
     check_process_afters(csp0("a → STOP"), event("a"), csp0s("STOP"));
     check_process_afters(csp0("a → STOP"), event("b"), csp0s());
+    check_process_traces_behavior(csp0("a → STOP"), events("a"));
 }
 
 TEST_CASE("a → b → STOP")
@@ -203,6 +255,7 @@ TEST_CASE("a → b → STOP")
     check_process_initials(csp0("a → b → STOP"), events("a"));
     check_process_afters(csp0("a → b → STOP"), event("a"), csp0s("b → STOP"));
     check_process_afters(csp0("a → b → STOP"), event("b"), csp0s());
+    check_process_traces_behavior(csp0("a → b → STOP"), events("a"));
 }
 
 TEST_CASE_GROUP("recursion");
@@ -212,6 +265,7 @@ TEST_CASE("let X=a → STOP within X")
     check_process_initials(csp0("let X=a → STOP within X"), events("a"));
     check_process_afters(csp0("let X=a → STOP within X"), event("a"),
                          csp0s("STOP"));
+    check_process_traces_behavior(csp0("let X=a → STOP within X"), events("a"));
 }
 
 TEST_CASE("let X=a → Y Y=b → X within X")
@@ -219,10 +273,14 @@ TEST_CASE("let X=a → Y Y=b → X within X")
     check_process_initials(csp0("let X=a → Y Y=b → X within X"), events("a"));
     check_process_afters(csp0("let X=a → Y Y=b → X within X"), event("a"),
                          csp0s("Y@0"));
+    check_process_traces_behavior(csp0("let X=a → Y Y=b → X within X"),
+                                  events("a"));
     check_process_sub_initials(csp0("let X=a → Y Y=b → X within X"),
                                csp0("Y@0"), events("b"));
     check_process_sub_afters(csp0("let X=a → Y Y=b → X within X"), csp0("Y@0"),
                              event("b"), csp0s("X@0"));
+    check_process_sub_traces_behavior(csp0("let X=a → Y Y=b → X within X"),
+                                      csp0("Y@0"), events("b"));
 }
 
 TEST_CASE_GROUP("sequential composition");
@@ -234,6 +292,7 @@ TEST_CASE("SKIP ; STOP")
     check_process_afters(csp0("SKIP ; STOP"), event("b"), csp0s());
     check_process_afters(csp0("SKIP ; STOP"), event("τ"), csp0s("STOP"));
     check_process_afters(csp0("SKIP ; STOP"), event("✔"), csp0s());
+    check_process_traces_behavior(csp0("SKIP ; STOP"), events("τ"));
 }
 
 TEST_CASE("a → SKIP ; STOP")
@@ -244,6 +303,7 @@ TEST_CASE("a → SKIP ; STOP")
     check_process_afters(csp0("a → SKIP ; STOP"), event("b"), csp0s());
     check_process_afters(csp0("a → SKIP ; STOP"), event("τ"), csp0s());
     check_process_afters(csp0("a → SKIP ; STOP"), event("✔"), csp0s());
+    check_process_traces_behavior(csp0("a → SKIP ; STOP"), events("a"));
 }
 
 TEST_CASE("(a → b → STOP □ SKIP) ; STOP")
@@ -258,6 +318,8 @@ TEST_CASE("(a → b → STOP □ SKIP) ; STOP")
                          csp0s("STOP"));
     check_process_afters(csp0("(a → b → STOP □ SKIP) ; STOP"), event("✔"),
                          csp0s());
+    check_process_traces_behavior(csp0("(a → b → STOP □ SKIP) ; STOP"),
+                                  events("a", "τ"));
 }
 
 TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
@@ -271,4 +333,6 @@ TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
                          csp0s("a → b → STOP ; STOP", "SKIP ; STOP"));
     check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("✔"),
                          csp0s());
+    check_process_traces_behavior(csp0("(a → b → STOP ⊓ SKIP) ; STOP"),
+                                  events("τ"));
 }
