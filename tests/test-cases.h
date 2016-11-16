@@ -567,6 +567,33 @@ csp_id_set_factory_create(struct csp *csp, struct csp_id_set_factory factory)
     return factory.create(csp, factory.ud);
 }
 
+/* ID pair factories are functions that can create an ID pair. */
+struct csp_id_pair_factory {
+    struct csp_id_pair (*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_id_pair
+csp_id_pair_factory_create(struct csp *csp, struct csp_id_pair_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
+/* ID pair array factories are functions that can create an ID pair array. */
+struct csp_id_pair_array_factory {
+    struct csp_id_pair_array *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_id_pair_array *
+csp_id_pair_array_factory_create(struct csp *csp,
+                                 struct csp_id_pair_array_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
 /* Creates a new ID factory that returns the given ID. */
 UNNEEDED
 static struct csp_id_factory
@@ -602,6 +629,78 @@ static struct csp_id_set_factory
 ids_(struct csp_id_set *set)
 {
     struct csp_id_set_factory factory = {ids_factory, set};
+    return factory;
+}
+
+/* Creates an array of ID factories. */
+struct csp_id_factory_array {
+    size_t count;
+    struct csp_id_factory *factories;
+};
+
+#define csp_id_factory_array_new(...)                              \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__))                \
+    (csp_id_factory_array_new_(LENGTH(__VA_ARGS__), __VA_ARGS__))( \
+            csp_id_factory_array_new_(0, NULL))
+
+UNNEEDED
+static struct csp_id_factory_array *
+csp_id_factory_array_new_(size_t count, ...)
+{
+    size_t i;
+    size_t size = (count * sizeof(struct csp_id_factory)) +
+                  sizeof(struct csp_id_factory_array);
+    va_list args;
+    struct csp_id_factory_array *array = malloc(size);
+    assert(array != NULL);
+    test_case_cleanup_register(free, array);
+    array->count = count;
+    array->factories = (void *) (array + 1);
+    va_start(args, count);
+    for (i = 0; i < count; i++) {
+        struct csp_id_factory factory = va_arg(args, struct csp_id_factory);
+        array->factories[i] = factory;
+    }
+    va_end(args);
+    return array;
+}
+
+/* Creates a new ID pair array factory that wraps a bunch of ID factories to
+ * create the contents of each pair. */
+#define pairs(...) (pairs_(csp_id_factory_array_new(__VA_ARGS__)))
+
+static void
+csp_id_pair_array_free_(void *varray)
+{
+    struct csp_id_pair_array *array = varray;
+    csp_id_pair_array_done(array);
+    free(array);
+}
+
+static struct csp_id_pair_array *
+pairs_factory(struct csp *csp, void *vids)
+{
+    size_t  i;
+    size_t  j;
+    struct csp_id_factory_array *ids = vids;
+    struct csp_id_pair_array *array = malloc(sizeof(struct csp_id_pair_array));
+    assert(array != NULL);
+    csp_id_pair_array_init(array);
+    test_case_cleanup_register(csp_id_pair_array_free_, array);
+    csp_id_pair_array_ensure_size(array, ids->count / 2);
+    for (i = 0, j = 0; j < ids->count; i++) {
+        array->pairs[i].from = csp_id_factory_create(csp, ids->factories[j++]);
+        array->pairs[i].to = csp_id_factory_create(csp, ids->factories[j++]);
+    }
+    return array;
+}
+
+UNNEEDED
+static struct csp_id_pair_array_factory
+pairs_(struct csp_id_factory_array *ids)
+{
+    struct csp_id_pair_array_factory factory = {pairs_factory, ids};
+    assert((ids->count % 2) == 0);
     return factory;
 }
 

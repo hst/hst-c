@@ -346,6 +346,7 @@ TEST_CASE("can spill over into allocated storage")
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
     /* Verify that we got a valid set. */
+    check(set.allocated_count == CSP_ID_SET_FIRST_ALLOCATION_COUNT);
     check_set_eq(&set, id_range_set(0, CSP_ID_SET_INTERNAL_SIZE + 1));
     csp_id_set_done(&set);
 }
@@ -364,6 +365,7 @@ TEST_CASE("can spill over into large allocated storage")
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
     /* Verify that we got a valid set. */
+    check(set.allocated_count == CSP_ID_SET_FIRST_ALLOCATION_COUNT * 2);
     check_set_eq(&set, id_range_set(0, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1));
     csp_id_set_done(&set);
 }
@@ -385,6 +387,7 @@ TEST_CASE("can reallocate allocated storage")
     csp_id_set_build(&set, &builder);
     csp_id_set_builder_done(&builder);
     /* Verify that we got a valid set. */
+    check(set.allocated_count == CSP_ID_SET_FIRST_ALLOCATION_COUNT * 2);
     check_set_eq(&set, id_range_set(0, CSP_ID_SET_FIRST_ALLOCATION_COUNT + 1));
     csp_id_set_done(&set);
 }
