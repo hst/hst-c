@@ -393,3 +393,111 @@ TEST_CASE("a → SKIP ; b → STOP")
     csp_normalized_lts_free(lts);
     csp_free(csp);
 }
+
+/*------------------------------------------------------------------------------
+ * Bisimulation
+ */
+
+/* Load `root_process`, prenormalize all of `prenormalized_processes`, and then
+ * bisimulate the result.  Then verify that all of the normalized nodes in
+ * `equivalent_nodes` belong to the same equivalence class. */
+static void
+check_bisimulation(struct csp_id_factory root_process,
+                   struct csp_id_set_factory prenormalized_processes,
+                   struct normalized_node_array *equivalent_nodes)
+{
+    size_t i;
+    struct csp *csp;
+    struct csp_normalized_lts *lts;
+    const struct csp_id_set *prenormalized;
+    struct csp_equivalences equiv;
+    const struct csp_id_set *node_processes;
+    csp_id node_id;
+    csp_id class_id = CSP_ID_NONE;
+    struct csp_id_set_builder builder;
+    struct csp_id_set actual;
+    struct csp_id_set expected;
+    /* Initialize everything. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
+    csp_equivalences_init(&equiv);
+    csp_id_set_builder_init(&builder);
+    csp_id_set_init(&actual);
+    csp_id_set_init(&expected);
+    /* Load the main process. */
+    csp_id_factory_create(csp, root_process);
+    /* Prenormalize all of the requested processes. */
+    prenormalized = csp_id_set_factory_create(csp, prenormalized_processes);
+    for (i = 0; i < prenormalized->count; i++) {
+        csp_process_prenormalize(csp, lts, prenormalized->ids[i]);
+    }
+    /* Bisimulate the prenormalized LTS. */
+    csp_normalized_lts_bisimulate(lts, &equiv);
+    /* Construct a set containing the IDs of the normalized nodes that are
+     * expected to be equivalent. */
+    check(equivalent_nodes->count > 0);
+    for (i = 0; i < equivalent_nodes->count; i++) {
+        node_processes =
+                csp_id_set_factory_create(csp, equivalent_nodes->nodes[i]);
+        csp_normalized_lts_add_node(lts, node_processes, &node_id);
+        csp_id_set_builder_add(&builder, node_id);
+        if (i == 0) {
+            /* While building up this set grab the ID of the equivalence class
+             * that the first normalized node belongs to. */
+            class_id = csp_equivalences_get_class(&equiv, node_id);
+            check_id_ne(class_id, CSP_ID_NONE);
+        }
+    }
+    csp_id_set_build(&expected, &builder);
+    /* Find all of the nodes that are in the same equivalence class as the first
+     * expected node. */
+    csp_equivalences_build_members(&equiv, class_id, &builder);
+    csp_id_set_build(&actual, &builder);
+    /* And verify that the actual and expected sets of equivalent nodes are
+     * equal. */
+    check_set_eq(&actual, &expected);
+    /* Clean up. */
+    csp_equivalences_done(&equiv);
+    csp_id_set_builder_done(&builder);
+    csp_id_set_done(&actual);
+    csp_id_set_done(&expected);
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}
+
+TEST_CASE_GROUP("bisimulation");
+
+TEST_CASE("a→a→STOP ~ a→a→STOP (separate branches)") {
+    const char *process =
+            "let "
+            "  A = □ {a→B} "
+            "  B = □ {a→C} "
+            "  C = □ {} "
+            "  D = □ {a→E} "
+            "  E = □ {a→F} "
+            "  F = □ {} "
+            "within A";
+    check_bisimulation(csp0(process), csp0s("A@0", "D@0"),
+                       normalized_nodes(csp0s("A@0"), csp0s("D@0")));
+    check_bisimulation(csp0(process), csp0s("A@0", "D@0"),
+                       normalized_nodes(csp0s("B@0"), csp0s("E@0")));
+    check_bisimulation(csp0(process), csp0s("A@0", "D@0"),
+                       normalized_nodes(csp0s("C@0"), csp0s("F@0")));
+}
+
+TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
+    const char *process =
+            "let "
+            "  A = □ {a→B, a→D} "
+            "  B = □ {a→C} "
+            "  C = □ {} "
+            "  D = □ {a→E} "
+            "  E = □ {} "
+            "within A";
+    check_bisimulation(csp0(process), csp0s("A@0"),
+                       normalized_nodes(csp0s("A@0")));
+    check_bisimulation(csp0(process), csp0s("A@0"),
+                       normalized_nodes(csp0s("B@0", "D@0")));
+    check_bisimulation(csp0(process), csp0s("A@0"),
+                       normalized_nodes(csp0s("C@0", "E@0")));
+}

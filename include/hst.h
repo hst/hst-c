@@ -517,6 +517,15 @@ void
 csp_normalized_lts_build_all_nodes(struct csp_normalized_lts *lts,
                                    struct csp_id_set_builder *builder);
 
+/* Bisimulate all of the nodes in a normalized LTS, to find nodes that have
+ * equivalent behavior.  Each node in the normalized LTS will have an entry in
+ * `equivalence`; the value of each entry will be the "representative node" for
+ * the equivalence class that the node belongs to.  All nodes in the same
+ * equivalence class will have the same representative node. */
+void
+csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
+                              struct csp_equivalences *equiv);
+
 /*------------------------------------------------------------------------------
  * Refinement
  */

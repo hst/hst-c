@@ -772,4 +772,40 @@ check_equivalence_class_members(struct csp *csp, struct csp_equivalences *equiv,
     csp_id_set_done(&actual);
 }
 
+/* Creates a new factory for an array of normalized LTS nodes.  This is
+ * represented by an array of ID set factories; each element of the array
+ * defines the set of processes that belong to the normalized node. */
+struct normalized_node_array {
+    size_t count;
+    struct csp_id_set_factory *nodes;
+};
+
+#define normalized_nodes(...)                              \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__))        \
+    (normalized_nodes_(LENGTH(__VA_ARGS__), __VA_ARGS__))( \
+            normalized_nodes_(0, NULL))
+
+UNNEEDED
+static struct normalized_node_array *
+normalized_nodes_(size_t count, ...)
+{
+    size_t i;
+    size_t size = (count * sizeof(struct csp_id_set_factory)) +
+                  sizeof(struct normalized_node_array);
+    va_list args;
+    struct normalized_node_array *array = malloc(size);
+    assert(array != NULL);
+    test_case_cleanup_register(free, array);
+    array->count = count;
+    array->nodes = (void *) (array + 1);
+    va_start(args, count);
+    for (i = 0; i < count; i++) {
+        struct csp_id_set_factory factory =
+                va_arg(args, struct csp_id_set_factory);
+        array->nodes[i] = factory;
+    }
+    va_end(args);
+    return array;
+}
+
 #endif /* TEST_CASES_H */

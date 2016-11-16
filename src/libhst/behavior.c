@@ -39,7 +39,6 @@ csp_process_add_traces_behavior(struct csp *csp, csp_id process,
                                 struct csp_id_set_builder *builder)
 {
     csp_process_build_initials(csp, process, builder);
-    behavior->hash = behavior->initials.hash;
 }
 
 static void
@@ -48,6 +47,7 @@ csp_behavior_finish_traces(struct csp_behavior *behavior,
 {
     behavior->model = CSP_TRACES;
     csp_id_set_build(&behavior->initials, builder);
+    behavior->hash = behavior->initials.hash;
 }
 
 static void
