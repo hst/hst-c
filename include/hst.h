@@ -227,6 +227,10 @@ csp_id_pair_array_done(struct csp_id_pair_array *array);
 void
 csp_id_pair_array_ensure_size(struct csp_id_pair_array *array, size_t count);
 
+bool
+csp_id_pair_array_eq(const struct csp_id_pair_array *a1,
+                     const struct csp_id_pair_array *a2);
+
 /*------------------------------------------------------------------------------
  * Equivalences
  */
@@ -541,6 +545,12 @@ csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
  * returned behavior. */
 const struct csp_behavior *
 csp_normalized_lts_get_node_behavior(struct csp_normalized_lts *lts, csp_id id);
+
+/* Return the outgoing edges for a normalized LTS node.  `id` must a node that
+ * you've already created via csp_normalized_lts_add_node. */
+void
+csp_normalized_lts_get_node_edges(struct csp_normalized_lts *lts, csp_id id,
+                                  struct csp_id_pair_array *edges);
 
 /* Return the set of processes for a normalized LTS node.  `id` must a node that
  * you've already created via csp_normalized_lts_add_node.  We retain ownership

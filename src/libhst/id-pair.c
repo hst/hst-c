@@ -58,3 +58,20 @@ csp_id_pair_array_ensure_size(struct csp_id_pair_array *array, size_t count)
         }
     }
 }
+
+bool
+csp_id_pair_array_eq(const struct csp_id_pair_array *a1,
+                     const struct csp_id_pair_array *a2)
+{
+    size_t i;
+    if (a1->count != a2->count) {
+        return false;
+    }
+    for (i = 0; i < a1->count; i++) {
+        if (a1->pairs[i].from != a2->pairs[i].from ||
+            a1->pairs[i].to != a2->pairs[i].to) {
+            return false;
+        }
+    }
+    return true;
+}
