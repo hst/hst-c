@@ -79,6 +79,26 @@ csp_normalized_lts_node_get_edge(struct csp_normalized_lts_node *node,
     }
 }
 
+static void
+csp_normalized_lts_node_get_edges(struct csp_normalized_lts_node *node,
+                                  struct csp_id_pair_array *edges)
+{
+    Word_t count;
+    Word_t *vto;
+    csp_id event_id = 0;
+    size_t i = 0;
+    JLC(count, node->edges, 0, -1);
+    csp_id_pair_array_ensure_size(edges, count);
+    JLF(vto, node->edges, event_id);
+    while (vto != NULL) {
+        csp_id to = *vto;
+        struct csp_id_pair *pair = &edges->pairs[i++];
+        pair->from = event_id;
+        pair->to = to;
+        JLN(vto, node->edges, event_id);
+    }
+}
+
 struct csp_normalized_lts {
     struct csp *csp;
     enum csp_semantic_model model;
@@ -159,6 +179,14 @@ csp_normalized_lts_get_node_behavior(struct csp_normalized_lts *lts, csp_id id)
     return &node->behavior;
 }
 
+void
+csp_normalized_lts_get_node_edges(struct csp_normalized_lts *lts, csp_id id,
+                                  struct csp_id_pair_array *edges)
+{
+    struct csp_normalized_lts_node *node = csp_normalized_lts_get_node(lts, id);
+    csp_normalized_lts_node_get_edges(node, edges);
+}
+
 const struct csp_id_set *
 csp_normalized_lts_get_node_processes(struct csp_normalized_lts *lts, csp_id id)
 {
@@ -224,22 +252,22 @@ csp_equivalences_equiv(struct csp_equivalences *equiv, csp_id n1, csp_id n2)
  * equivalent. */
 static bool
 csp_normalized_lts_nodes_equiv(struct csp_equivalences *equiv,
-                               csp_id id1,
+                               struct csp_id_pair_array *edges, csp_id id1,
                                struct csp_normalized_lts_node *from1,
                                csp_id id2,
                                struct csp_normalized_lts_node *from2)
 {
-    Word_t  *vto;
-    csp_id  event_id = 0;
+    size_t i;
+    csp_normalized_lts_node_get_edges(from1, edges);
     assert(from1 != from2);
     DEBUG("  check " CSP_ID_FMT " ?~ " CSP_ID_FMT, id1, id2);
 
     /* Loop through all of node1's outgoing edges, finding the corresponding
      * outgoing edge from node2. */
-    JLF(vto, from1->edges, event_id);
-    while (vto != NULL) {
-        csp_id  to1 = *vto;
-        csp_id  to2 = csp_normalized_lts_node_get_edge(from2, event_id);
+    for (i = 0; i < edges->count; i++) {
+        csp_id event_id = edges->pairs[i].from;
+        csp_id to1 = edges->pairs[i].to;
+        csp_id to2 = csp_normalized_lts_node_get_edge(from2, event_id);
         DEBUG("    --- " CSP_ID_FMT, event_id);
         DEBUG("    " CSP_ID_FMT " -" CSP_ID_FMT "→ " CSP_ID_FMT,
               id1, event_id, to1);
@@ -251,7 +279,6 @@ csp_normalized_lts_nodes_equiv(struct csp_equivalences *equiv,
             DEBUG("  NOT EQUIVALENT");
             return false;
         }
-        JLN(vto, from1->edges, event_id);
     }
 
     /* We didn't find any negation, so from1 and from2 are still equivalent. */
@@ -263,11 +290,13 @@ void
 csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
                               struct csp_equivalences *equiv)
 {
-    struct csp_id_set_builder  builder;
-    struct csp_id_set  classes;
-    struct csp_id_set  members;
-    bool  changed;
+    struct csp_id_pair_array edges;
+    struct csp_id_set_builder builder;
+    struct csp_id_set classes;
+    struct csp_id_set members;
+    bool changed;
 
+    csp_id_pair_array_init(&edges);
     csp_id_set_builder_init(&builder);
     csp_id_set_init(&classes);
     csp_id_set_init(&members);
@@ -317,8 +346,8 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
                 struct csp_normalized_lts_node  *member =
                     csp_normalized_lts_get_node(lts, member_id);
                 DEBUG("member[%zu] = " CSP_ID_FMT, j, member_id);
-                if (!csp_normalized_lts_nodes_equiv(
-                            equiv, head_id, head, member_id, member)) {
+                if (!csp_normalized_lts_nodes_equiv(equiv, &edges, head_id,
+                                                    head, member_id, member)) {
                     /* This state is not equivalent to its head.  If necessary,
                      * create a new equivalence class.  Add the node to this new
                      * class. */
@@ -334,6 +363,7 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
         }
     } while (changed);
 
+    csp_id_pair_array_done(&edges);
     csp_id_set_builder_done(&builder);
     csp_id_set_done(&classes);
     csp_id_set_done(&members);

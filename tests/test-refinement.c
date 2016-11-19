@@ -152,6 +152,19 @@ check_normalized_edge_by_id(struct csp_normalized_lts *lts, csp_id from,
     check_id_eq(actual, expected);
 }
 
+static void
+check_normalized_edges(struct csp *csp, struct csp_normalized_lts *lts,
+                       csp_id from, struct csp_id_pair_array_factory edges)
+{
+    struct csp_id_pair_array actual;
+    struct csp_id_pair_array *edges_array;
+    csp_id_pair_array_init(&actual);
+    edges_array = csp_id_pair_array_factory_create(csp, edges);
+    csp_normalized_lts_get_node_edges(lts, from, &actual);
+    check_pair_array_eq(&actual, edges_array);
+    csp_id_pair_array_done(&actual);
+}
+
 TEST_CASE("can add edges to normalized LTS")
 {
     struct csp *csp;
@@ -179,6 +192,9 @@ TEST_CASE("can add edges to normalized LTS")
     check_normalized_edge_by_id(lts, id1, 3, id3);
     check_normalized_edge_by_id(lts, id2, 1, id4);
     check_normalized_edge_by_id(lts, id2, 2, CSP_NODE_NONE);
+    check_normalized_edges(csp, lts, id1, pairs(id(1), id(id2), id(2), id(id2),
+                                                id(3), id(id3)));
+    check_normalized_edges(csp, lts, id2, pairs(id(1), id(id4)));
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);

@@ -148,7 +148,7 @@ csp_id_set_ensure_size(struct csp_id_set *set)
             }
             set->ids = malloc(new_count * sizeof(csp_id));
             assert(set->ids != NULL);
-            set->allocated_count = CSP_ID_SET_FIRST_ALLOCATION_COUNT;
+            set->allocated_count = new_count;
         } else {
             /* Whenever we reallocate, at least double the size of the existing
              * array. */

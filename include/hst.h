@@ -64,13 +64,14 @@ csp_get_event_name(struct csp *csp, csp_id event);
  * to minimize malloc overhead for small sets.  We automatically calculate a
  * number that makes the size of the csp_id_set itself a nice multiple of
  * sizeof(void *).  On 64-bit platforms this should currently evaluate to 12. */
-#define CSP_ID_SET_INTERNAL_SIZE                                   \
-    (((sizeof(void *) * 16) - sizeof(csp_id) /* hash */            \
-      - sizeof(csp_id *)                     /* ids */             \
-      - sizeof(size_t)                       /* count */           \
-      - sizeof(size_t)                       /* allocated_count */ \
-      ) /                                                          \
-     sizeof(void *))
+#define CSP_ID_SET_INTERNAL_SIZE                      \
+    (((sizeof(void *) * 16) /* target overall size */ \
+      - sizeof(csp_id)      /* hash */                \
+      - sizeof(csp_id *)    /* ids */                 \
+      - sizeof(size_t)      /* count */               \
+      - sizeof(size_t)      /* allocated_count */     \
+      ) /                                             \
+     sizeof(csp_id))
 
 /* A set of IDs, stored as a sorted array.  This type is read-only; to construct
  * a set, use a csp_id_set_builder. */
@@ -183,6 +184,52 @@ csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder);
 void
 csp_id_set_build_and_keep(struct csp_id_set *set,
                           struct csp_id_set_builder *builder);
+
+/*------------------------------------------------------------------------------
+ * Pairs
+ */
+
+struct csp_id_pair {
+    csp_id from;
+    csp_id to;
+};
+
+/* We preallocate a certain number of entries in the csp_id_pair_array struct
+ * itself, to minimize malloc overhead for small arrays.  We automatically
+ * calculate a number that makes the size of the csp_id_pair_array itself a nice
+ * multiple of sizeof(void *).  On 64-bit platforms this should currently
+ * evaluate to 6. */
+#define CSP_ID_PAIR_ARRAY_INTERNAL_SIZE                        \
+    (((sizeof(void *) * 16)          /* target overall size */ \
+      - sizeof(struct csp_id_pair *) /* pairs */               \
+      - sizeof(size_t)               /* count */               \
+      - sizeof(size_t)               /* allocated_count */     \
+      ) /                                                      \
+     sizeof(struct csp_id_pair))
+
+/* An array of pairs of IDs. */
+struct csp_id_pair_array {
+    struct csp_id_pair *pairs;
+    size_t count;
+    size_t allocated_count;
+    struct csp_id_pair internal[CSP_ID_PAIR_ARRAY_INTERNAL_SIZE];
+};
+
+void
+csp_id_pair_array_init(struct csp_id_pair_array *array);
+
+void
+csp_id_pair_array_done(struct csp_id_pair_array *array);
+
+/* Ensure that the array's `pairs` field has enough allocated space to hold
+ * `count` pairs.  The array's `count` will be set to `count` after this
+ * returns; you must then fill in the `pairs` field with the actual ID pairs. */
+void
+csp_id_pair_array_ensure_size(struct csp_id_pair_array *array, size_t count);
+
+bool
+csp_id_pair_array_eq(const struct csp_id_pair_array *a1,
+                     const struct csp_id_pair_array *a2);
 
 /*------------------------------------------------------------------------------
  * Equivalences
@@ -498,6 +545,12 @@ csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
  * returned behavior. */
 const struct csp_behavior *
 csp_normalized_lts_get_node_behavior(struct csp_normalized_lts *lts, csp_id id);
+
+/* Return the outgoing edges for a normalized LTS node.  `id` must a node that
+ * you've already created via csp_normalized_lts_add_node. */
+void
+csp_normalized_lts_get_node_edges(struct csp_normalized_lts *lts, csp_id id,
+                                  struct csp_id_pair_array *edges);
 
 /* Return the set of processes for a normalized LTS node.  `id` must a node that
  * you've already created via csp_normalized_lts_add_node.  We retain ownership
