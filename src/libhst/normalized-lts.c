@@ -286,6 +286,14 @@ csp_normalized_lts_nodes_equiv(struct csp_equivalences *equiv,
     return true;
 }
 
+#define swap_equivalences(a, b)          \
+    do {                                 \
+        struct csp_equivalences *__swap; \
+        __swap = (a);                    \
+        (a) = (b);                       \
+        (b) = __swap;                    \
+    } while (0)
+
 void
 csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
                               struct csp_equivalences *equiv)
@@ -294,16 +302,22 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
     struct csp_id_set_builder builder;
     struct csp_id_set classes;
     struct csp_id_set members;
+    struct csp_equivalences new_equiv;
+    struct csp_equivalences *prev_equiv;
+    struct csp_equivalences *next_equiv;
     bool changed;
 
     csp_id_pair_array_init(&edges);
     csp_id_set_builder_init(&builder);
     csp_id_set_init(&classes);
     csp_id_set_init(&members);
+    csp_equivalences_init(&new_equiv);
 
     csp_normalized_lts_init_bisimulation(lts, equiv);
+    prev_equiv = equiv;
+    next_equiv = &new_equiv;
     do {
-        size_t  i;
+        size_t i;
         DEBUG("=== starting new iteration");
 
         /* We don't want to start another iteration after this one unless we
@@ -313,17 +327,17 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
         /* Loop through each pair of states that were equivalent before,
          * verifying that they're still equivalent.  Separate any that are not
          * equivalent to their head into a new class. */
-        csp_equivalences_build_classes(equiv, &builder);
+        csp_equivalences_build_classes(prev_equiv, &builder);
         csp_id_set_build(&classes, &builder);
         for (i = 0; i < classes.count; i++) {
-            size_t  j;
-            csp_id  class_id = classes.ids[i];
-            csp_id  head_id;
-            struct csp_normalized_lts_node  *head;
-            csp_id  new_class_id = CSP_ID_NONE;
+            size_t j;
+            csp_id class_id = classes.ids[i];
+            csp_id head_id;
+            struct csp_normalized_lts_node *head;
+            csp_id new_class_id = CSP_ID_NONE;
             DEBUG("class " CSP_ID_FMT, class_id);
 
-            csp_equivalences_build_members(equiv, class_id, &builder);
+            csp_equivalences_build_members(prev_equiv, class_id, &builder);
             csp_id_set_build(&members, &builder);
 
             /* The "head" of this class is just the one that happens to be first
@@ -332,6 +346,7 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
             head_id = members.ids[0];
             head = csp_normalized_lts_get_node(lts, head_id);
             DEBUG("member[0] = " CSP_ID_FMT, head_id);
+            csp_equivalences_add(next_equiv, class_id, head_id);
 
             /* If we find a non-equivalent member of this class, we'll need to
              * separate it out into a new class.  This new class will need a
@@ -342,11 +357,11 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
              * out to also not be equivalent to each other, we'll catch that in
              * a later iteration. */
             for (j = 1; j < members.count; j++) {
-                csp_id  member_id = members.ids[j];
-                struct csp_normalized_lts_node  *member =
-                    csp_normalized_lts_get_node(lts, member_id);
+                csp_id member_id = members.ids[j];
+                struct csp_normalized_lts_node *member =
+                        csp_normalized_lts_get_node(lts, member_id);
                 DEBUG("member[%zu] = " CSP_ID_FMT, j, member_id);
-                if (!csp_normalized_lts_nodes_equiv(equiv, &edges, head_id,
+                if (!csp_normalized_lts_nodes_equiv(prev_equiv, &edges, head_id,
                                                     head, member_id, member)) {
                     /* This state is not equivalent to its head.  If necessary,
                      * create a new equivalence class.  Add the node to this new
@@ -354,17 +369,24 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
                     if (new_class_id == CSP_ID_NONE) {
                         new_class_id = member_id;
                     }
-                    DEBUG("  move " CSP_ID_FMT " ⇒ " CSP_ID_FMT,
-                          member_id, new_class_id);
-                    csp_equivalences_add(equiv, new_class_id, member_id);
+                    DEBUG("  move " CSP_ID_FMT " ⇒ " CSP_ID_FMT, member_id,
+                          new_class_id);
+                    csp_equivalences_add(next_equiv, new_class_id, member_id);
                     changed = true;
+                } else {
+                    DEBUG("  keep " CSP_ID_FMT " ⇒ " CSP_ID_FMT, member_id,
+                          class_id);
+                    csp_equivalences_add(next_equiv, class_id, member_id);
                 }
             }
         }
+
+        swap_equivalences(prev_equiv, next_equiv);
     } while (changed);
 
     csp_id_pair_array_done(&edges);
     csp_id_set_builder_done(&builder);
     csp_id_set_done(&classes);
     csp_id_set_done(&members);
+    csp_equivalences_done(&new_equiv);
 }
