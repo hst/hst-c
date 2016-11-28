@@ -517,3 +517,90 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
     check_bisimulation(csp0(process), csp0s("A@0"),
                        normalized_nodes(csp0s("C@0", "E@0")));
 }
+
+/*------------------------------------------------------------------------------
+ * Normalization
+ */
+
+/* Load `root_process`, prenormalize all of `prenormalized_processes`,
+ * bisimulate the result, and then apply the bisimulation to merge normalized
+ * LTS nodes. */
+static void
+check_normalize(struct csp *csp, struct csp_normalized_lts *lts,
+                    struct csp_id_factory root_process,
+                    struct csp_id_set_factory prenormalized_processes)
+{
+    size_t i;
+    const struct csp_id_set *prenormalized;
+    struct csp_equivalences equiv;
+    /* Initialize everything. */
+    csp_equivalences_init(&equiv);
+    /* Load the main process. */
+    csp_id_factory_create(csp, root_process);
+    /* Prenormalize all of the requested processes. */
+    prenormalized = csp_id_set_factory_create(csp, prenormalized_processes);
+    for (i = 0; i < prenormalized->count; i++) {
+        csp_process_prenormalize(csp, lts, prenormalized->ids[i]);
+    }
+    /* Bisimulate the prenormalized LTS. */
+    csp_normalized_lts_bisimulate(lts, &equiv);
+    /* Apply the bisimulation. */
+    csp_normalized_lts_merge_equivalences(lts, &equiv);
+    /* Clean up. */
+    csp_equivalences_done(&equiv);
+}
+
+TEST_CASE_GROUP("normalization");
+
+TEST_CASE("a→a→STOP ~ a→a→STOP (separate branches)") {
+    struct csp *csp;
+    struct csp_normalized_lts *lts;
+    const char *process =
+            "let "
+            "  A = □ {a→B} "
+            "  B = □ {a→C} "
+            "  C = □ {} "
+            "  D = □ {a→E} "
+            "  E = □ {a→F} "
+            "  F = □ {} "
+            "within A";
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
+    /* Normalize the process and verify we get all of the nodes and edges we
+     * expect. */
+    check_normalize(csp, lts, csp0(process), csp0s("A@0", "D@0"));
+    check_normalized_edge(csp, lts, csp0s("A@0", "D@0"), event("a"),
+                          csp0s("B@0", "E@0"));
+    check_normalized_edge(csp, lts, csp0s("B@0", "E@0"), event("a"),
+                          csp0s("C@0", "F@0"));
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}
+
+TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
+    struct csp *csp;
+    struct csp_normalized_lts *lts;
+    const char *process =
+            "let "
+            "  A = □ {a→B, a→D} "
+            "  B = □ {a→C} "
+            "  C = □ {} "
+            "  D = □ {a→E} "
+            "  E = □ {} "
+            "within A";
+    /* Create the CSP environment. */
+    check_alloc(csp, csp_new());
+    check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
+    /* Normalize the process and verify we get all of the nodes and edges we
+     * expect. */
+    check_normalize(csp, lts, csp0(process), csp0s("A@0"));
+    check_normalized_edge(csp, lts, csp0s("A@0"), event("a"),
+                          csp0s("B@0", "D@0"));
+    check_normalized_edge(csp, lts, csp0s("B@0", "D@0"), event("a"),
+                          csp0s("C@0", "E@0"));
+    /* Clean up. */
+    csp_normalized_lts_free(lts);
+    csp_free(csp);
+}

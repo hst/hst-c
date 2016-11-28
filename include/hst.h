@@ -534,8 +534,8 @@ csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
 
 /* Adds a new edge to a normalized LTS.  `from` and `to` must the IDs of nodes
  * that you've already created via csp_normalized_lts_add_node.  `event` must be
- * an event ID.  There must not already be an edge with the same `from` and
- * `event`. */
+ * an event ID.  If there is already an edge with the same `from` and `event`,
+ * it must also have the same `to`. */
 void
 csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
                             csp_id event, csp_id to);
@@ -578,6 +578,13 @@ csp_normalized_lts_build_all_nodes(struct csp_normalized_lts *lts,
 void
 csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
                               struct csp_equivalences *equiv);
+
+/* Merge together equivalent nodes in the normalized LTS, according to the given
+ * equivalence relation, placing the result into a new normalized LTS. */
+void
+csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *dest,
+                                      struct csp_equivalences *equiv);
+
 
 /*------------------------------------------------------------------------------
  * Refinement

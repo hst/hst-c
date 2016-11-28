@@ -62,7 +62,7 @@ csp_normalized_lts_node_add_edge(struct csp_normalized_lts_node *node,
 {
     Word_t *vto;
     JLI(vto, node->edges, event);
-    assert(*vto == 0);
+    assert(*vto == 0 || *vto == to);
     *vto = to;
 }
 
@@ -389,4 +389,108 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
     csp_id_set_done(&classes);
     csp_id_set_done(&members);
     csp_equivalences_done(&new_equiv);
+}
+
+#define swap_normalized_lts(a, b)         \
+    do {                                  \
+        struct csp_normalized_lts __swap; \
+        __swap = (a);                     \
+        (a) = (b);                        \
+        (b) = __swap;                     \
+    } while (0)
+
+void
+csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *lts,
+                                      struct csp_equivalences *equiv)
+{
+    struct csp_normalized_lts *new_lts =
+            csp_normalized_lts_new(lts->csp, lts->model);
+    struct csp_id_set_builder builder;
+    struct csp_id_set classes;
+    struct csp_id_set members;
+    struct csp_id_pair_array edges;
+    struct csp_equivalences new_nodes;
+    size_t i;
+
+    csp_id_set_builder_init(&builder);
+    csp_id_set_init(&classes);
+    csp_id_set_init(&members);
+    csp_id_pair_array_init(&edges);
+    csp_equivalences_init(&new_nodes);
+
+    /* Loop through all of the equivalence classes, creating a new normalized
+     * node for each one. */
+    DEBUG("Create new nodes for each equivalence class");
+    csp_equivalences_build_classes(equiv, &builder);
+    csp_id_set_build(&classes, &builder);
+    for (i = 0; i < classes.count; i++) {
+        size_t  j;
+        csp_id class_id = classes.ids[i];
+        csp_id new_node_id;
+        DEBUG("  Class " CSP_ID_FMT, class_id);
+        /* We want to create a single new normalized node for this equivalence
+         * class.  To do this, we merge together the processes that belong to
+         * any of the original normalized nodes in the equivalence class. */
+        csp_equivalences_build_members(equiv, class_id, &builder);
+        csp_id_set_build(&members, &builder);
+        for (j = 0; j < members.count; j++) {
+            csp_id member_id = members.ids[j];
+            const struct csp_id_set *member_processes =
+                    csp_normalized_lts_get_node_processes(lts, member_id);
+            DEBUG("    Member " CSP_ID_FMT, member_id);
+            csp_id_set_builder_merge(&builder, member_processes);
+        }
+        /* Create the new normalized node representing the union of all of the
+         * original nodes. */
+        csp_id_set_build(&members, &builder);
+        csp_normalized_lts_add_node(new_lts, &members, &new_node_id);
+        csp_equivalences_add(&new_nodes, new_node_id, class_id);
+        DEBUG("    NEW NODE " CSP_ID_FMT, new_node_id);
+    }
+
+    /* Then loop through all of the edges in the original normalized LTS, adding
+     * an equivalent edge in the new normalized LTS. */
+    DEBUG("Add edges");
+    for (i = 0; i < classes.count; i++) {
+        size_t  j;
+        csp_id class_id = classes.ids[i];
+        csp_id new_class_node_id =
+                csp_equivalences_get_class(&new_nodes, class_id);
+        assert(new_class_node_id != CSP_ID_NONE);
+        DEBUG("  Class " CSP_ID_FMT " (new node " CSP_ID_FMT ")", class_id,
+              new_class_node_id);
+        csp_equivalences_build_members(equiv, class_id, &builder);
+        csp_id_set_build(&members, &builder);
+        for (j = 0; j < members.count; j++) {
+            size_t k;
+            csp_id from_id = members.ids[j];
+            DEBUG("    Member " CSP_ID_FMT, from_id);
+            csp_normalized_lts_get_node_edges(lts, from_id, &edges);
+            for (k = 0; k < edges.count; k++) {
+                csp_id event_id = edges.pairs[k].from;
+                csp_id to_id = edges.pairs[k].to;
+                csp_id to_class_id = csp_equivalences_get_class(equiv, to_id);
+                csp_id new_to_node_id =
+                        csp_equivalences_get_class(&new_nodes, to_class_id);
+                assert(new_to_node_id != CSP_ID_NONE);
+                DEBUG("      New edge " CSP_ID_FMT " -" CSP_ID_FMT
+                      "→ " CSP_ID_FMT,
+                      new_class_node_id, event_id, new_to_node_id);
+                csp_normalized_lts_add_edge(new_lts, new_class_node_id,
+                                            event_id, new_to_node_id);
+            }
+        }
+    }
+
+    /* Swap the contents of the new LTS into the in/out parameter that the
+     * caller provided. */
+    swap_normalized_lts(*lts, *new_lts);
+
+    /* Clean up. */
+    csp_normalized_lts_free(new_lts);
+    csp_id_set_builder_done(&builder);
+    csp_id_set_done(&classes);
+    csp_id_set_done(&members);
+    csp_id_pair_array_done(&edges);
+    csp_equivalences_done(&new_nodes);
 }
