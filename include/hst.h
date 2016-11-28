@@ -540,6 +540,23 @@ void
 csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
                             csp_id event, csp_id to);
 
+/* Add a "normalized root".  During a refinement check, this lets us keep track
+ * of which normalized LTS node your Spec process belongs to.  (You won't have
+ * to call this function directly; we'll keep track of this for you for each
+ * process that you prenormalize.) */
+void
+csp_normalized_lts_add_normalized_root(struct csp_normalized_lts *lts,
+                                       csp_id root_id,
+                                       csp_id normalized_root_id);
+
+/* Return the normalized LTS node that a particular original non-normalized
+ * process belongs to.  (That is, if you start a refinement check for a
+ * particular Spec process, which normalized LTS node should you start the
+ * breadth-first search from?) */
+csp_id
+csp_normalized_lts_get_normalized_root(struct csp_normalized_lts *lts,
+                                       csp_id root_id);
+
 /* Return the behavior for a normalized LTS node.  `id` must a node that you've
  * already created via csp_normalized_lts_add_node.  We retain ownership of the
  * returned behavior. */

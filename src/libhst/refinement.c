@@ -104,6 +104,9 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
 
     /* Start processing with the initial process. */
     if (csp_normalized_lts_add_node(lts, &closure, &node)) {
+        DEBUG("Register normalized root " CSP_ID_FMT " for " CSP_ID_FMT, node,
+              process);
+        csp_normalized_lts_add_normalized_root(lts, process, node);
         DEBUG("Enqueue normalized node " CSP_ID_FMT, node);
         csp_id_set_fill_single(&pending, node);
     }
