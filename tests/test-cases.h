@@ -650,6 +650,19 @@ csp_id_pair_array_factory_create(struct csp *csp,
     return factory.create(csp, factory.ud);
 }
 
+/* Trace factories are functions that can create a trace. */
+struct csp_trace_factory {
+    struct csp_trace *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_trace *
+csp_trace_factory_create(struct csp *csp, struct csp_trace_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
 /* Creates a new ID factory that returns the given ID. */
 UNNEEDED
 static struct csp_id_factory
@@ -961,6 +974,43 @@ normalized_nodes_(size_t count, ...)
     }
     va_end(args);
     return array;
+}
+
+/* Creates a new trace factory that creates a trace containing the given events.
+ * The trace will be automatically freed for you at the end of the test case. */
+#define trace(...) trace_(strings(__VA_ARGS__))
+
+static void
+csp_trace_free_(void *vtrace)
+{
+    struct csp_trace *trace = vtrace;
+    csp_trace_done(trace);
+    free(trace);
+}
+
+static struct csp_trace *
+trace_factory(struct csp *csp, void *vnames)
+{
+    struct string_array *names = vnames;
+    size_t i;
+    struct csp_trace *trace = malloc(sizeof(struct csp_trace));
+    assert(trace != NULL);
+    csp_trace_init(trace);
+    test_case_cleanup_register(csp_trace_free_, trace);
+    csp_trace_ensure_size(trace, names->count);
+    for (i = 0; i < names->count; i++) {
+        const char *event_name = names->strings[i];
+        trace->events[i] = csp_get_event_id(csp, event_name);
+    }
+    return trace;
+}
+
+UNNEEDED
+static struct csp_trace_factory
+trace_(struct string_array *names)
+{
+    struct csp_trace_factory factory = {trace_factory, names};
+    return factory;
 }
 
 #endif /* TEST_CASES_H */
