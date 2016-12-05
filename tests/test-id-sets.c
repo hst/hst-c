@@ -297,6 +297,32 @@ TEST_CASE("can compare sets")
     csp_id_set_done(&set3);
 }
 
+TEST_CASE("can check subsets")
+{
+    check(csp_id_set_subseteq(id_set(), id_set()));
+    check(csp_id_set_subseteq(id_set(), id_set(1)));
+    check(!csp_id_set_subseteq(id_set(5), id_set()));
+    check(!csp_id_set_subseteq(id_set(5), id_set(4)));
+    check(csp_id_set_subseteq(id_set(5), id_set(4, 5)));
+    check(csp_id_set_subseteq(id_set(5), id_set(4, 5, 6)));
+    check(csp_id_set_subseteq(id_set(5), id_set(5)));
+    check(csp_id_set_subseteq(id_set(5), id_set(5, 6)));
+    check(!csp_id_set_subseteq(id_set(5), id_set(6)));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set()));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set(3)));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set(3, 4)));
+    check(csp_id_set_subseteq(id_set(4, 5), id_set(3, 4, 5)));
+    check(csp_id_set_subseteq(id_set(4, 5), id_set(3, 4, 5, 6)));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set(3, 5)));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set(4)));
+    check(csp_id_set_subseteq(id_set(4, 5), id_set(4, 5)));
+    check(csp_id_set_subseteq(id_set(4, 5), id_set(4, 5, 6)));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set(4, 6)));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set(5)));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set(5, 6)));
+    check(!csp_id_set_subseteq(id_set(4, 5), id_set(6)));
+}
+
 TEST_CASE("can build a singleton set via shortcut")
 {
     struct csp_id_set set;

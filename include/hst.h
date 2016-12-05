@@ -92,6 +92,11 @@ csp_id_set_done(struct csp_id_set *set);
 bool
 csp_id_set_eq(const struct csp_id_set *set1, const struct csp_id_set *set2);
 
+/* Return whether set1 ⊆ set2 */
+bool
+csp_id_set_subseteq(const struct csp_id_set *set1,
+                    const struct csp_id_set *set2);
+
 /* Fills a set with a copy of another set, without having to go through a
  * builder first.  You must have already initialized `set`.  This is guaranteed
  * to be equivalent to (and likely more efficient than):
