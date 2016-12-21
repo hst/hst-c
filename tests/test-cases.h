@@ -559,6 +559,14 @@ id_range_set(size_t start, size_t end)
     return set;
 }
 
+/* Create a new pair with the given contents. */
+struct csp_id_pair
+pair(csp_id from, csp_id to)
+{
+    struct csp_id_pair pair = {from, to};
+    return pair;
+}
+
 /* Creates a new array of strings.  The set (but not the strings in the array)
  * will be automatically freed for you at the end of the test case. */
 struct string_array {
@@ -646,6 +654,33 @@ UNNEEDED
 static struct csp_id_pair_array *
 csp_id_pair_array_factory_create(struct csp *csp,
                                  struct csp_id_pair_array_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
+/* ID pair set factories are functions that can create an ID pair set. */
+struct csp_id_pair_set_factory {
+    struct csp_id_pair_set *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_id_pair_set *
+csp_id_pair_set_factory_create(struct csp *csp,
+                               struct csp_id_pair_set_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
+/* Trace factories are functions that can create a trace. */
+struct csp_trace_factory {
+    struct csp_trace *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_trace *
+csp_trace_factory_create(struct csp *csp, struct csp_trace_factory factory)
 {
     return factory.create(csp, factory.ud);
 }
@@ -756,6 +791,49 @@ static struct csp_id_pair_array_factory
 pairs_(struct csp_id_factory_array *ids)
 {
     struct csp_id_pair_array_factory factory = {pairs_factory, ids};
+    assert((ids->count % 2) == 0);
+    return factory;
+}
+
+/* Creates a new ID pair set factory that wraps a bunch of ID factories to
+ * create the contents of each pair. */
+#define pair_set(...) (pair_set_(csp_id_factory_array_new(__VA_ARGS__)))
+
+static void
+csp_id_pair_set_free_(void *vset)
+{
+    struct csp_id_pair_set *set = vset;
+    csp_id_pair_set_done(set);
+    free(set);
+}
+
+static struct csp_id_pair_set *
+pair_set_factory(struct csp *csp, void *vids)
+{
+    size_t  i;
+    struct csp_id_factory_array *ids = vids;
+    struct csp_id_pair_set *set = malloc(sizeof(struct csp_id_pair_set));
+    struct csp_id_pair_set_builder builder;
+    assert(set != NULL);
+    csp_id_pair_set_init(set);
+    test_case_cleanup_register(csp_id_pair_set_free_, set);
+    csp_id_pair_set_builder_init(&builder);
+    for (i = 0; i < ids->count;) {
+        csp_id from = csp_id_factory_create(csp, ids->factories[i++]);
+        csp_id to = csp_id_factory_create(csp, ids->factories[i++]);
+        struct csp_id_pair pair = {from, to};
+        csp_id_pair_set_builder_add(&builder, pair);
+    }
+    csp_id_pair_set_build(set, &builder);
+    csp_id_pair_set_builder_done(&builder);
+    return set;
+}
+
+UNNEEDED
+static struct csp_id_pair_set_factory
+pair_set_(struct csp_id_factory_array *ids)
+{
+    struct csp_id_pair_set_factory factory = {pair_set_factory, ids};
     assert((ids->count % 2) == 0);
     return factory;
 }
@@ -961,6 +1039,43 @@ normalized_nodes_(size_t count, ...)
     }
     va_end(args);
     return array;
+}
+
+/* Creates a new trace factory that creates a trace containing the given events.
+ * The trace will be automatically freed for you at the end of the test case. */
+#define trace(...) trace_(strings(__VA_ARGS__))
+
+static void
+csp_trace_free_(void *vtrace)
+{
+    struct csp_trace *trace = vtrace;
+    csp_trace_done(trace);
+    free(trace);
+}
+
+static struct csp_trace *
+trace_factory(struct csp *csp, void *vnames)
+{
+    struct string_array *names = vnames;
+    size_t i;
+    struct csp_trace *trace = malloc(sizeof(struct csp_trace));
+    assert(trace != NULL);
+    csp_trace_init(trace);
+    test_case_cleanup_register(csp_trace_free_, trace);
+    csp_trace_ensure_size(trace, names->count);
+    for (i = 0; i < names->count; i++) {
+        const char *event_name = names->strings[i];
+        trace->events[i] = csp_get_event_id(csp, event_name);
+    }
+    return trace;
+}
+
+UNNEEDED
+static struct csp_trace_factory
+trace_(struct string_array *names)
+{
+    struct csp_trace_factory factory = {trace_factory, names};
+    return factory;
 }
 
 #endif /* TEST_CASES_H */

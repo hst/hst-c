@@ -178,7 +178,7 @@ TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)")
     check_process_afters(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("τ"),
                          csp0s("a → STOP □ b → STOP", "a → STOP □ c → STOP"));
     check_process_traces_behavior(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
-                                  events("a", "τ"));
+                                  events("a"));
 }
 
 TEST_CASE("(a → STOP) □ (b → STOP)")
@@ -216,7 +216,7 @@ TEST_CASE("STOP ⊓ STOP")
     check_process_initials(csp0("STOP ⊓ STOP"), events("τ"));
     check_process_afters(csp0("STOP ⊓ STOP"), event("τ"), csp0s("STOP"));
     check_process_afters(csp0("STOP ⊓ STOP"), event("a"), csp0s());
-    check_process_traces_behavior(csp0("STOP ⊓ STOP"), events("τ"));
+    check_process_traces_behavior(csp0("STOP ⊓ STOP"), events());
 }
 
 TEST_CASE("(a → STOP) ⊓ (b → STOP)")
@@ -225,7 +225,7 @@ TEST_CASE("(a → STOP) ⊓ (b → STOP)")
     check_process_afters(csp0("(a → STOP) ⊓ (b → STOP)"), event("τ"),
                          csp0s("a → STOP", "b → STOP"));
     check_process_afters(csp0("(a → STOP) ⊓ (b → STOP)"), event("a"), csp0s());
-    check_process_traces_behavior(csp0("(a → STOP) ⊓ (b → STOP)"), events("τ"));
+    check_process_traces_behavior(csp0("(a → STOP) ⊓ (b → STOP)"), events());
 }
 
 TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}")
@@ -237,7 +237,7 @@ TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}")
     check_process_afters(csp0("⊓ {a → STOP, b → STOP, c → STOP}"), event("a"),
                          csp0s());
     check_process_traces_behavior(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
-                                  events("τ"));
+                                  events());
 }
 
 TEST_CASE_GROUP("prefix");
@@ -292,7 +292,7 @@ TEST_CASE("SKIP ; STOP")
     check_process_afters(csp0("SKIP ; STOP"), event("b"), csp0s());
     check_process_afters(csp0("SKIP ; STOP"), event("τ"), csp0s("STOP"));
     check_process_afters(csp0("SKIP ; STOP"), event("✔"), csp0s());
-    check_process_traces_behavior(csp0("SKIP ; STOP"), events("τ"));
+    check_process_traces_behavior(csp0("SKIP ; STOP"), events());
 }
 
 TEST_CASE("a → SKIP ; STOP")
@@ -319,7 +319,7 @@ TEST_CASE("(a → b → STOP □ SKIP) ; STOP")
     check_process_afters(csp0("(a → b → STOP □ SKIP) ; STOP"), event("✔"),
                          csp0s());
     check_process_traces_behavior(csp0("(a → b → STOP □ SKIP) ; STOP"),
-                                  events("a", "τ"));
+                                  events("a"));
 }
 
 TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
@@ -334,5 +334,5 @@ TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
     check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("✔"),
                          csp0s());
     check_process_traces_behavior(csp0("(a → b → STOP ⊓ SKIP) ; STOP"),
-                                  events("τ"));
+                                  events());
 }

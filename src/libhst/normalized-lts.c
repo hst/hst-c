@@ -102,6 +102,7 @@ csp_normalized_lts_node_get_edges(struct csp_normalized_lts_node *node,
 struct csp_normalized_lts {
     struct csp *csp;
     enum csp_semantic_model model;
+    struct csp_equivalences roots;
     void *nodes;
 };
 
@@ -112,6 +113,7 @@ csp_normalized_lts_new(struct csp *csp, enum csp_semantic_model model)
     assert(lts != NULL);
     lts->csp = csp;
     lts->model = model;
+    csp_equivalences_init(&lts->roots);
     lts->nodes = NULL;
     return lts;
 }
@@ -131,6 +133,7 @@ csp_normalized_lts_free(struct csp_normalized_lts *lts)
         }
         JLFA(dummy, lts->nodes);
     }
+    csp_equivalences_done(&lts->roots);
     free(lts);
 }
 
@@ -170,6 +173,21 @@ csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
     assert(from_node != NULL);
     assert(csp_normalized_lts_get_node(lts, to) != NULL);
     csp_normalized_lts_node_add_edge(from_node, event, to);
+}
+
+void
+csp_normalized_lts_add_normalized_root(struct csp_normalized_lts *lts,
+                                       csp_id root_id,
+                                       csp_id normalized_root_id)
+{
+    csp_equivalences_add(&lts->roots, normalized_root_id, root_id);
+}
+
+csp_id
+csp_normalized_lts_get_normalized_root(struct csp_normalized_lts *lts,
+                                       csp_id root_id)
+{
+    return csp_equivalences_get_class(&lts->roots, root_id);
 }
 
 const struct csp_behavior *
@@ -479,6 +497,31 @@ csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *lts,
                 csp_normalized_lts_add_edge(new_lts, new_class_node_id,
                                             event_id, new_to_node_id);
             }
+        }
+    }
+
+    /* Figure out the new normalized root for each root node. */
+    DEBUG("Update normalized roots");
+    csp_equivalences_build_classes(&lts->roots, &builder);
+    csp_id_set_build(&classes, &builder);
+    for (i = 0; i < classes.count; i++) {
+        size_t j;
+        csp_id old_normalized_root_id = classes.ids[i];
+        csp_id class_id =
+                csp_equivalences_get_class(equiv, old_normalized_root_id);
+        csp_id new_normalized_root_id =
+                csp_equivalences_get_class(&new_nodes, class_id);
+        csp_equivalences_build_members(&lts->roots, old_normalized_root_id,
+                                       &builder);
+        csp_id_set_build(&members, &builder);
+        for (j = 0; j < members.count; j++) {
+            csp_id root_id = members.ids[j];
+            DEBUG("  Old root " CSP_ID_FMT " for " CSP_ID_FMT,
+                  old_normalized_root_id, root_id);
+            DEBUG("  New root " CSP_ID_FMT " for " CSP_ID_FMT,
+                  new_normalized_root_id, root_id);
+            csp_equivalences_add(&new_lts->roots, new_normalized_root_id,
+                                 root_id);
         }
     }
 

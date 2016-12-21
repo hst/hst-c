@@ -11,6 +11,7 @@ lib_LTLIBRARIES = libhst.la
 check_LTLIBRARIES = libtests.la
 check_PROGRAMS = \
 	tests/test-csp0 \
+	tests/test-denotational \
 	tests/test-environment \
 	tests/test-equivalences \
 	tests/test-id-pairs \
@@ -33,6 +34,7 @@ dist-hook:
 libhst_la_SOURCES = \
 	src/libhst/behavior.c \
 	src/libhst/csp0.c \
+	src/libhst/denotational.c \
 	src/libhst/environment.c \
 	src/libhst/equivalence.c \
 	src/libhst/id-pair.c \
@@ -65,6 +67,7 @@ hst_LDADD = libhst.la
 
 LDADD = libhst.la libtests.la
 tests_test_csp0_LDFLAGS = -no-install
+tests_test_denotational_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install
 tests_test_equivalences_LDFLAGS = -no-install
 tests_test_id_pairs_LDFLAGS = -no-install

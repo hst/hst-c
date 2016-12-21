@@ -92,6 +92,11 @@ csp_id_set_done(struct csp_id_set *set);
 bool
 csp_id_set_eq(const struct csp_id_set *set1, const struct csp_id_set *set2);
 
+/* Return whether set1 ⊆ set2 */
+bool
+csp_id_set_subseteq(const struct csp_id_set *set1,
+                    const struct csp_id_set *set2);
+
 /* Fills a set with a copy of another set, without having to go through a
  * builder first.  You must have already initialized `set`.  This is guaranteed
  * to be equivalent to (and likely more efficient than):
@@ -230,6 +235,71 @@ csp_id_pair_array_ensure_size(struct csp_id_pair_array *array, size_t count);
 bool
 csp_id_pair_array_eq(const struct csp_id_pair_array *a1,
                      const struct csp_id_pair_array *a2);
+
+/* We preallocate a certain number of entries in the csp_id_pair_set struct
+ * itself, to minimize malloc overhead for small sets.  We automatically
+ * calculate a number that makes the size of the csp_id_pair_set itself a nice
+ * multiple of sizeof(void *).  On 64-bit platforms this should currently
+ * evaluate to 6. */
+#define CSP_ID_PAIR_SET_INTERNAL_SIZE                        \
+    (((sizeof(void *) * 16)          /* target overall size */ \
+      - sizeof(struct csp_id_pair *) /* pairs */               \
+      - sizeof(size_t)               /* count */               \
+      - sizeof(size_t)               /* allocated_count */     \
+      ) /                                                      \
+     sizeof(struct csp_id_pair))
+
+/* An set of pairs of IDs. */
+struct csp_id_pair_set {
+    struct csp_id_pair *pairs;
+    size_t count;
+    size_t allocated_count;
+    struct csp_id_pair internal[CSP_ID_PAIR_SET_INTERNAL_SIZE];
+};
+
+void
+csp_id_pair_set_init(struct csp_id_pair_set *set);
+
+void
+csp_id_pair_set_done(struct csp_id_pair_set *set);
+
+/* Update `dest` to contain the union of `dest` and `src`. */
+void
+csp_id_pair_set_union(struct csp_id_pair_set *dest,
+                      const struct csp_id_pair_set *src);
+
+bool
+csp_id_pair_set_contains(const struct csp_id_pair_set *set,
+                         struct csp_id_pair pair);
+
+bool
+csp_id_pair_set_eq(const struct csp_id_pair_set *set1,
+                   const struct csp_id_pair_set *set2);
+
+/* A writeable view of a set of pairs of IDs. */
+struct csp_id_pair_set_builder {
+    size_t count;
+    void *working_set;
+};
+
+/* Initialize and clear a set builder. */
+void
+csp_id_pair_set_builder_init(struct csp_id_pair_set_builder *builder);
+
+void
+csp_id_pair_set_builder_done(struct csp_id_pair_set_builder *builder);
+
+/* Add a single pair to a set builder. */
+void
+csp_id_pair_set_builder_add(struct csp_id_pair_set_builder *builder,
+                            struct csp_id_pair pair);
+
+/* "Lock" the contents of a pair set builder, filling in a (read-only)
+ * set.  The set builder will be cleared in the process, allowing you to
+ * reuse it if you need to build several sets. */
+void
+csp_id_pair_set_build(struct csp_id_pair_set *set,
+                      struct csp_id_pair_set_builder *builder);
 
 /*------------------------------------------------------------------------------
  * Equivalences
@@ -494,6 +564,11 @@ csp_behavior_done(struct csp_behavior *behavior);
 bool
 csp_behavior_eq(const struct csp_behavior *b1, const struct csp_behavior *b2);
 
+/* Return whether `impl` refines `spec`. */
+bool
+csp_behavior_refines(const struct csp_behavior *spec,
+                     const struct csp_behavior *impl);
+
 /* Fill in `behavior` with the behavior of `process` in the given semantic
  * model.  You must have already initialized `behavior`. */
 void
@@ -502,13 +577,51 @@ csp_process_get_behavior(struct csp *csp, csp_id process,
                          struct csp_behavior *behavior);
 
 /* Fill in `behavior` with the behavior of a set of `processes` in the given
- * semantic model.  `processes` should be τ-closed, and so τ won't be included
- * in the set's behavior.  You must have already initialized `behavior`. */
+ * semantic model.  You must have already initialized `behavior`. */
 void
 csp_process_set_get_behavior(struct csp *csp,
                              const struct csp_id_set *processes,
                              enum csp_semantic_model model,
                              struct csp_behavior *behavior);
+
+/*------------------------------------------------------------------------------
+ * Denotational semantics
+ */
+
+/* We preallocate a certain number of entries in the csp_trace struct itself, to
+ * minimize malloc overhead for small traces.  We automatically calculate a
+ * number that makes the size of the csp_trace itself a nice multiple of
+ * sizeof(void *).  On 64-bit platforms this should currently evaluate to 13. */
+#define CSP_TRACE_INTERNAL_SIZE                       \
+    (((sizeof(void *) * 16) /* target overall size */ \
+      - sizeof(csp_id *)    /* ids */                 \
+      - sizeof(size_t)      /* count */               \
+      - sizeof(size_t)      /* allocated_count */     \
+      ) /                                             \
+     sizeof(csp_id))
+
+/* A sequence of events. */
+struct csp_trace {
+    csp_id *events;
+    size_t count;
+    size_t allocated_count;
+    csp_id internal[CSP_TRACE_INTERNAL_SIZE];
+};
+
+void
+csp_trace_init(struct csp_trace *set);
+
+void
+csp_trace_done(struct csp_trace *set);
+
+/* Ensure that the traces's `events` field has enough allocated space to hold
+ * `count` events.  The trace's `count` will be set to `count` after this
+ * returns; you must then fill in the `events` field with the actual events. */
+void
+csp_trace_ensure_size(struct csp_trace *trace, size_t count);
+
+bool
+csp_trace_eq(const struct csp_trace *trace1, const struct csp_trace *trace2);
 
 /*------------------------------------------------------------------------------
  * Normalized LTS
@@ -539,6 +652,23 @@ csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
 void
 csp_normalized_lts_add_edge(struct csp_normalized_lts *lts, csp_id from,
                             csp_id event, csp_id to);
+
+/* Add a "normalized root".  During a refinement check, this lets us keep track
+ * of which normalized LTS node your Spec process belongs to.  (You won't have
+ * to call this function directly; we'll keep track of this for you for each
+ * process that you prenormalize.) */
+void
+csp_normalized_lts_add_normalized_root(struct csp_normalized_lts *lts,
+                                       csp_id root_id,
+                                       csp_id normalized_root_id);
+
+/* Return the normalized LTS node that a particular original non-normalized
+ * process belongs to.  (That is, if you start a refinement check for a
+ * particular Spec process, which normalized LTS node should you start the
+ * breadth-first search from?) */
+csp_id
+csp_normalized_lts_get_normalized_root(struct csp_normalized_lts *lts,
+                                       csp_id root_id);
 
 /* Return the behavior for a normalized LTS node.  `id` must a node that you've
  * already created via csp_normalized_lts_add_node.  We retain ownership of the
@@ -607,6 +737,16 @@ csp_process_find_closure(struct csp *csp, csp_id event,
 csp_id
 csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
                          csp_id process);
+
+/* Return whether Spec ⊑T Impl.  You must have already normalized Spec into
+ * `lts`.  Use csp_process_check_traces_refinement for a simpler version if you
+ * only want to perform one refinement check. */
+bool
+csp_check_traces_refinement(struct csp *csp, struct csp_normalized_lts *lts,
+                            csp_id normalized_spec, csp_id impl);
+
+bool
+csp_process_check_traces_refinement(struct csp *csp, csp_id spec, csp_id impl);
 
 #ifdef __cplusplus
 }

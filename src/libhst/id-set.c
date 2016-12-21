@@ -54,6 +54,27 @@ csp_id_set_eq(const struct csp_id_set *set1, const struct csp_id_set *set2)
     }
 }
 
+bool
+csp_id_set_subseteq(const struct csp_id_set *set1,
+                    const struct csp_id_set *set2)
+{
+    csp_id *end1 = set1->ids + set1->count;
+    csp_id *end2 = set2->ids + set2->count;
+    csp_id *curr1;
+    csp_id *curr2;
+    /* Loop through the elements in `set1`, verifying that each one is also in
+     * `set2`. */
+    for (curr1 = set1->ids, curr2 = set2->ids; curr1 < end1; curr1++, curr2++) {
+        while (curr2 < end2 && *curr1 > *curr2) {
+            curr2++;
+        }
+        if (curr2 == end2 || *curr1 < *curr2) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void
 csp_id_set_builder_init(struct csp_id_set_builder *builder)
 {

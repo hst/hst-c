@@ -320,6 +320,24 @@ check_normalized_edge(struct csp *csp, struct csp_normalized_lts *lts,
     check_id_eq(actual, expected);
 }
 
+static void
+check_normalized_root(struct csp *csp, struct csp_normalized_lts *lts,
+                      struct csp_id_factory root,
+                      struct csp_id_set_factory expected_normalized_root)
+{
+    csp_id root_id;
+    const struct csp_id_set *expected_normalized_root_set;
+    csp_id actual;
+    csp_id expected;
+    root_id = csp_id_factory_create(csp, root);
+    expected_normalized_root_set =
+            csp_id_set_factory_create(csp, expected_normalized_root);
+    check(!csp_normalized_lts_add_node(lts, expected_normalized_root_set,
+                                       &expected));
+    actual = csp_normalized_lts_get_normalized_root(lts, root_id);
+    check_id_eq(actual, expected);
+}
+
 TEST_CASE("a → STOP")
 {
     struct csp *csp;
@@ -329,6 +347,7 @@ TEST_CASE("a → STOP")
     check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     /* Prenormalize the process and verify we get all of the edges we expect. */
     check_prenormalize(csp, lts, csp0("a → STOP"), csp0s("a → STOP"));
+    check_normalized_root(csp, lts, csp0("a → STOP"), csp0s("a → STOP"));
     check_normalized_edge(csp, lts, csp0s("a → STOP"), event("a"),
                           csp0s("STOP"));
     /* And verify that the normalized nodes have the behavior we expect. */
@@ -349,6 +368,8 @@ TEST_CASE("a → STOP □ b → STOP")
     /* Prenormalize the process and verify we get all of the edges we expect. */
     check_prenormalize(csp, lts, csp0("a → STOP □ b → STOP"),
                        csp0s("a → STOP □ b → STOP"));
+    check_normalized_root(csp, lts, csp0("a → STOP □ b → STOP"),
+                          csp0s("a → STOP □ b → STOP"));
     check_normalized_edge(csp, lts, csp0s("a → STOP □ b → STOP"), event("a"),
                           csp0s("STOP"));
     check_normalized_edge(csp, lts, csp0s("a → STOP □ b → STOP"), event("b"),
@@ -371,6 +392,8 @@ TEST_CASE("a → STOP ⊓ b → STOP")
     /* Prenormalize the process and verify we get all of the edges we expect. */
     check_prenormalize(csp, lts, csp0("a → STOP ⊓ b → STOP"),
                        csp0s("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"));
+    check_normalized_root(csp, lts, csp0("a → STOP ⊓ b → STOP"),
+                          csp0s("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"));
     check_normalized_edge(csp, lts,
                           csp0s("a → STOP ⊓ b → STOP", "a → STOP", "b → STOP"),
                           event("a"), csp0s("STOP"));
@@ -396,6 +419,8 @@ TEST_CASE("a → SKIP ; b → STOP")
     /* Prenormalize the process and verify we get all of the edges we expect. */
     check_prenormalize(csp, lts, csp0("a → SKIP ; b → STOP"),
                        csp0s("a → SKIP ; b → STOP"));
+    check_normalized_root(csp, lts, csp0("a → SKIP ; b → STOP"),
+                          csp0s("a → SKIP ; b → STOP"));
     check_normalized_edge(csp, lts, csp0s("a → SKIP ; b → STOP"), event("a"),
                           csp0s("SKIP ; b → STOP", "b → STOP"));
     check_normalized_edge(csp, lts, csp0s("SKIP ; b → STOP", "b → STOP"),
@@ -527,8 +552,8 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
  * LTS nodes. */
 static void
 check_normalize(struct csp *csp, struct csp_normalized_lts *lts,
-                    struct csp_id_factory root_process,
-                    struct csp_id_set_factory prenormalized_processes)
+                struct csp_id_factory root_process,
+                struct csp_id_set_factory prenormalized_processes)
 {
     size_t i;
     const struct csp_id_set *prenormalized;
@@ -570,6 +595,8 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (separate branches)") {
     /* Normalize the process and verify we get all of the nodes and edges we
      * expect. */
     check_normalize(csp, lts, csp0(process), csp0s("A@0", "D@0"));
+    check_normalized_root(csp, lts, csp0("A@0"), csp0s("A@0", "D@0"));
+    check_normalized_root(csp, lts, csp0("D@0"), csp0s("A@0", "D@0"));
     check_normalized_edge(csp, lts, csp0s("A@0", "D@0"), event("a"),
                           csp0s("B@0", "E@0"));
     check_normalized_edge(csp, lts, csp0s("B@0", "E@0"), event("a"),
@@ -596,6 +623,7 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
     /* Normalize the process and verify we get all of the nodes and edges we
      * expect. */
     check_normalize(csp, lts, csp0(process), csp0s("A@0"));
+    check_normalized_root(csp, lts, csp0("A@0"), csp0s("A@0"));
     check_normalized_edge(csp, lts, csp0s("A@0"), event("a"),
                           csp0s("B@0", "D@0"));
     check_normalized_edge(csp, lts, csp0s("B@0", "D@0"), event("a"),
@@ -603,4 +631,120 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);
+}
+
+/*------------------------------------------------------------------------------
+ * Traces refinement
+ */
+
+static void
+check_traces_refinement(struct csp_id_factory spec, struct csp_id_factory impl)
+{
+    struct csp *csp;
+    csp_id spec_id;
+    csp_id impl_id;
+    check_alloc(csp, csp_new());
+    spec_id = csp_id_factory_create(csp, spec);
+    impl_id = csp_id_factory_create(csp, impl);
+    check(csp_process_check_traces_refinement(csp, spec_id, impl_id));
+    csp_free(csp);
+}
+
+static void
+xcheck_traces_refinement(struct csp_id_factory spec, struct csp_id_factory impl)
+{
+    struct csp *csp;
+    csp_id spec_id;
+    csp_id impl_id;
+    check_alloc(csp, csp_new());
+    spec_id = csp_id_factory_create(csp, spec);
+    impl_id = csp_id_factory_create(csp, impl);
+    check(!csp_process_check_traces_refinement(csp, spec_id, impl_id));
+    csp_free(csp);
+}
+
+TEST_CASE_GROUP("traces refinement");
+
+TEST_CASE("STOP ⊑T STOP")
+{
+    check_traces_refinement(csp0("STOP"), csp0("STOP"));
+}
+
+TEST_CASE("STOP ⋤T a → STOP")
+{
+    xcheck_traces_refinement(csp0("STOP"), csp0("a → STOP"));
+}
+
+TEST_CASE("STOP ⋤T a → STOP □ b → STOP")
+{
+    xcheck_traces_refinement(csp0("STOP"), csp0("a → STOP □ b → STOP"));
+}
+
+TEST_CASE("STOP ⋤T a → STOP ⊓ b → STOP")
+{
+    xcheck_traces_refinement(csp0("STOP"), csp0("a → STOP ⊓ b → STOP"));
+}
+
+TEST_CASE("a → STOP ⊑T STOP")
+{
+    check_traces_refinement(csp0("a → STOP"), csp0("STOP"));
+}
+
+TEST_CASE("a → STOP ⊑T a → STOP")
+{
+    check_traces_refinement(csp0("a → STOP"), csp0("a → STOP"));
+}
+
+TEST_CASE("a → STOP ⋤T a → STOP □ b → STOP")
+{
+    xcheck_traces_refinement(csp0("a → STOP"), csp0("a → STOP □ b → STOP"));
+}
+
+TEST_CASE("a → STOP ⋤T a → STOP ⊓ b → STOP")
+{
+    xcheck_traces_refinement(csp0("a → STOP"), csp0("a → STOP ⊓ b → STOP"));
+}
+
+TEST_CASE("a → STOP □ b → STOP ⊑T STOP")
+{
+    check_traces_refinement(csp0("a → STOP □ b → STOP"), csp0("STOP"));
+}
+
+TEST_CASE("a → STOP □ b → STOP ⊑T a → STOP")
+{
+    check_traces_refinement(csp0("a → STOP □ b → STOP"), csp0("a → STOP"));
+}
+
+TEST_CASE("a → STOP □ b → STOP ⊑T a → STOP □ b → STOP")
+{
+    check_traces_refinement(csp0("a → STOP □ b → STOP"),
+                            csp0("a → STOP □ b → STOP"));
+}
+
+TEST_CASE("a → STOP □ b → STOP ⊑T a → STOP ⊓ b → STOP")
+{
+    check_traces_refinement(csp0("a → STOP □ b → STOP"),
+                            csp0("a → STOP ⊓ b → STOP"));
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP ⊑T STOP")
+{
+    check_traces_refinement(csp0("a → STOP ⊓ b → STOP"), csp0("STOP"));
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP ⊑T a → STOP")
+{
+    check_traces_refinement(csp0("a → STOP ⊓ b → STOP"), csp0("a → STOP"));
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP ⊑T a → STOP □ b → STOP")
+{
+    check_traces_refinement(csp0("a → STOP ⊓ b → STOP"),
+                            csp0("a → STOP □ b → STOP"));
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP ⊑T a → STOP ⊓ b → STOP")
+{
+    check_traces_refinement(csp0("a → STOP ⊓ b → STOP"),
+                            csp0("a → STOP ⊓ b → STOP"));
 }
