@@ -572,8 +572,7 @@ csp_process_get_behavior(struct csp *csp, csp_id process,
                          struct csp_behavior *behavior);
 
 /* Fill in `behavior` with the behavior of a set of `processes` in the given
- * semantic model.  `processes` should be τ-closed, and so τ won't be included
- * in the set's behavior.  You must have already initialized `behavior`. */
+ * semantic model.  You must have already initialized `behavior`. */
 void
 csp_process_set_get_behavior(struct csp *csp,
                              const struct csp_id_set *processes,

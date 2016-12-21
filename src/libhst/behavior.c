@@ -42,10 +42,11 @@ csp_process_add_traces_behavior(struct csp *csp, csp_id process,
 }
 
 static void
-csp_behavior_finish_traces(struct csp_behavior *behavior,
+csp_behavior_finish_traces(struct csp *csp, struct csp_behavior *behavior,
                            struct csp_id_set_builder *builder)
 {
     behavior->model = CSP_TRACES;
+    csp_id_set_builder_remove(builder, csp->tau);
     csp_id_set_build(&behavior->initials, builder);
     behavior->hash = behavior->initials.hash;
 }
@@ -57,7 +58,7 @@ csp_process_get_traces_behavior(struct csp *csp, csp_id process,
     struct csp_id_set_builder builder;
     csp_id_set_builder_init(&builder);
     csp_process_add_traces_behavior(csp, process, behavior, &builder);
-    csp_behavior_finish_traces(behavior, &builder);
+    csp_behavior_finish_traces(csp, behavior, &builder);
     csp_id_set_builder_done(&builder);
 }
 
@@ -87,8 +88,7 @@ csp_process_set_get_traces_behavior(struct csp *csp,
         csp_process_add_traces_behavior(csp, processes->ids[i], behavior,
                                         &builder);
     }
-    csp_id_set_builder_remove(&builder, csp->tau);
-    csp_behavior_finish_traces(behavior, &builder);
+    csp_behavior_finish_traces(csp, behavior, &builder);
     csp_id_set_builder_done(&builder);
 }
 
