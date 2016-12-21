@@ -564,6 +564,11 @@ csp_behavior_done(struct csp_behavior *behavior);
 bool
 csp_behavior_eq(const struct csp_behavior *b1, const struct csp_behavior *b2);
 
+/* Return whether `impl` refines `spec`. */
+bool
+csp_behavior_refines(const struct csp_behavior *spec,
+                     const struct csp_behavior *impl);
+
 /* Fill in `behavior` with the behavior of `process` in the given semantic
  * model.  You must have already initialized `behavior`. */
 void
@@ -732,6 +737,16 @@ csp_process_find_closure(struct csp *csp, csp_id event,
 csp_id
 csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
                          csp_id process);
+
+/* Return whether Spec ⊑T Impl.  You must have already normalized Spec into
+ * `lts`.  Use csp_process_check_traces_refinement for a simpler version if you
+ * only want to perform one refinement check. */
+bool
+csp_check_traces_refinement(struct csp *csp, struct csp_normalized_lts *lts,
+                            csp_id normalized_spec, csp_id impl);
+
+bool
+csp_process_check_traces_refinement(struct csp *csp, csp_id spec, csp_id impl);
 
 #ifdef __cplusplus
 }

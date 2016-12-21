@@ -552,8 +552,8 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
  * LTS nodes. */
 static void
 check_normalize(struct csp *csp, struct csp_normalized_lts *lts,
-                    struct csp_id_factory root_process,
-                    struct csp_id_set_factory prenormalized_processes)
+                struct csp_id_factory root_process,
+                struct csp_id_set_factory prenormalized_processes)
 {
     size_t i;
     const struct csp_id_set *prenormalized;
@@ -631,4 +631,120 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
     /* Clean up. */
     csp_normalized_lts_free(lts);
     csp_free(csp);
+}
+
+/*------------------------------------------------------------------------------
+ * Traces refinement
+ */
+
+static void
+check_traces_refinement(struct csp_id_factory spec, struct csp_id_factory impl)
+{
+    struct csp *csp;
+    csp_id spec_id;
+    csp_id impl_id;
+    check_alloc(csp, csp_new());
+    spec_id = csp_id_factory_create(csp, spec);
+    impl_id = csp_id_factory_create(csp, impl);
+    check(csp_process_check_traces_refinement(csp, spec_id, impl_id));
+    csp_free(csp);
+}
+
+static void
+xcheck_traces_refinement(struct csp_id_factory spec, struct csp_id_factory impl)
+{
+    struct csp *csp;
+    csp_id spec_id;
+    csp_id impl_id;
+    check_alloc(csp, csp_new());
+    spec_id = csp_id_factory_create(csp, spec);
+    impl_id = csp_id_factory_create(csp, impl);
+    check(!csp_process_check_traces_refinement(csp, spec_id, impl_id));
+    csp_free(csp);
+}
+
+TEST_CASE_GROUP("traces refinement");
+
+TEST_CASE("STOP ⊑T STOP")
+{
+    check_traces_refinement(csp0("STOP"), csp0("STOP"));
+}
+
+TEST_CASE("STOP ⋤T a → STOP")
+{
+    xcheck_traces_refinement(csp0("STOP"), csp0("a → STOP"));
+}
+
+TEST_CASE("STOP ⋤T a → STOP □ b → STOP")
+{
+    xcheck_traces_refinement(csp0("STOP"), csp0("a → STOP □ b → STOP"));
+}
+
+TEST_CASE("STOP ⋤T a → STOP ⊓ b → STOP")
+{
+    xcheck_traces_refinement(csp0("STOP"), csp0("a → STOP ⊓ b → STOP"));
+}
+
+TEST_CASE("a → STOP ⊑T STOP")
+{
+    check_traces_refinement(csp0("a → STOP"), csp0("STOP"));
+}
+
+TEST_CASE("a → STOP ⊑T a → STOP")
+{
+    check_traces_refinement(csp0("a → STOP"), csp0("a → STOP"));
+}
+
+TEST_CASE("a → STOP ⋤T a → STOP □ b → STOP")
+{
+    xcheck_traces_refinement(csp0("a → STOP"), csp0("a → STOP □ b → STOP"));
+}
+
+TEST_CASE("a → STOP ⋤T a → STOP ⊓ b → STOP")
+{
+    xcheck_traces_refinement(csp0("a → STOP"), csp0("a → STOP ⊓ b → STOP"));
+}
+
+TEST_CASE("a → STOP □ b → STOP ⊑T STOP")
+{
+    check_traces_refinement(csp0("a → STOP □ b → STOP"), csp0("STOP"));
+}
+
+TEST_CASE("a → STOP □ b → STOP ⊑T a → STOP")
+{
+    check_traces_refinement(csp0("a → STOP □ b → STOP"), csp0("a → STOP"));
+}
+
+TEST_CASE("a → STOP □ b → STOP ⊑T a → STOP □ b → STOP")
+{
+    check_traces_refinement(csp0("a → STOP □ b → STOP"),
+                            csp0("a → STOP □ b → STOP"));
+}
+
+TEST_CASE("a → STOP □ b → STOP ⊑T a → STOP ⊓ b → STOP")
+{
+    check_traces_refinement(csp0("a → STOP □ b → STOP"),
+                            csp0("a → STOP ⊓ b → STOP"));
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP ⊑T STOP")
+{
+    check_traces_refinement(csp0("a → STOP ⊓ b → STOP"), csp0("STOP"));
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP ⊑T a → STOP")
+{
+    check_traces_refinement(csp0("a → STOP ⊓ b → STOP"), csp0("a → STOP"));
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP ⊑T a → STOP □ b → STOP")
+{
+    check_traces_refinement(csp0("a → STOP ⊓ b → STOP"),
+                            csp0("a → STOP □ b → STOP"));
+}
+
+TEST_CASE("a → STOP ⊓ b → STOP ⊑T a → STOP ⊓ b → STOP")
+{
+    check_traces_refinement(csp0("a → STOP ⊓ b → STOP"),
+                            csp0("a → STOP ⊓ b → STOP"));
 }

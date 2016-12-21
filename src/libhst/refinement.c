@@ -10,6 +10,21 @@
 #if defined(REFINEMENT_DEBUG)
 #include <stdio.h>
 #define XDEBUG(...) fprintf(stderr, __VA_ARGS__)
+#define XDEBUG_EVENT_SET(set)                                       \
+    do {                                                            \
+        bool __first = true;                                        \
+        size_t __i;                                                 \
+        XDEBUG("{");                                                \
+        for (__i = 0; __i < (set)->count; __i++) {                  \
+            if (__first) {                                          \
+                __first = false;                                    \
+            } else {                                                \
+                XDEBUG(",");                                        \
+            }                                                       \
+            XDEBUG("%s", csp_get_event_name(csp, (set)->ids[__i])); \
+        }                                                           \
+        XDEBUG("}");                                                \
+    } while (0)
 #define XDEBUG_PROCESS_SET(set)                    \
     do {                                           \
         bool __first = true;                       \
@@ -27,6 +42,7 @@
     } while (0)
 #else
 #define XDEBUG(...)             /* do nothing */
+#define XDEBUG_EVENT_SET(set)   /* do nothing */
 #define XDEBUG_PROCESS_SET(set) /* do nothing */
 #endif
 
@@ -34,6 +50,11 @@
     do {                     \
         XDEBUG(__VA_ARGS__); \
         XDEBUG("\n");        \
+    } while (0)
+#define DEBUG_EVENT_SET(set)   \
+    do {                       \
+        XDEBUG_EVENT_SET(set); \
+        XDEBUG("\n");          \
     } while (0)
 #define DEBUG_PROCESS_SET(set)   \
     do {                         \
@@ -133,7 +154,7 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
             csp_id_set_builder_remove(&builder, csp->tau);
             csp_id_set_build(&initials, &builder);
             XDEBUG("Merged initials are ");
-            DEBUG_PROCESS_SET(&initials);
+            DEBUG_EVENT_SET(&initials);
 
             /* For each of those events, union together the `afters` of that
              * event for all of the processes in the current set. */
@@ -141,11 +162,11 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
                 size_t k;
                 csp_id initial = initials.ids[j];
                 csp_id after;
-                DEBUG("Get afters for " CSP_ID_FMT, initial);
+                DEBUG("Get afters for %s", csp_get_event_name(csp, initial));
                 for (k = 0; k < current_processes->count; k++) {
                     csp_id process = current_processes->ids[k];
-                    DEBUG("Get afters of " CSP_ID_FMT " for " CSP_ID_FMT,
-                          process, initial);
+                    DEBUG("Get afters of " CSP_ID_FMT " for %s", process,
+                          csp_get_event_name(csp, initial));
                     csp_process_build_afters(csp, process, initial, &builder);
                 }
 
@@ -181,4 +202,134 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
     csp_id_set_builder_done(&builder);
     csp_id_set_builder_done(&pending_builder);
     return node;
+}
+
+bool
+csp_check_traces_refinement(struct csp *csp, struct csp_normalized_lts *lts,
+                            csp_id normalized_spec, csp_id impl)
+{
+    struct csp_id_pair_set checked;
+    struct csp_id_pair_set checking;
+    struct csp_id_pair_set_builder pending;
+    struct csp_id_set initials;
+    struct csp_id_set afters;
+    struct csp_id_set_builder builder;
+    struct csp_behavior impl_behavior;
+    struct csp_id_pair root = {normalized_spec, impl};
+
+    csp_id_pair_set_init(&checked);
+    csp_id_pair_set_init(&checking);
+    csp_id_pair_set_builder_init(&pending);
+    csp_id_set_init(&initials);
+    csp_id_set_init(&afters);
+    csp_id_set_builder_init(&builder);
+    csp_behavior_init(&impl_behavior);
+    csp_id_pair_set_builder_add(&pending, root);
+    DEBUG("=== check " CSP_ID_FMT " ⊑T " CSP_ID_FMT, normalized_spec, impl);
+
+    while (pending.count > 0) {
+        size_t i;
+        csp_id_pair_set_build(&checking, &pending);
+        DEBUG("--- new round; checking %zu pairs", checking.count);
+        for (i = 0; i < checking.count; i++) {
+            size_t j;
+            const struct csp_id_pair *current = &checking.pairs[i];
+            csp_id spec_node = current->from;
+            csp_id impl_node = current->to;
+            const struct csp_behavior *spec_behavior;
+
+            DEBUG("  check   " CSP_ID_FMT " ⊑T " CSP_ID_FMT, spec_node,
+                  impl_node);
+            spec_behavior =
+                    csp_normalized_lts_get_node_behavior(lts, spec_node);
+            XDEBUG("    spec: ");
+            DEBUG_EVENT_SET(&spec_behavior->initials);
+            csp_process_get_behavior(csp, impl_node, spec_behavior->model,
+                                     &impl_behavior);
+            XDEBUG("    impl: ");
+            DEBUG_EVENT_SET(&impl_behavior.initials);
+
+            if (!csp_behavior_refines(spec_behavior, &impl_behavior)) {
+                /* TODO: Construct a counterexample */
+                DEBUG("    NOPE");
+                goto failure;
+            }
+
+            csp_process_build_initials(csp, impl_node, &builder);
+            csp_id_set_build(&initials, &builder);
+            for (j = 0; j < initials.count; j++) {
+                size_t k;
+                csp_id initial = initials.ids[j];
+                csp_id spec_after;
+                DEBUG("    impl -%s→ {...}", csp_get_event_name(csp, initial));
+                if (initial == csp->tau) {
+                    spec_after = spec_node;
+                } else {
+                    spec_after = csp_normalized_lts_get_edge(lts, spec_node,
+                                                             initial);
+                    if (spec_after == CSP_ID_NONE) {
+                        /* TODO: Construct a counterexample */
+                        DEBUG("      NOPE");
+                        goto failure;
+                    }
+                }
+                DEBUG("    spec -%s→ " CSP_ID_FMT,
+                      csp_get_event_name(csp, initial), spec_after);
+
+                csp_process_build_afters(csp, impl_node, initial, &builder);
+                csp_id_set_build(&afters, &builder);
+                for (k = 0; k < afters.count; k++) {
+                    csp_id impl_after = afters.ids[k];
+                    struct csp_id_pair next = {spec_after, impl_after};
+                    DEBUG("    impl -%s→ " CSP_ID_FMT,
+                          csp_get_event_name(csp, initial), impl_after);
+                    if (!csp_id_pair_set_contains(&checked, next)) {
+                        DEBUG("      enqueue (" CSP_ID_FMT "," CSP_ID_FMT ")",
+                              spec_after, impl_after);
+                        csp_id_pair_set_builder_add(&pending, next);
+                    }
+                }
+            }
+        }
+
+        csp_id_pair_set_union(&checked, &checking);
+    }
+
+    csp_id_pair_set_done(&checked);
+    csp_id_pair_set_done(&checking);
+    csp_id_pair_set_builder_done(&pending);
+    csp_id_set_done(&initials);
+    csp_id_set_done(&afters);
+    csp_id_set_builder_done(&builder);
+    csp_behavior_done(&impl_behavior);
+    return true;
+
+failure:
+    csp_id_pair_set_done(&checked);
+    csp_id_pair_set_done(&checking);
+    csp_id_pair_set_builder_done(&pending);
+    csp_id_set_done(&initials);
+    csp_id_set_done(&afters);
+    csp_id_set_builder_done(&builder);
+    csp_behavior_done(&impl_behavior);
+    return false;
+}
+
+bool
+csp_process_check_traces_refinement(struct csp *csp, csp_id spec, csp_id impl)
+{
+    struct csp_normalized_lts *lts;
+    csp_id spec_normalized;
+    struct csp_equivalences equiv;
+    bool result;
+
+    csp_equivalences_init(&equiv);
+    lts = csp_normalized_lts_new(csp, CSP_TRACES);
+    spec_normalized = csp_process_prenormalize(csp, lts, spec);
+    csp_normalized_lts_bisimulate(lts, &equiv);
+    csp_normalized_lts_merge_equivalences(lts, &equiv);
+    result = csp_check_traces_refinement(csp, lts, spec_normalized, impl);
+    csp_normalized_lts_free(lts);
+    csp_equivalences_done(&equiv);
+    return result;
 }

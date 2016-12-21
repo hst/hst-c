@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 
+#include "ccan/likely/likely.h"
 #include "hst.h"
 
 void
@@ -27,10 +28,20 @@ csp_behavior_eq(const struct csp_behavior *b1, const struct csp_behavior *b2)
     if (b1->hash != b2->hash) {
         return false;
     }
-    if (b1->model != b2->model) {
+    if (unlikely(b1->model != b2->model)) {
         return false;
     }
     return csp_id_set_eq(&b1->initials, &b2->initials);
+}
+
+bool
+csp_behavior_refines(const struct csp_behavior *spec,
+                     const struct csp_behavior *impl)
+{
+    if (unlikely(spec->model != impl->model)) {
+        return false;
+    }
+    return csp_id_set_subseteq(&impl->initials, &spec->initials);
 }
 
 static void
