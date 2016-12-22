@@ -5,9 +5,8 @@
 # ------------------------------------------------------------------------------
 
 ACLOCAL_AMFLAGS = -I m4
-AM_CFLAGS = -I. -I$(top_srcdir)/include -I$(top_srcdir)/third_party
-include_HEADERS = include/hst.h
-lib_LTLIBRARIES = libhst.la
+AM_CFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/third_party
+noinst_LTLIBRARIES = libhst.la
 check_LTLIBRARIES = libtests.la
 check_PROGRAMS = \
 	tests/test-csp0 \
@@ -32,20 +31,21 @@ dist-hook:
 	@rm -rf `find $(top_distdir)/third_party -type d -name .libs`
 
 libhst_la_SOURCES = \
-	src/libhst/behavior.c \
-	src/libhst/csp0.c \
-	src/libhst/denotational.c \
-	src/libhst/environment.c \
-	src/libhst/equivalence.c \
-	src/libhst/id-pair.c \
-	src/libhst/id-set.c \
-	src/libhst/normalized-lts.c \
-	src/libhst/refinement.c \
-	src/libhst/operators/external-choice.c \
-	src/libhst/operators/internal-choice.c \
-	src/libhst/operators/prefix.c \
-	src/libhst/operators/recursion.c \
-	src/libhst/operators/sequential-composition.c \
+	src/hst.h \
+	src/behavior.c \
+	src/csp0.c \
+	src/denotational.c \
+	src/environment.c \
+	src/equivalence.c \
+	src/id-pair.c \
+	src/id-set.c \
+	src/normalized-lts.c \
+	src/refinement.c \
+	src/operators/external-choice.c \
+	src/operators/internal-choice.c \
+	src/operators/prefix.c \
+	src/operators/recursion.c \
+	src/operators/sequential-composition.c \
 	third_party/ccan/build_assert/build_assert.h \
 	third_party/ccan/compiler/compiler.h \
 	third_party/ccan/container_of/container_of.h \
