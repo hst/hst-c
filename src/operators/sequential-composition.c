@@ -27,8 +27,7 @@ struct csp_sequential_composition {
  */
 
 static void
-csp_sequential_composition_initials(struct csp *csp,
-                                    struct csp_id_set_builder *builder,
+csp_sequential_composition_initials(struct csp *csp, struct csp_id_set *set,
                                     void *vseq)
 {
     struct csp_sequential_composition *seq = vseq;
@@ -38,16 +37,15 @@ csp_sequential_composition_initials(struct csp *csp,
      * initials(P;Q) = initials(P) ∖ {✔}                                [rule 1]
      *               ∪ (✔ ∈ initials(P)? {τ}: {})                       [rule 2]
      */
-    csp_process_build_initials(csp, seq->p, builder);
-    if (csp_id_set_builder_remove(builder, csp->tick)) {
-        csp_id_set_builder_add(builder, csp->tau);
+    csp_process_build_initials(csp, seq->p, set);
+    if (csp_id_set_remove(set, csp->tick)) {
+        csp_id_set_add(set, csp->tau);
     }
 }
 
 static void
 csp_sequential_composition_afters(struct csp *csp, csp_id initial,
-                                  struct csp_id_set_builder *builder,
-                                  void *vseq)
+                                  struct csp_id_set *set, void *vseq)
 {
     /* afters(P;Q a ≠ ✔) = afters(P, a)                                 [rule 1]
      * afters(P;Q, τ) = Q  if ✔ ∈ initials(P)                           [rule 2]
@@ -57,8 +55,7 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
      * (Note that τ is covered by both rules)
      */
     struct csp_sequential_composition *seq = vseq;
-    size_t i;
-    struct csp_id_set_builder afters_builder;
+    struct csp_id_set_iterator i;
     struct csp_id_set afters;
 
     /* The composition can never perform a ✔; that's always translated into a τ
@@ -69,29 +66,26 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
 
     /* If P can perform a non-✔ event (including τ) leading to P', then P;Q can
      * also perform that event, leading to P';Q. */
-    csp_id_set_builder_init(&afters_builder);
     csp_id_set_init(&afters);
-    csp_process_build_afters(csp, seq->p, initial, &afters_builder);
-    csp_id_set_build(&afters, &afters_builder);
-    for (i = 0; i < afters.count; i++) {
-        csp_id p_prime = afters.ids[i];
+    csp_process_build_afters(csp, seq->p, initial, &afters);
+    csp_id_set_foreach (&afters, &i) {
+        csp_id p_prime = i.current;
         csp_id seq_prime = csp_sequential_composition(csp, p_prime, seq->q);
-        csp_id_set_builder_add(builder, seq_prime);
+        csp_id_set_add(set, seq_prime);
     }
 
     /* If P can perform a ✔ leading to P', then P;Q can perform a τ leading to
      * Q.  Note that we don't care what P' is; we just care that it exists. */
     if (initial == csp->tau) {
-        csp_process_build_afters(csp, seq->p, csp->tick, &afters_builder);
-        csp_id_set_build(&afters, &afters_builder);
+        csp_id_set_clear(&afters);
+        csp_process_build_afters(csp, seq->p, csp->tick, &afters);
         if (afters.count > 0) {
             /* A can perform ✔, and we don't actually care what it leads to,
              * since we're going to lead to Q no matter what. */
-            csp_id_set_builder_add(builder, seq->q);
+            csp_id_set_add(set, seq->q);
         }
     }
 
-    csp_id_set_builder_done(&afters_builder);
     csp_id_set_done(&afters);
 }
 

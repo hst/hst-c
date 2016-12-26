@@ -18,13 +18,26 @@
  * Normalized LTS
  */
 
+static bool
+csp_normalized_lts_add_node_copy(struct csp_normalized_lts *lts,
+                                 const struct csp_id_set *processes, csp_id *id)
+{
+    bool result;
+    struct csp_id_set process_ids_copy;
+    csp_id_set_init(&process_ids_copy);
+    csp_id_set_union(&process_ids_copy, processes);
+    result = csp_normalized_lts_add_node(lts, &process_ids_copy, id);
+    csp_id_set_done(&process_ids_copy);
+    return result;
+}
+
 static void
 add_normalized_node(struct csp *csp, struct csp_normalized_lts *lts, csp_id *id,
                     struct csp_id_set_factory processes)
 {
     const struct csp_id_set *process_ids =
             csp_id_set_factory_create(csp, processes);
-    check(csp_normalized_lts_add_node(lts, process_ids, id));
+    check(csp_normalized_lts_add_node_copy(lts, process_ids, id));
 }
 
 static void
@@ -42,24 +55,21 @@ static void
 check_normalized_node_set(struct csp *csp, struct csp_normalized_lts *lts,
                           struct csp_id_set_factory ids)
 {
-    struct csp_id_set_builder builder;
     struct csp_id_set actual;
     const struct csp_id_set *id_set;
-    csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
     id_set = csp_id_set_factory_create(csp, ids);
-    csp_normalized_lts_build_all_nodes(lts, &builder);
-    csp_id_set_build(&actual, &builder);
+    csp_normalized_lts_build_all_nodes(lts, &actual);
     check_set_eq(&actual, id_set);
-    csp_id_set_builder_done(&builder);
     csp_id_set_done(&actual);
 }
 
 static void
-check_normalized_node_traces_behavior(struct csp *csp,
-                                      struct csp_normalized_lts *lts,
-                                      struct csp_id_set_factory processes,
-                                      struct csp_id_set_factory events)
+check_normalized_node_traces_behavior_(const char *filename, unsigned int line,
+                                       struct csp *csp,
+                                       struct csp_normalized_lts *lts,
+                                       struct csp_id_set_factory processes,
+                                       struct csp_id_set_factory events)
 {
     csp_id id;
     const struct csp_id_set *process_set;
@@ -67,10 +77,13 @@ check_normalized_node_traces_behavior(struct csp *csp,
     const struct csp_behavior *behavior;
     process_set = csp_id_set_factory_create(csp, processes);
     event_set = csp_id_set_factory_create(csp, events);
-    check(!csp_normalized_lts_add_node(lts, process_set, &id));
+    check(!csp_normalized_lts_add_node_copy(lts, process_set, &id));
     behavior = csp_normalized_lts_get_node_behavior(lts, id);
-    check_set_eq(&behavior->initials, event_set);
+    check_set_eq_(filename, line, &behavior->initials, event_set);
 }
+
+#define check_normalized_node_traces_behavior \
+    ADD_FILE_AND_LINE(check_normalized_node_traces_behavior_)
 
 TEST_CASE_GROUP("normalized LTSes");
 
@@ -117,7 +130,7 @@ add_duplicate_normalized_node(struct csp *csp, struct csp_normalized_lts *lts,
     const struct csp_id_set *process_ids =
             csp_id_set_factory_create(csp, processes);
     csp_id new_id;
-    check(!csp_normalized_lts_add_node(lts, process_ids, &new_id));
+    check(!csp_normalized_lts_add_node_copy(lts, process_ids, &new_id));
     check_id_eq(new_id, id);
 }
 
@@ -207,8 +220,9 @@ TEST_CASE("can add edges to normalized LTS")
 /* Verify the closure of the given CSP₀ process.  `event` should be event to
  * calculate the closure for. */
 static void
-check_closure(struct csp *csp, struct csp_id_factory process,
-              struct csp_id_factory event, struct csp_id_set_factory expected)
+check_closure_(const char *filename, unsigned int line, struct csp *csp,
+               struct csp_id_factory process, struct csp_id_factory event,
+               struct csp_id_set_factory expected)
 {
     csp_id process_id;
     csp_id event_id;
@@ -218,11 +232,13 @@ check_closure(struct csp *csp, struct csp_id_factory process,
     process_id = csp_id_factory_create(csp, process);
     event_id = csp_id_factory_create(csp, event);
     expected_set = csp_id_set_factory_create(csp, expected);
-    csp_id_set_fill_single(&actual, process_id);
+    csp_id_set_add(&actual, process_id);
     csp_process_find_closure(csp, event_id, &actual);
-    check_set_eq(&actual, expected_set);
+    check_set_eq_(filename, line, &actual, expected_set);
     csp_id_set_done(&actual);
 }
+
+#define check_closure ADD_FILE_AND_LINE(check_closure_)
 
 TEST_CASE_GROUP("closures");
 
@@ -314,8 +330,8 @@ check_normalized_edge(struct csp *csp, struct csp_normalized_lts *lts,
     from_node_set = csp_id_set_factory_create(csp, from_node);
     event_id = csp_id_factory_create(csp, event);
     to_node_set = csp_id_set_factory_create(csp, to_node);
-    check(!csp_normalized_lts_add_node(lts, from_node_set, &from_node_id));
-    check(!csp_normalized_lts_add_node(lts, to_node_set, &expected));
+    check(!csp_normalized_lts_add_node_copy(lts, from_node_set, &from_node_id));
+    check(!csp_normalized_lts_add_node_copy(lts, to_node_set, &expected));
     actual = csp_normalized_lts_get_edge(lts, from_node_id, event_id);
     check_id_eq(actual, expected);
 }
@@ -332,8 +348,8 @@ check_normalized_root(struct csp *csp, struct csp_normalized_lts *lts,
     root_id = csp_id_factory_create(csp, root);
     expected_normalized_root_set =
             csp_id_set_factory_create(csp, expected_normalized_root);
-    check(!csp_normalized_lts_add_node(lts, expected_normalized_root_set,
-                                       &expected));
+    check(!csp_normalized_lts_add_node_copy(lts, expected_normalized_root_set,
+                                            &expected));
     actual = csp_normalized_lts_get_normalized_root(lts, root_id);
     check_id_eq(actual, expected);
 }
@@ -448,6 +464,7 @@ check_bisimulation(struct csp_id_factory root_process,
                    struct normalized_node_array *equivalent_nodes)
 {
     size_t i;
+    struct csp_id_set_iterator iter;
     struct csp *csp;
     struct csp_normalized_lts *lts;
     const struct csp_id_set *prenormalized;
@@ -455,22 +472,20 @@ check_bisimulation(struct csp_id_factory root_process,
     const struct csp_id_set *node_processes;
     csp_id node_id;
     csp_id class_id = CSP_ID_NONE;
-    struct csp_id_set_builder builder;
     struct csp_id_set actual;
     struct csp_id_set expected;
     /* Initialize everything. */
     check_alloc(csp, csp_new());
     check_alloc(lts, csp_normalized_lts_new(csp, CSP_TRACES));
     csp_equivalences_init(&equiv);
-    csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
     csp_id_set_init(&expected);
     /* Load the main process. */
     csp_id_factory_create(csp, root_process);
     /* Prenormalize all of the requested processes. */
     prenormalized = csp_id_set_factory_create(csp, prenormalized_processes);
-    for (i = 0; i < prenormalized->count; i++) {
-        csp_process_prenormalize(csp, lts, prenormalized->ids[i]);
+    csp_id_set_foreach (prenormalized, &iter) {
+        csp_process_prenormalize(csp, lts, iter.current);
     }
     /* Bisimulate the prenormalized LTS. */
     csp_normalized_lts_bisimulate(lts, &equiv);
@@ -480,8 +495,8 @@ check_bisimulation(struct csp_id_factory root_process,
     for (i = 0; i < equivalent_nodes->count; i++) {
         node_processes =
                 csp_id_set_factory_create(csp, equivalent_nodes->nodes[i]);
-        csp_normalized_lts_add_node(lts, node_processes, &node_id);
-        csp_id_set_builder_add(&builder, node_id);
+        csp_normalized_lts_add_node_copy(lts, node_processes, &node_id);
+        csp_id_set_add(&expected, node_id);
         if (i == 0) {
             /* While building up this set grab the ID of the equivalence class
              * that the first normalized node belongs to. */
@@ -489,17 +504,14 @@ check_bisimulation(struct csp_id_factory root_process,
             check_id_ne(class_id, CSP_ID_NONE);
         }
     }
-    csp_id_set_build(&expected, &builder);
     /* Find all of the nodes that are in the same equivalence class as the first
      * expected node. */
-    csp_equivalences_build_members(&equiv, class_id, &builder);
-    csp_id_set_build(&actual, &builder);
+    csp_equivalences_build_members(&equiv, class_id, &actual);
     /* And verify that the actual and expected sets of equivalent nodes are
      * equal. */
     check_set_eq(&actual, &expected);
     /* Clean up. */
     csp_equivalences_done(&equiv);
-    csp_id_set_builder_done(&builder);
     csp_id_set_done(&actual);
     csp_id_set_done(&expected);
     csp_normalized_lts_free(lts);
@@ -555,7 +567,7 @@ check_normalize(struct csp *csp, struct csp_normalized_lts *lts,
                 struct csp_id_factory root_process,
                 struct csp_id_set_factory prenormalized_processes)
 {
-    size_t i;
+    struct csp_id_set_iterator i;
     const struct csp_id_set *prenormalized;
     struct csp_equivalences equiv;
     /* Initialize everything. */
@@ -564,8 +576,8 @@ check_normalize(struct csp *csp, struct csp_normalized_lts *lts,
     csp_id_factory_create(csp, root_process);
     /* Prenormalize all of the requested processes. */
     prenormalized = csp_id_set_factory_create(csp, prenormalized_processes);
-    for (i = 0; i < prenormalized->count; i++) {
-        csp_process_prenormalize(csp, lts, prenormalized->ids[i]);
+    csp_id_set_foreach (prenormalized, &i) {
+        csp_process_prenormalize(csp, lts, i.current);
     }
     /* Bisimulate the prenormalized LTS. */
     csp_normalized_lts_bisimulate(lts, &equiv);

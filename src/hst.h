@@ -16,6 +16,8 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+#include "id-set.h"
+
 /*------------------------------------------------------------------------------
  * Environments
  */
@@ -55,140 +57,6 @@ csp_get_sized_event_id(struct csp *csp, const char *name, size_t name_length);
  * event with that ID (via csp_get_event_id), we return NULL. */
 const char *
 csp_get_event_name(struct csp *csp, csp_id event);
-
-/*------------------------------------------------------------------------------
- * Sets
- */
-
-/* We preallocate a certain number of entries in the csp_id_set struct itself,
- * to minimize malloc overhead for small sets.  We automatically calculate a
- * number that makes the size of the csp_id_set itself a nice multiple of
- * sizeof(void *).  On 64-bit platforms this should currently evaluate to 12. */
-#define CSP_ID_SET_INTERNAL_SIZE                      \
-    (((sizeof(void *) * 16) /* target overall size */ \
-      - sizeof(csp_id)      /* hash */                \
-      - sizeof(csp_id *)    /* ids */                 \
-      - sizeof(size_t)      /* count */               \
-      - sizeof(size_t)      /* allocated_count */     \
-      ) /                                             \
-     sizeof(csp_id))
-
-/* A set of IDs, stored as a sorted array.  This type is read-only; to construct
- * a set, use a csp_id_set_builder. */
-struct csp_id_set {
-    csp_id hash;
-    csp_id *ids;
-    size_t count;
-    size_t allocated_count;
-    csp_id internal[CSP_ID_SET_INTERNAL_SIZE];
-};
-
-void
-csp_id_set_init(struct csp_id_set *set);
-
-void
-csp_id_set_done(struct csp_id_set *set);
-
-bool
-csp_id_set_eq(const struct csp_id_set *set1, const struct csp_id_set *set2);
-
-/* Return whether set1 ⊆ set2 */
-bool
-csp_id_set_subseteq(const struct csp_id_set *set1,
-                    const struct csp_id_set *set2);
-
-/* Fills a set with a copy of another set, without having to go through a
- * builder first.  You must have already initialized `set`.  This is guaranteed
- * to be equivalent to (and likely more efficient than):
- *
- *     struct csp_id_set_builder  builder;
- *     csp_id_set_builder_init(&builder);
- *     csp_id_set_builder_merge(&builder, other);
- *     csp_id_set_build(set, &builder);
- *     csp_id_set_builder_done(&builder);
- */
-void
-csp_id_set_clone(struct csp_id_set *set, const struct csp_id_set *other);
-
-/* Shortcut for constructing an ID set with one element, without having to go
- * through a builder.  This is guaranteed to be equivalent to (and likely more
- * efficient than):
- *
- *     struct csp_id_set_builder  builder;
- *     csp_id_set_builder_init(&builder);
- *     csp_id_set_builder_add(&builder, event);
- *     csp_id_set_build(set, &builder);
- *     csp_id_set_builder_done(&builder);
- */
-void
-csp_id_set_fill_single(struct csp_id_set *set, csp_id event);
-
-/* Shortcut for constructing an ID set with two elements, without having to go
- * through a builder.  This is guaranteed to be equivalent to (and likely more
- * efficient than):
- *
- *     struct csp_id_set_builder  builder;
- *     csp_id_set_builder_init(&builder);
- *     csp_id_set_builder_add(&builder, e1);
- *     csp_id_set_builder_add(&builder, e2);
- *     csp_id_set_build(set, &builder);
- *     csp_id_set_builder_done(&builder);
- */
-void
-csp_id_set_fill_double(struct csp_id_set *set, csp_id e1, csp_id e2);
-
-/* A writeable view of a set of IDs. */
-struct csp_id_set_builder {
-    csp_id hash;
-    void *working_set;
-};
-
-/* Initialize and clear a set builder. */
-void
-csp_id_set_builder_init(struct csp_id_set_builder *builder);
-
-void
-csp_id_set_builder_done(struct csp_id_set_builder *builder);
-
-/* Add a single ID to a set builder.  Return whether the ID is new (i.e., it
- * wasn't already in `builder`.) */
-bool
-csp_id_set_builder_add(struct csp_id_set_builder *builder, csp_id id);
-
-/* Add several IDs to a set builder.  `ids` does not need to be sorted, and it's
- * okay for it to contain duplicates. */
-void
-csp_id_set_builder_add_many(struct csp_id_set_builder *builder, size_t count,
-                            csp_id *ids);
-
-/* Remove a single ID from a set builder.  Returns whether that ID was in the
- * builder or not. */
-bool
-csp_id_set_builder_remove(struct csp_id_set_builder *builder, csp_id id);
-
-/* Remove several IDs from a set builder.  `ids` does not need to be sorted, and
- * it's okay for it to contain duplicates. */
-void
-csp_id_set_builder_remove_many(struct csp_id_set_builder *builder, size_t count,
-                               csp_id *ids);
-
-/* Add the contents of an existing set to a set builder. */
-void
-csp_id_set_builder_merge(struct csp_id_set_builder *builder,
-                         const struct csp_id_set *set);
-
-/* "Lock" the contents of a set builder, filling in a (read-only)
- * set.  The set builder will be cleared in the process, allowing you to
- * reuse it if you need to build several sets. */
-void
-csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder);
-
-/* "Lock" the contents of a set builder, filling in a (read-only)
- * set.  The set builder will NOT be cleared in the process, allowing you to
- * easily build several sets that have similar contents. */
-void
-csp_id_set_build_and_keep(struct csp_id_set *set,
-                          struct csp_id_set_builder *builder);
 
 /*------------------------------------------------------------------------------
  * Pairs
@@ -326,31 +194,30 @@ void
 csp_equivalences_add(struct csp_equivalences *equiv, csp_id class_id,
                      csp_id member_id);
 
-/* Add the IDs of all of the equivalence classes to a set builder. */
+/* Add the IDs of all of the equivalence classes to a set. */
 void
 csp_equivalences_build_classes(struct csp_equivalences *equiv,
-                               struct csp_id_set_builder *builder);
+                               struct csp_id_set *set);
 
 /* Return the class that a member belongs to, or CSP_ID_NONE if that member
  * hasn't been added to an equivalence class yet. */
 csp_id
 csp_equivalences_get_class(struct csp_equivalences *equiv, csp_id member_id);
 
-/* Add all of the members of an equivalence class to a set builder. */
+/* Add all of the members of an equivalence class to a set. */
 void
 csp_equivalences_build_members(struct csp_equivalences *equiv, csp_id class_id,
-                               struct csp_id_set_builder *builder);
+                               struct csp_id_set *set);
 
 /*------------------------------------------------------------------------------
  * Processes
  */
 
 struct csp_process_iface {
-    void (*initials)(struct csp *csp, struct csp_id_set_builder *builder,
-                     void *ud);
+    void (*initials)(struct csp *csp, struct csp_id_set *set, void *ud);
 
-    void (*afters)(struct csp *csp, csp_id initial,
-                   struct csp_id_set_builder *builder, void *ud);
+    void (*afters)(struct csp *csp, csp_id initial, struct csp_id_set *set,
+                   void *ud);
 
     csp_id (*get_id)(struct csp *csp, const void *temp_ud);
 
@@ -389,11 +256,11 @@ csp_process_init(struct csp *csp, const void *temp_ud, void **ud,
 
 void
 csp_process_build_initials(struct csp *csp, csp_id process,
-                           struct csp_id_set_builder *builder);
+                           struct csp_id_set *set);
 
 void
 csp_process_build_afters(struct csp *csp, csp_id process, csp_id initial,
-                         struct csp_id_set_builder *builder);
+                         struct csp_id_set *set);
 
 /*------------------------------------------------------------------------------
  * Constructing process IDs
@@ -639,11 +506,11 @@ csp_normalized_lts_free(struct csp_normalized_lts *lts);
 
 /* Create a new normalized LTS node for the given set of processes, if it
  * doesn't already exist.  Returns whether a new node was created.  Places the
- * ID of the node into `id` either way.  We will make a copy of `processes` if
- * needed, so it's safe for you to reuse it after this function returns. */
+ * ID of the node into `id` either way.  Takes control of the content of
+ * `processes`; it will be cleared upon return. */
 bool
 csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
-                            const struct csp_id_set *processes, csp_id *id);
+                            struct csp_id_set *processes, csp_id *id);
 
 /* Adds a new edge to a normalized LTS.  `from` and `to` must the IDs of nodes
  * that you've already created via csp_normalized_lts_add_node.  `event` must be
@@ -695,10 +562,10 @@ csp_id
 csp_normalized_lts_get_edge(struct csp_normalized_lts *lts, csp_id from,
                             csp_id event);
 
-/* Add the IDs of all of the normalized nodes in `lts` to `builder`. */
+/* Add the IDs of all of the normalized nodes in `lts` to `set`. */
 void
 csp_normalized_lts_build_all_nodes(struct csp_normalized_lts *lts,
-                                   struct csp_id_set_builder *builder);
+                                   struct csp_id_set *set);
 
 /* Bisimulate all of the nodes in a normalized LTS, to find nodes that have
  * equivalent behavior.  Each node in the normalized LTS will have an entry in

@@ -68,14 +68,13 @@ static struct csp_process *
 csp_process_get(struct csp_priv *csp, csp_id process_id);
 
 static void
-csp_stop_initials(struct csp *pcsp, struct csp_id_set_builder *builder,
-                  void *ud)
+csp_stop_initials(struct csp *pcsp, struct csp_id_set *set, void *ud)
 {
 }
 
 static void
-csp_stop_afters(struct csp *pcsp, csp_id initial,
-                struct csp_id_set_builder *builder, void *ud)
+csp_stop_afters(struct csp *pcsp, csp_id initial, struct csp_id_set *set,
+                void *ud)
 {
 }
 
@@ -108,20 +107,19 @@ const struct csp_process_iface csp_stop_iface = {
         &csp_stop_ud_size,  &csp_stop_init,   &csp_stop_done};
 
 static void
-csp_skip_initials(struct csp *pcsp, struct csp_id_set_builder *builder,
-                  void *ud)
+csp_skip_initials(struct csp *pcsp, struct csp_id_set *set, void *ud)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    csp_id_set_builder_add(builder, csp->public.tick);
+    csp_id_set_add(set, csp->public.tick);
 }
 
 static void
-csp_skip_afters(struct csp *pcsp, csp_id initial,
-                struct csp_id_set_builder *builder, void *ud)
+csp_skip_afters(struct csp *pcsp, csp_id initial, struct csp_id_set *set,
+                void *ud)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
     if (initial == csp->public.tick) {
-        csp_id_set_builder_add(builder, csp->public.stop);
+        csp_id_set_add(set, csp->public.stop);
     }
 }
 
@@ -286,21 +284,20 @@ csp_process_get(struct csp_priv *csp, csp_id process_id)
 
 void
 csp_process_build_initials(struct csp *pcsp, csp_id process_id,
-                           struct csp_id_set_builder *builder)
+                           struct csp_id_set *set)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
     struct csp_process *process = csp_process_get(csp, process_id);
-    process->iface.initials(&csp->public, builder, csp_process_ud(process));
+    process->iface.initials(&csp->public, set, csp_process_ud(process));
 }
 
 void
 csp_process_build_afters(struct csp *pcsp, csp_id process_id, csp_id initial,
-                         struct csp_id_set_builder *builder)
+                         struct csp_id_set *set)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
     struct csp_process *process = csp_process_get(csp, process_id);
-    process->iface.afters(&csp->public, initial, builder,
-                          csp_process_ud(process));
+    process->iface.afters(&csp->public, initial, set, csp_process_ud(process));
 }
 
 csp_id
@@ -318,7 +315,11 @@ csp_id_add_id(csp_id id, csp_id id_to_add)
 csp_id
 csp_id_add_id_set(csp_id id, const struct csp_id_set *set)
 {
-    return hash64_any(set->ids, set->count * sizeof(csp_id), id);
+    struct csp_id_set_iterator iter;
+    csp_id_set_foreach(set, &iter) {
+        id = csp_id_add_id(id, iter.current);
+    }
+    return id;
 }
 
 csp_id

@@ -46,19 +46,16 @@ csp_behavior_refines(const struct csp_behavior *spec,
 
 static void
 csp_process_add_traces_behavior(struct csp *csp, csp_id process,
-                                struct csp_behavior *behavior,
-                                struct csp_id_set_builder *builder)
+                                struct csp_behavior *behavior)
 {
-    csp_process_build_initials(csp, process, builder);
+    csp_process_build_initials(csp, process, &behavior->initials);
 }
 
 static void
-csp_behavior_finish_traces(struct csp *csp, struct csp_behavior *behavior,
-                           struct csp_id_set_builder *builder)
+csp_behavior_finish_traces(struct csp *csp, struct csp_behavior *behavior)
 {
     behavior->model = CSP_TRACES;
-    csp_id_set_builder_remove(builder, csp->tau);
-    csp_id_set_build(&behavior->initials, builder);
+    csp_id_set_remove(&behavior->initials, csp->tau);
     behavior->hash = behavior->initials.hash;
 }
 
@@ -66,11 +63,9 @@ static void
 csp_process_get_traces_behavior(struct csp *csp, csp_id process,
                                 struct csp_behavior *behavior)
 {
-    struct csp_id_set_builder builder;
-    csp_id_set_builder_init(&builder);
-    csp_process_add_traces_behavior(csp, process, behavior, &builder);
-    csp_behavior_finish_traces(csp, behavior, &builder);
-    csp_id_set_builder_done(&builder);
+    csp_id_set_clear(&behavior->initials);
+    csp_process_add_traces_behavior(csp, process, behavior);
+    csp_behavior_finish_traces(csp, behavior);
 }
 
 void
@@ -92,15 +87,12 @@ csp_process_set_get_traces_behavior(struct csp *csp,
                                     const struct csp_id_set *processes,
                                     struct csp_behavior *behavior)
 {
-    size_t i;
-    struct csp_id_set_builder builder;
-    csp_id_set_builder_init(&builder);
-    for (i = 0; i < processes->count; i++) {
-        csp_process_add_traces_behavior(csp, processes->ids[i], behavior,
-                                        &builder);
+    struct csp_id_set_iterator iter;
+    csp_id_set_clear(&behavior->initials);
+    csp_id_set_foreach (processes, &iter) {
+        csp_process_add_traces_behavior(csp, iter.current, behavior);
     }
-    csp_behavior_finish_traces(csp, behavior, &builder);
-    csp_id_set_builder_done(&builder);
+    csp_behavior_finish_traces(csp, behavior);
 }
 
 void

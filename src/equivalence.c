@@ -78,13 +78,13 @@ csp_equivalences_add(struct csp_equivalences *equiv, csp_id class_id,
 
 void
 csp_equivalences_build_classes(struct csp_equivalences *equiv,
-                               struct csp_id_set_builder *builder)
+                               struct csp_id_set *set)
 {
     Word_t *vmembers;
     csp_id class_id = 0;
     JLF(vmembers, equiv->classes, class_id);
     while (vmembers != NULL) {
-        csp_id_set_builder_add(builder, class_id);
+        csp_id_set_add(set, class_id);
         JLN(vmembers, equiv->classes, class_id);
     }
 }
@@ -103,7 +103,7 @@ csp_equivalences_get_class(struct csp_equivalences *equiv, csp_id member_id)
 
 void
 csp_equivalences_build_members(struct csp_equivalences *equiv, csp_id class_id,
-                               struct csp_id_set_builder *builder)
+                               struct csp_id_set *set)
 {
     Word_t *vmembers;
     JLG(vmembers, equiv->classes, class_id);
@@ -113,7 +113,7 @@ csp_equivalences_build_members(struct csp_equivalences *equiv, csp_id class_id,
         csp_id member_id = 0;
         J1F(found, *members, member_id);
         while (found) {
-            csp_id_set_builder_add(builder, member_id);
+            csp_id_set_add(set, member_id);
             J1N(found, *members, member_id);
         }
     }

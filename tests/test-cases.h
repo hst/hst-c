@@ -22,6 +22,7 @@
 #include "ccan/cppmagic/cppmagic.h"
 #include "ccan/likely/likely.h"
 #include "hst.h"
+#include "id-set.h"
 
 /*------------------------------------------------------------------------------
  * Compiler attributes
@@ -391,36 +392,32 @@ check_set_eq_(const char *filename, unsigned int line,
               const struct csp_id_set *expected)
 {
     if (unlikely(!csp_id_set_eq(actual, expected))) {
-        size_t i;
-        struct csp_id_set_builder builder;
+        struct csp_id_set_iterator i;
         struct csp_id_set diff;
         fail_at(filename, line, "Expected sets to be equal");
         printf("# hash of actual   = " CSP_ID_FMT "\n", actual->hash);
         printf("# hash of expected = " CSP_ID_FMT "\n", expected->hash);
-        csp_id_set_builder_init(&builder);
         csp_id_set_init(&diff);
 
         printf("# Elements only in actual:\n");
-        csp_id_set_builder_merge(&builder, expected);
-        for (i = 0; i < actual->count; i++) {
-            csp_id curr = actual->ids[i];
-            if (!csp_id_set_builder_remove(&builder, curr)) {
+        csp_id_set_union(&diff, expected);
+        csp_id_set_foreach (actual, &i) {
+            csp_id curr = i.current;
+            if (!csp_id_set_remove(&diff, curr)) {
                 printf("#   " CSP_ID_FMT "\n", curr);
             }
         }
-        csp_id_set_build(&diff, &builder);
+        csp_id_set_clear(&diff);
 
         printf("# Elements only in expected:\n");
-        csp_id_set_builder_merge(&builder, actual);
-        for (i = 0; i < expected->count; i++) {
-            csp_id curr = expected->ids[i];
-            if (!csp_id_set_builder_remove(&builder, curr)) {
+        csp_id_set_union(&diff, actual);
+        csp_id_set_foreach (expected, &i) {
+            csp_id curr = i.current;
+            if (!csp_id_set_remove(&diff, curr)) {
                 printf("#   " CSP_ID_FMT "\n", curr);
             }
         }
-        csp_id_set_build(&diff, &builder);
 
-        csp_id_set_builder_done(&builder);
         csp_id_set_done(&diff);
         abort_test();
     }
@@ -522,19 +519,15 @@ id_set_(size_t count, ...)
     size_t i;
     va_list args;
     struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder builder;
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
-    csp_id_set_builder_init(&builder);
     va_start(args, count);
     for (i = 0; i < count; i++) {
         csp_id id = va_arg(args, csp_id);
-        csp_id_set_builder_add(&builder, id);
+        csp_id_set_add(set, id);
     }
     va_end(args);
-    csp_id_set_build(set, &builder);
-    csp_id_set_builder_done(&builder);
     return set;
 }
 
@@ -546,16 +539,12 @@ id_range_set(size_t start, size_t end)
 {
     size_t i;
     struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder builder;
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
-    csp_id_set_builder_init(&builder);
     for (i = start; i < end; i++) {
-        csp_id_set_builder_add(&builder, i);
+        csp_id_set_add(set, i);
     }
-    csp_id_set_build(set, &builder);
-    csp_id_set_builder_done(&builder);
     return set;
 }
 
@@ -868,18 +857,14 @@ events_factory(struct csp *csp, void *vnames)
     struct string_array *names = vnames;
     size_t i;
     struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder builder;
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
-    csp_id_set_builder_init(&builder);
     for (i = 0; i < names->count; i++) {
         const char *event_name = names->strings[i];
         csp_id event = csp_get_event_id(csp, event_name);
-        csp_id_set_builder_add(&builder, event);
+        csp_id_set_add(set, event);
     }
-    csp_id_set_build(set, &builder);
-    csp_id_set_builder_done(&builder);
     return set;
 }
 
@@ -924,19 +909,15 @@ csp0s_factory(struct csp *csp, void *vprocesses)
     struct string_array *processes = vprocesses;
     size_t i;
     struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
-    struct csp_id_set_builder builder;
     assert(set != NULL);
     csp_id_set_init(set);
     test_case_cleanup_register(csp_id_set_free_, set);
-    csp_id_set_builder_init(&builder);
     for (i = 0; i < processes->count; i++) {
         const char *csp0 = processes->strings[i];
         csp_id process;
         check0(csp_load_csp0_string(csp, csp0, &process));
-        csp_id_set_builder_add(&builder, process);
+        csp_id_set_add(set, process);
     }
-    csp_id_set_build(set, &builder);
-    csp_id_set_builder_done(&builder);
     return set;
 }
 
@@ -954,16 +935,12 @@ static void
 check_equivalence_classes(struct csp *csp, struct csp_equivalences *equiv,
                           struct csp_id_set_factory classes)
 {
-    struct csp_id_set_builder builder;
     struct csp_id_set actual;
     const struct csp_id_set *class_set;
-    csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
-    csp_equivalences_build_classes(equiv, &builder);
-    csp_id_set_build(&actual, &builder);
+    csp_equivalences_build_classes(equiv, &actual);
     class_set = csp_id_set_factory_create(csp, classes);
     check_set_eq(&actual, class_set);
-    csp_id_set_builder_done(&builder);
     csp_id_set_done(&actual);
 }
 
@@ -992,16 +969,12 @@ check_equivalence_class_members(struct csp *csp, struct csp_equivalences *equiv,
 {
     csp_id class_id;
     const struct csp_id_set *member_set;
-    struct csp_id_set_builder builder;
     struct csp_id_set actual;
-    csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
     class_id = csp_id_factory_create(csp, clazz);
     member_set = csp_id_set_factory_create(csp, members);
-    csp_equivalences_build_members(equiv, class_id, &builder);
-    csp_id_set_build(&actual, &builder);
+    csp_equivalences_build_members(equiv, class_id, &actual);
     check_set_eq(&actual, member_set);
-    csp_id_set_builder_done(&builder);
     csp_id_set_done(&actual);
 }
 

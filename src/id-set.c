@@ -29,17 +29,43 @@ void
 csp_id_set_init(struct csp_id_set *set)
 {
     set->hash = CSP_ID_SET_INITIAL_HASH;
-    set->ids = set->internal;
-    set->allocated_count = CSP_ID_SET_INTERNAL_SIZE;
     set->count = 0;
+    set->elements = NULL;
 }
 
 void
 csp_id_set_done(struct csp_id_set *set)
 {
-    if (set->ids != set->internal) {
-        free(set->ids);
-    }
+    UNNEEDED Word_t dummy;
+    J1FA(dummy, set->elements);
+}
+
+void
+csp_id_set_clear(struct csp_id_set *set)
+{
+    csp_id_set_done(set);
+    csp_id_set_init(set);
+}
+
+void
+csp_id_set_iterate(const struct csp_id_set *set,
+                   struct csp_id_set_iterator *iter)
+{
+    iter->elements = &set->elements;
+    iter->current = 0;
+    J1F(iter->found, *iter->elements, iter->current);
+}
+
+bool
+csp_id_set_iterator_done(struct csp_id_set_iterator *iter)
+{
+    return !iter->found;
+}
+
+void
+csp_id_set_iterator_advance(struct csp_id_set_iterator *iter)
+{
+    J1N(iter->found, *iter->elements, iter->current);
 }
 
 bool
@@ -50,7 +76,21 @@ csp_id_set_eq(const struct csp_id_set *set1, const struct csp_id_set *set2)
     } else if (set1->hash != set2->hash) {
         return false;
     } else {
-        return memcmp(set1->ids, set2->ids, set1->count * sizeof(csp_id)) == 0;
+        struct csp_id_set_iterator iter1;
+        struct csp_id_set_iterator iter2;
+        /* Loop through the elements in `set1`, verifying that each one is also
+         * in `set2`. */
+        for (csp_id_set_iterate(set1, &iter1), csp_id_set_iterate(set2, &iter2);
+             !csp_id_set_iterator_done(&iter1) &&
+             !csp_id_set_iterator_done(&iter2);
+             csp_id_set_iterator_advance(&iter1),
+             csp_id_set_iterator_advance(&iter2)) {
+            if (iter1.current != iter2.current) {
+                return false;
+            }
+        }
+        return csp_id_set_iterator_done(&iter1) ==
+               csp_id_set_iterator_done(&iter2);
     }
 }
 
@@ -58,214 +98,100 @@ bool
 csp_id_set_subseteq(const struct csp_id_set *set1,
                     const struct csp_id_set *set2)
 {
-    csp_id *end1 = set1->ids + set1->count;
-    csp_id *end2 = set2->ids + set2->count;
-    csp_id *curr1;
-    csp_id *curr2;
+    struct csp_id_set_iterator iter1;
+    struct csp_id_set_iterator iter2;
     /* Loop through the elements in `set1`, verifying that each one is also in
      * `set2`. */
-    for (curr1 = set1->ids, curr2 = set2->ids; curr1 < end1; curr1++, curr2++) {
-        while (curr2 < end2 && *curr1 > *curr2) {
-            curr2++;
+    for (csp_id_set_iterate(set1, &iter1), csp_id_set_iterate(set2, &iter2);
+         !csp_id_set_iterator_done(&iter1);
+         csp_id_set_iterator_advance(&iter1),
+         csp_id_set_iterator_advance(&iter2)) {
+        while (!csp_id_set_iterator_done(&iter2) &&
+               iter1.current > iter2.current) {
+            csp_id_set_iterator_advance(&iter2);
         }
-        if (curr2 == end2 || *curr1 < *curr2) {
+        if (csp_id_set_iterator_done(&iter2) || iter1.current < iter2.current) {
             return false;
         }
     }
     return true;
 }
 
-void
-csp_id_set_builder_init(struct csp_id_set_builder *builder)
-{
-    builder->hash = CSP_ID_SET_INITIAL_HASH;
-    builder->working_set = NULL;
-}
-
-void
-csp_id_set_builder_done(struct csp_id_set_builder *builder)
-{
-    UNNEEDED Word_t dummy;
-    J1FA(dummy, builder->working_set);
-}
-
 static bool
-csp_id_set_builder_add_one(struct csp_id_set_builder *builder, csp_id id)
+csp_id_set_add_one(struct csp_id_set *set, csp_id id)
 {
     int rc;
-    J1S(rc, builder->working_set, id);
+    J1S(rc, set->elements, id);
     if (rc) {
-        /* Only update the set's hash if we actually added a new element. */
-        builder->hash ^= id;
+        /* Only update the set's hash and count if we actually added a new
+         * element. */
+        set->hash ^= id;
+        set->count++;
     }
     return rc;
 }
 
 static bool
-csp_id_set_builder_remove_one(struct csp_id_set_builder *builder, csp_id id)
+csp_id_set_remove_one(struct csp_id_set *set, csp_id id)
 {
     int rc;
-    J1U(rc, builder->working_set, id);
+    J1U(rc, set->elements, id);
     if (rc) {
-        /* Only update the set's hash if we actually removed an element. */
-        builder->hash ^= id;
+        /* Only update the set's hash and count if we actually removed an
+         * element. */
+        set->hash ^= id;
+        set->count--;
     }
     return rc;
 }
 
 bool
-csp_id_set_builder_add(struct csp_id_set_builder *builder, csp_id id)
+csp_id_set_add(struct csp_id_set *set, csp_id id)
 {
-    return csp_id_set_builder_add_one(builder, id);
-}
-
-void
-csp_id_set_builder_add_many(struct csp_id_set_builder *builder, size_t count,
-                            csp_id *ids)
-{
-    size_t i;
-    for (i = 0; i < count; i++) {
-        csp_id_set_builder_add_one(builder, ids[i]);
-    }
+    return csp_id_set_add_one(set, id);
 }
 
 bool
-csp_id_set_builder_remove(struct csp_id_set_builder *builder, csp_id id)
+csp_id_set_add_many(struct csp_id_set *set, size_t count, csp_id *ids)
 {
-    return csp_id_set_builder_remove_one(builder, id);
-}
-
-void
-csp_id_set_builder_remove_many(struct csp_id_set_builder *builder, size_t count,
-                               csp_id *ids)
-{
+    bool any_new = false;
     size_t i;
     for (i = 0; i < count; i++) {
-        csp_id_set_builder_remove_one(builder, ids[i]);
-    }
-}
-
-void
-csp_id_set_builder_merge(struct csp_id_set_builder *builder,
-                         const struct csp_id_set *set)
-{
-    size_t i;
-    for (i = 0; i < set->count; i++) {
-        csp_id_set_builder_add_one(builder, set->ids[i]);
-    }
-}
-
-#define CSP_ID_SET_FIRST_ALLOCATION_COUNT 32
-
-/* Ensure that `set` is large enough to hold `set->count` elements. */
-static void
-csp_id_set_ensure_size(struct csp_id_set *set)
-{
-    if (unlikely(set->count > set->allocated_count)) {
-        if (set->ids == set->internal) {
-            size_t new_count = CSP_ID_SET_FIRST_ALLOCATION_COUNT;
-            while (set->count > new_count) {
-                new_count *= 2;
-            }
-            set->ids = malloc(new_count * sizeof(csp_id));
-            assert(set->ids != NULL);
-            set->allocated_count = new_count;
-        } else {
-            /* Whenever we reallocate, at least double the size of the existing
-             * array. */
-            csp_id *new_ids;
-            size_t new_count = set->allocated_count;
-            do {
-                new_count *= 2;
-            } while (set->count > new_count);
-            new_ids = realloc(set->ids, new_count * sizeof(csp_id));
-            assert(new_ids != NULL);
-            set->ids = new_ids;
-            set->allocated_count = new_count;
+        if (csp_id_set_add_one(set, ids[i])) {
+            any_new = true;
         }
     }
+    return any_new;
 }
 
-void
-csp_id_set_build_and_keep(struct csp_id_set *set,
-                          struct csp_id_set_builder *builder)
+bool
+csp_id_set_remove(struct csp_id_set *set, csp_id id)
 {
-    int found;
-    Word_t count;
+    return csp_id_set_remove_one(set, id);
+}
+
+bool
+csp_id_set_remove_many(struct csp_id_set *set, size_t count, csp_id *ids)
+{
+    bool any_removed = false;
     size_t i;
-    csp_id id;
-
-    /* First make sure that the `ids` array is large enough to hold all of the
-     * ids that have been added to the set. */
-    J1C(count, builder->working_set, 0, -1);
-    set->count = count;
-    csp_id_set_ensure_size(set);
-
-    /* Then fill in the array. */
-    i = 0;
-    id = 0;
-    J1F(found, builder->working_set, id);
-    while (found) {
-        set->ids[i++] = id;
-        J1N(found, builder->working_set, id);
-    }
-
-    set->hash = builder->hash;
-}
-
-void
-csp_id_set_build(struct csp_id_set *set, struct csp_id_set_builder *builder)
-{
-    UNNEEDED Word_t dummy;
-    csp_id_set_build_and_keep(set, builder);
-    J1FA(dummy, builder->working_set);
-    builder->hash = CSP_ID_SET_INITIAL_HASH;
-}
-
-void
-csp_id_set_clone(struct csp_id_set *set, const struct csp_id_set *other)
-{
-    set->count = other->count;
-    set->hash = other->hash;
-    csp_id_set_ensure_size(set);
-    memcpy(set->ids, other->ids, other->count * sizeof(csp_id));
-}
-
-void
-csp_id_set_fill_single(struct csp_id_set *set, csp_id event)
-{
-    /* Ensure that we can initialize the singleton set without having to
-     * allocate anything.  Because we always reallocate some space in the set
-     * itself, we can do this at build time. */
-    BUILD_ASSERT(CSP_ID_SET_INTERNAL_SIZE >= 1);
-    set->hash = CSP_ID_SET_INITIAL_HASH ^ event;
-    set->count = 1;
-    set->ids[0] = event;
-}
-
-void
-csp_id_set_fill_double(struct csp_id_set *set, csp_id e1, csp_id e2)
-{
-    /* Ensure that we can initialize the singleton set without having to
-     * allocate anything.  Because we always reallocate some space in the set
-     * itself, we can do this at build time. */
-    BUILD_ASSERT(CSP_ID_SET_INTERNAL_SIZE >= 2);
-
-    /* Make sure the events are deduplicated! */
-    if (unlikely(e1 == e2)) {
-        set->hash = CSP_ID_SET_INITIAL_HASH ^ e1;
-        set->count = 1;
-        set->ids[0] = e1;
-    } else {
-        set->hash = CSP_ID_SET_INITIAL_HASH ^ e1 ^ e2;
-        set->count = 2;
-        /* Make sure the events are sorted! */
-        if (e1 < e2) {
-            set->ids[0] = e1;
-            set->ids[1] = e2;
-        } else {
-            set->ids[0] = e2;
-            set->ids[1] = e1;
+    for (i = 0; i < count; i++) {
+        if (csp_id_set_remove_one(set, ids[i])) {
+            any_removed = true;
         }
     }
+    return any_removed;
+}
+
+bool
+csp_id_set_union(struct csp_id_set *set, const struct csp_id_set *other)
+{
+    bool any_new = false;
+    struct csp_id_set_iterator iter;
+    csp_id_set_foreach (other, &iter) {
+        if (csp_id_set_add_one(set, iter.current)) {
+            any_new = true;
+        }
+    }
+    return any_new;
 }

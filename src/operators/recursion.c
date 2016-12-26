@@ -45,21 +45,21 @@ struct csp_recursion {
 };
 
 static void
-csp_recursion_initials(struct csp *csp, struct csp_id_set_builder *builder,
+csp_recursion_initials(struct csp *csp, struct csp_id_set *set,
                        void *vrecursion)
 {
     struct csp_recursion *recursion = vrecursion;
     assert(recursion->process != CSP_PROCESS_NONE);
-    csp_process_build_initials(csp, recursion->process, builder);
+    csp_process_build_initials(csp, recursion->process, set);
 }
 
 static void
-csp_recursion_afters(struct csp *csp, csp_id initial,
-                     struct csp_id_set_builder *builder, void *vrecursion)
+csp_recursion_afters(struct csp *csp, csp_id initial, struct csp_id_set *set,
+                     void *vrecursion)
 {
     struct csp_recursion *recursion = vrecursion;
     assert(recursion->process != CSP_PROCESS_NONE);
-    csp_process_build_afters(csp, recursion->process, initial, builder);
+    csp_process_build_afters(csp, recursion->process, initial, set);
 }
 
 static csp_id
