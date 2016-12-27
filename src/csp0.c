@@ -191,31 +191,25 @@ parse_process(struct csp0_parse_state *state, csp_id *dest);
 static int
 parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
 {
-    struct csp_id_set_builder builder;
     csp_id process;
     DEBUG("ENTER  process set");
 
-    csp_id_set_builder_init(&builder);
     require(parse_token(state, "{"));
     skip_whitespace(state);
     if (parse_process(state, &process) == 0) {
-        csp_id_set_builder_add(&builder, process);
+        csp_id_set_add(set, process);
         skip_whitespace(state);
         while (parse_token(state, ",") == 0) {
             skip_whitespace(state);
             if (unlikely(parse_process(state, &process) != 0)) {
                 // Expected process after `,`
-                csp_id_set_build(set, &builder);
-                csp_id_set_builder_done(&builder);
                 DEBUG("FAIL   process set");
                 return -1;
             }
-            csp_id_set_builder_add(&builder, process);
+            csp_id_set_add(set, process);
             skip_whitespace(state);
         }
     }
-    csp_id_set_build(set, &builder);
-    csp_id_set_builder_done(&builder);
     if (unlikely(parse_token(state, "}") != 0)) {
         // Expected process `}`
         DEBUG("FAIL   process set");

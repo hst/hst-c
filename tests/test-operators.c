@@ -27,16 +27,12 @@ check_process_initials(struct csp_id_factory process,
 {
     struct csp *csp;
     csp_id process_id;
-    struct csp_id_set_builder builder;
     struct csp_id_set actual;
     check_alloc(csp, csp_new());
-    csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
     process_id = csp_id_factory_create(csp, process);
-    csp_process_build_initials(csp, process_id, &builder);
-    csp_id_set_build(&actual, &builder);
+    csp_process_build_initials(csp, process_id, &actual);
     check_set_eq(&actual, csp_id_set_factory_create(csp, expected_initials));
-    csp_id_set_builder_done(&builder);
     csp_id_set_done(&actual);
     csp_free(csp);
 }
@@ -50,17 +46,13 @@ check_process_afters(struct csp_id_factory process,
     struct csp *csp;
     csp_id process_id;
     csp_id initial_id;
-    struct csp_id_set_builder builder;
     struct csp_id_set actual;
     check_alloc(csp, csp_new());
-    csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
     process_id = csp_id_factory_create(csp, process);
     initial_id = csp_id_factory_create(csp, initial);
-    csp_process_build_afters(csp, process_id, initial_id, &builder);
-    csp_id_set_build(&actual, &builder);
+    csp_process_build_afters(csp, process_id, initial_id, &actual);
     check_set_eq(&actual, csp_id_set_factory_create(csp, expected_afters));
-    csp_id_set_builder_done(&builder);
     csp_id_set_done(&actual);
     csp_free(csp);
 }
@@ -80,6 +72,7 @@ check_process_traces_behavior(struct csp_id_factory process,
     expected_initials_set = csp_id_set_factory_create(csp, expected_initials);
     csp_process_get_behavior(csp, process_id, CSP_TRACES, &behavior);
     check_set_eq(&behavior.initials, expected_initials_set);
+    csp_behavior_done(&behavior);
     csp_free(csp);
 }
 
@@ -93,17 +86,13 @@ check_process_sub_initials(struct csp_id_factory process,
     struct csp *csp;
     UNNEEDED csp_id process_id;
     csp_id subprocess_id;
-    struct csp_id_set_builder builder;
     struct csp_id_set actual;
     check_alloc(csp, csp_new());
-    csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
     process_id = csp_id_factory_create(csp, process);
     subprocess_id = csp_id_factory_create(csp, subprocess);
-    csp_process_build_initials(csp, subprocess_id, &builder);
-    csp_id_set_build(&actual, &builder);
+    csp_process_build_initials(csp, subprocess_id, &actual);
     check_set_eq(&actual, csp_id_set_factory_create(csp, expected_initials));
-    csp_id_set_builder_done(&builder);
     csp_id_set_done(&actual);
     csp_free(csp);
 }
@@ -120,18 +109,14 @@ check_process_sub_afters(struct csp_id_factory process,
     UNNEEDED csp_id process_id;
     csp_id subprocess_id;
     csp_id initial_id;
-    struct csp_id_set_builder builder;
     struct csp_id_set actual;
     check_alloc(csp, csp_new());
-    csp_id_set_builder_init(&builder);
     csp_id_set_init(&actual);
     process_id = csp_id_factory_create(csp, process);
     subprocess_id = csp_id_factory_create(csp, subprocess);
     initial_id = csp_id_factory_create(csp, initial);
-    csp_process_build_afters(csp, subprocess_id, initial_id, &builder);
-    csp_id_set_build(&actual, &builder);
+    csp_process_build_afters(csp, subprocess_id, initial_id, &actual);
     check_set_eq(&actual, csp_id_set_factory_create(csp, expected_afters));
-    csp_id_set_builder_done(&builder);
     csp_id_set_done(&actual);
     csp_free(csp);
 }
@@ -155,6 +140,7 @@ check_process_sub_traces_behavior(struct csp_id_factory process,
     expected_initials_set = csp_id_set_factory_create(csp, expected_initials);
     csp_process_get_behavior(csp, subprocess_id, CSP_TRACES, &behavior);
     check_set_eq(&behavior.initials, expected_initials_set);
+    csp_behavior_done(&behavior);
     csp_free(csp);
 }
 

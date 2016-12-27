@@ -22,22 +22,21 @@ struct csp_prefix {
  */
 
 static void
-csp_prefix_initials(struct csp *csp, struct csp_id_set_builder *builder,
-                    void *vprefix)
+csp_prefix_initials(struct csp *csp, struct csp_id_set *set, void *vprefix)
 {
     /* initials(a → P) = {a} */
     struct csp_prefix *prefix = vprefix;
-    csp_id_set_builder_add(builder, prefix->a);
+    csp_id_set_add(set, prefix->a);
 }
 
 static void
-csp_prefix_afters(struct csp *csp, csp_id initial,
-                  struct csp_id_set_builder *builder, void *vprefix)
+csp_prefix_afters(struct csp *csp, csp_id initial, struct csp_id_set *set,
+                  void *vprefix)
 {
     /* afters(a → P, a) = P */
     struct csp_prefix *prefix = vprefix;
     if (initial == prefix->a) {
-        csp_id_set_builder_add(builder, prefix->p);
+        csp_id_set_add(set, prefix->p);
     }
 }
 

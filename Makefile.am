@@ -31,14 +31,17 @@ dist-hook:
 	@rm -rf `find $(top_distdir)/third_party -type d -name .libs`
 
 libhst_la_SOURCES = \
-	src/hst.h \
+	src/basics.h \
 	src/behavior.c \
 	src/csp0.c \
 	src/denotational.c \
 	src/environment.c \
 	src/equivalence.c \
+	src/hst.h \
 	src/id-pair.c \
+	src/id-set.h \
 	src/id-set.c \
+	src/macros.h \
 	src/normalized-lts.c \
 	src/refinement.c \
 	src/operators/external-choice.c \
