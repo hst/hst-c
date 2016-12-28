@@ -317,7 +317,7 @@ csp_id_add_id_set(csp_id id, const struct csp_id_set *set)
 {
     struct csp_id_set_iterator iter;
     csp_id_set_foreach(set, &iter) {
-        id = csp_id_add_id(id, iter.current);
+        id = csp_id_add_id(id, csp_id_set_iterator_get(&iter));
     }
     return id;
 }

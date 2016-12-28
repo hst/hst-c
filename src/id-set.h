@@ -8,12 +8,12 @@
 #ifndef HST_ID_SET_H
 #define HST_ID_SET_H
 
-#include <assert.h>
-#include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "basics.h"
 
+/* A set of IDs */
 struct csp_id_set {
     csp_id hash;
     size_t count;
@@ -71,8 +71,11 @@ struct csp_id_set_iterator {
 };
 
 void
-csp_id_set_iterate(const struct csp_id_set *set,
-                   struct csp_id_set_iterator *iter);
+csp_id_set_get_iterator(const struct csp_id_set *set,
+                        struct csp_id_set_iterator *iter);
+
+csp_id
+csp_id_set_iterator_get(const struct csp_id_set_iterator *iter);
 
 bool
 csp_id_set_iterator_done(struct csp_id_set_iterator *iter);
@@ -80,9 +83,9 @@ csp_id_set_iterator_done(struct csp_id_set_iterator *iter);
 void
 csp_id_set_iterator_advance(struct csp_id_set_iterator *iter);
 
-#define csp_id_set_foreach(set, iter)                                          \
-    for (csp_id_set_iterate((set), (iter)); !csp_id_set_iterator_done((iter)); \
+#define csp_id_set_foreach(set, iter)            \
+    for (csp_id_set_get_iterator((set), (iter)); \
+         !csp_id_set_iterator_done((iter));      \
          csp_id_set_iterator_advance((iter)))
-
 
 #endif /* HST_ID_SET_H */

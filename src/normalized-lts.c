@@ -342,7 +342,7 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
         csp_id_set_foreach (&classes, &i) {
             struct csp_id_set_iterator j;
             size_t j_index;
-            csp_id class_id = i.current;
+            csp_id class_id = csp_id_set_iterator_get(&i);
             csp_id head_id;
             struct csp_normalized_lts_node *head;
             csp_id new_class_id = CSP_ID_NONE;
@@ -353,9 +353,9 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
 
             /* The "head" of this class is just the one that happens to be first
              * in the list of members. */
-            csp_id_set_iterate(&members, &j);
+            csp_id_set_get_iterator(&members, &j);
             assert(!csp_id_set_iterator_done(&j));
-            head_id = j.current;
+            head_id = csp_id_set_iterator_get(&j);
             head = csp_normalized_lts_get_node(lts, head_id);
             DEBUG("member[0] = " CSP_ID_FMT, head_id);
             csp_equivalences_add(next_equiv, class_id, head_id);
@@ -371,7 +371,7 @@ csp_normalized_lts_bisimulate(struct csp_normalized_lts *lts,
             for (csp_id_set_iterator_advance(&j), j_index = 1;
                  !csp_id_set_iterator_done(&j);
                  csp_id_set_iterator_advance(&j), j_index++) {
-                csp_id member_id = j.current;
+                csp_id member_id = csp_id_set_iterator_get(&j);
                 struct csp_normalized_lts_node *member =
                         csp_normalized_lts_get_node(lts, member_id);
                 DEBUG("member[%zu] = " CSP_ID_FMT, j_index, member_id);
@@ -430,7 +430,7 @@ csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *lts,
     csp_equivalences_build_classes(equiv, &classes);
     csp_id_set_foreach (&classes, &i) {
         struct csp_id_set_iterator j;
-        csp_id class_id = i.current;
+        csp_id class_id = csp_id_set_iterator_get(&i);
         csp_id new_node_id;
         DEBUG("  Class " CSP_ID_FMT, class_id);
         /* We want to create a single new normalized node for this equivalence
@@ -439,7 +439,7 @@ csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *lts,
         csp_id_set_clear(&members);
         csp_equivalences_build_members(equiv, class_id, &members);
         csp_id_set_foreach (&members, &j) {
-            csp_id member_id = j.current;
+            csp_id member_id = csp_id_set_iterator_get(&j);
             const struct csp_id_set *member_processes =
                     csp_normalized_lts_get_node_processes(lts, member_id);
             DEBUG("    Member " CSP_ID_FMT, member_id);
@@ -457,7 +457,7 @@ csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *lts,
     DEBUG("Add edges");
     csp_id_set_foreach (&classes, &i) {
         struct csp_id_set_iterator j;
-        csp_id class_id = i.current;
+        csp_id class_id = csp_id_set_iterator_get(&i);
         csp_id new_class_node_id =
                 csp_equivalences_get_class(&new_nodes, class_id);
         assert(new_class_node_id != CSP_ID_NONE);
@@ -467,7 +467,7 @@ csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *lts,
         csp_equivalences_build_members(equiv, class_id, &members);
         csp_id_set_foreach (&members, &j) {
             size_t k;
-            csp_id from_id = j.current;
+            csp_id from_id = csp_id_set_iterator_get(&j);
             DEBUG("    Member " CSP_ID_FMT, from_id);
             csp_normalized_lts_get_node_edges(lts, from_id, &edges);
             for (k = 0; k < edges.count; k++) {
@@ -492,7 +492,7 @@ csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *lts,
     csp_equivalences_build_classes(&lts->roots, &classes);
     csp_id_set_foreach (&classes, &i) {
         struct csp_id_set_iterator j;
-        csp_id old_normalized_root_id = i.current;
+        csp_id old_normalized_root_id = csp_id_set_iterator_get(&i);
         csp_id class_id =
                 csp_equivalences_get_class(equiv, old_normalized_root_id);
         csp_id new_normalized_root_id =
@@ -501,7 +501,7 @@ csp_normalized_lts_merge_equivalences(struct csp_normalized_lts *lts,
         csp_equivalences_build_members(&lts->roots, old_normalized_root_id,
                                        &members);
         csp_id_set_foreach (&members, &j) {
-            csp_id root_id = j.current;
+            csp_id root_id = csp_id_set_iterator_get(&j);
             DEBUG("  Old root " CSP_ID_FMT " for " CSP_ID_FMT,
                   old_normalized_root_id, root_id);
             DEBUG("  New root " CSP_ID_FMT " for " CSP_ID_FMT,

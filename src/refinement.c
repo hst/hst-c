@@ -82,7 +82,7 @@ csp_process_find_closure(struct csp *csp, csp_id event,
         DEBUG("--- start closure iteration %p", current_queue);
         csp_id_set_clear(next_queue);
         csp_id_set_foreach (current_queue, &i) {
-            csp_id process = i.current;
+            csp_id process = csp_id_set_iterator_get(&i);
             DEBUG("process " CSP_ID_FMT, process);
             /* Enqueue each of the states that we can reach from `process` by
              * following a single `event`. */
@@ -134,7 +134,7 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
         csp_id_set_clear(next_pending);
         csp_id_set_foreach (current_pending, &i) {
             struct csp_id_set_iterator j;
-            csp_id current = i.current;
+            csp_id current = csp_id_set_iterator_get(&i);
             const struct csp_id_set *current_processes =
                     csp_normalized_lts_get_node_processes(lts, current);
             DEBUG("Process normalized node " CSP_ID_FMT, current);
@@ -145,7 +145,7 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
              * can perform. */
             csp_id_set_clear(&initials);
             csp_id_set_foreach (current_processes, &j) {
-                csp_id process = j.current;
+                csp_id process = csp_id_set_iterator_get(&j);
                 DEBUG("Get initials of " CSP_ID_FMT, process);
                 csp_process_build_initials(csp, process, &initials);
             }
@@ -157,11 +157,11 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
              * event for all of the processes in the current set. */
             csp_id_set_foreach (&initials, &j) {
                 struct csp_id_set_iterator k;
-                csp_id initial = j.current;
+                csp_id initial = csp_id_set_iterator_get(&j);
                 csp_id after;
                 DEBUG("Get afters for %s", csp_get_event_name(csp, initial));
                 csp_id_set_foreach (current_processes, &k) {
-                    csp_id process = k.current;
+                    csp_id process = csp_id_set_iterator_get(&k);
                     DEBUG("Get afters of " CSP_ID_FMT " for %s", process,
                           csp_get_event_name(csp, initial));
                     csp_process_build_afters(csp, process, initial, &closure);
@@ -252,7 +252,7 @@ csp_check_traces_refinement(struct csp *csp, struct csp_normalized_lts *lts,
             csp_process_build_initials(csp, impl_node, &initials);
             csp_id_set_foreach (&initials, &j) {
                 struct csp_id_set_iterator k;
-                csp_id initial = j.current;
+                csp_id initial = csp_id_set_iterator_get(&j);
                 csp_id spec_after;
                 DEBUG("    impl -%s→ {...}", csp_get_event_name(csp, initial));
                 if (initial == csp->tau) {
@@ -272,7 +272,7 @@ csp_check_traces_refinement(struct csp *csp, struct csp_normalized_lts *lts,
                 csp_id_set_clear(&afters);
                 csp_process_build_afters(csp, impl_node, initial, &afters);
                 csp_id_set_foreach (&afters, &k) {
-                    csp_id impl_after = k.current;
+                    csp_id impl_after = csp_id_set_iterator_get(&k);
                     struct csp_id_pair next = {spec_after, impl_after};
                     DEBUG("    impl -%s→ " CSP_ID_FMT,
                           csp_get_event_name(csp, initial), impl_after);
