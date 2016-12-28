@@ -13,6 +13,7 @@ check_PROGRAMS = \
 	tests/test-denotational \
 	tests/test-environment \
 	tests/test-equivalences \
+	tests/test-id-maps \
 	tests/test-id-pairs \
 	tests/test-id-sets \
 	tests/test-operators \
@@ -39,9 +40,13 @@ libhst_la_SOURCES = \
 	src/equivalence.c \
 	src/hst.h \
 	src/id-pair.c \
+	src/id-map.h \
+	src/id-map.c \
 	src/id-set.h \
 	src/id-set.c \
 	src/macros.h \
+	src/map.h \
+	src/map.c \
 	src/normalized-lts.c \
 	src/refinement.c \
 	src/operators/external-choice.c \
@@ -73,6 +78,7 @@ tests_test_csp0_LDFLAGS = -no-install
 tests_test_denotational_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install
 tests_test_equivalences_LDFLAGS = -no-install
+tests_test_id_maps_LDFLAGS = -no-install
 tests_test_id_pairs_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
