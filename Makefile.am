@@ -39,6 +39,7 @@ libhst_la_SOURCES = \
 	src/csp0.c \
 	src/denotational.c \
 	src/environment.c \
+	src/equivalence.h \
 	src/equivalence.c \
 	src/hst.h \
 	src/id-pair.c \
