@@ -17,7 +17,8 @@ check_PROGRAMS = \
 	tests/test-id-pairs \
 	tests/test-id-sets \
 	tests/test-operators \
-	tests/test-refinement
+	tests/test-refinement \
+	tests/test-string-maps
 bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
@@ -49,6 +50,8 @@ libhst_la_SOURCES = \
 	src/map.c \
 	src/normalized-lts.c \
 	src/refinement.c \
+	src/string-map.h \
+	src/string-map.c \
 	src/operators/external-choice.c \
 	src/operators/internal-choice.c \
 	src/operators/prefix.c \
@@ -83,5 +86,6 @@ tests_test_id_pairs_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
 tests_test_refinement_LDFLAGS = -no-install
+tests_test_string_maps_LDFLAGS = -no-install
 
 dist_doc_DATA = README.md

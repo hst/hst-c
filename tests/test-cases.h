@@ -24,6 +24,7 @@
 #include "hst.h"
 #include "id-map.h"
 #include "id-set.h"
+#include "string-map.h"
 
 /*------------------------------------------------------------------------------
  * Compiler attributes
