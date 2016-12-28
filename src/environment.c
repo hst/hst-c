@@ -9,14 +9,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define JUDYERROR_NOTEST 1
-#include <Judy.h>
-
 #include "ccan/compiler/compiler.h"
 #include "ccan/container_of/container_of.h"
 #include "ccan/hash/hash.h"
 #include "ccan/likely/likely.h"
 #include "hst.h"
+#include "map.h"
+#include "string-map.h"
 
 static uint64_t
 hash_sized_name(const char *name, size_t name_length)
@@ -29,6 +28,96 @@ hash_name(const char *name)
 {
     return hash_sized_name(name, strlen(name));
 }
+
+/*------------------------------------------------------------------------------
+ * Predefined processes
+ */
+
+static void
+csp_stop_initials(struct csp *csp, struct csp_id_set *set, void *ud)
+{
+}
+
+static void
+csp_stop_afters(struct csp *csp, csp_id initial, struct csp_id_set *set,
+                void *ud)
+{
+}
+
+static csp_id
+csp_stop_get_id(struct csp *csp, const void *temp_ud)
+{
+    return hash_name("STOP");
+}
+
+static size_t
+csp_stop_ud_size(struct csp *csp, const void *temp_ud)
+{
+    return 0;
+}
+
+static void
+csp_stop_init(struct csp *csp, void *ud, const void *temp_ud)
+{
+    /* nothing to do */
+}
+
+static void
+csp_stop_done(struct csp *csp, void *ud)
+{
+    /* nothing to do */
+}
+
+const struct csp_process_iface csp_stop_iface = {
+        &csp_stop_initials, &csp_stop_afters, &csp_stop_get_id,
+        &csp_stop_ud_size,  &csp_stop_init,   &csp_stop_done};
+
+static void
+csp_skip_initials(struct csp *csp, struct csp_id_set *set, void *ud)
+{
+    csp_id_set_add(set, csp->tick);
+}
+
+static void
+csp_skip_afters(struct csp *csp, csp_id initial, struct csp_id_set *set,
+                void *ud)
+{
+    if (initial == csp->tick) {
+        csp_id_set_add(set, csp->stop);
+    }
+}
+
+static csp_id
+csp_skip_get_id(struct csp *csp, const void *temp_ud)
+{
+    return hash_name("SKIP");
+}
+
+static size_t
+csp_skip_ud_size(struct csp *csp, const void *temp_ud)
+{
+    return 0;
+}
+
+static void
+csp_skip_init(struct csp *csp, void *ud, const void *temp_ud)
+{
+    /* nothing to do */
+}
+
+static void
+csp_skip_done(struct csp *csp, void *ud)
+{
+    /* nothing to do */
+}
+
+const struct csp_process_iface csp_skip_iface = {
+        &csp_skip_initials, &csp_skip_afters, &csp_skip_get_id,
+        &csp_skip_ud_size,  &csp_skip_init,   &csp_skip_done};
+
+/*------------------------------------------------------------------------------
+ * Processes
+ */
 
 struct csp_process {
     const struct csp_process_iface iface;
@@ -55,101 +144,61 @@ csp_process_free(struct csp *csp, struct csp_process *process)
     free(process);
 }
 
+/*------------------------------------------------------------------------------
+ * ID→process maps
+ */
+
+struct csp_id_process_map {
+    struct csp_map map;
+};
+
+static void
+csp_id_process_map_init(struct csp_id_process_map *map)
+{
+    csp_map_init(&map->map);
+}
+
+static void
+csp_id_process_map_free_entry(void *ud, void *entry)
+{
+    struct csp *csp = ud;
+    struct csp_process *process = entry;
+    csp_process_free(csp, process);
+}
+
+void
+csp_id_process_map_done(struct csp *csp, struct csp_id_process_map *map)
+{
+    csp_map_done(&map->map, csp_id_process_map_free_entry, csp);
+}
+
+struct csp_process *
+csp_id_process_map_get(const struct csp_id_process_map *map, csp_id id)
+{
+    return csp_map_get(&map->map, id);
+}
+
+struct csp_process **
+csp_id_process_map_at(struct csp_id_process_map *map, csp_id id)
+{
+    return (struct csp_process **) csp_map_at(&map->map, id);
+}
+
+/*------------------------------------------------------------------------------
+ * Environment
+ */
+
 struct csp_priv {
     struct csp public;
     csp_id next_recursion_scope_id;
-    void *events;
-    void *processes;
+    struct csp_string_map events;
+    struct csp_id_process_map processes;
     struct csp_process *stop;
     struct csp_process *skip;
 };
 
 static struct csp_process *
 csp_process_get(struct csp_priv *csp, csp_id process_id);
-
-static void
-csp_stop_initials(struct csp *pcsp, struct csp_id_set *set, void *ud)
-{
-}
-
-static void
-csp_stop_afters(struct csp *pcsp, csp_id initial, struct csp_id_set *set,
-                void *ud)
-{
-}
-
-static csp_id
-csp_stop_get_id(struct csp *pcsp, const void *temp_ud)
-{
-    return hash_name("STOP");
-}
-
-static size_t
-csp_stop_ud_size(struct csp *pcsp, const void *temp_ud)
-{
-    return 0;
-}
-
-static void
-csp_stop_init(struct csp *pcsp, void *ud, const void *temp_ud)
-{
-    /* nothing to do */
-}
-
-static void
-csp_stop_done(struct csp *pcsp, void *ud)
-{
-    /* nothing to do */
-}
-
-const struct csp_process_iface csp_stop_iface = {
-        &csp_stop_initials, &csp_stop_afters, &csp_stop_get_id,
-        &csp_stop_ud_size,  &csp_stop_init,   &csp_stop_done};
-
-static void
-csp_skip_initials(struct csp *pcsp, struct csp_id_set *set, void *ud)
-{
-    struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    csp_id_set_add(set, csp->public.tick);
-}
-
-static void
-csp_skip_afters(struct csp *pcsp, csp_id initial, struct csp_id_set *set,
-                void *ud)
-{
-    struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    if (initial == csp->public.tick) {
-        csp_id_set_add(set, csp->public.stop);
-    }
-}
-
-static csp_id
-csp_skip_get_id(struct csp *pcsp, const void *temp_ud)
-{
-    return hash_name("SKIP");
-}
-
-static size_t
-csp_skip_ud_size(struct csp *pcsp, const void *temp_ud)
-{
-    return 0;
-}
-
-static void
-csp_skip_init(struct csp *pcsp, void *ud, const void *temp_ud)
-{
-    /* nothing to do */
-}
-
-static void
-csp_skip_done(struct csp *pcsp, void *ud)
-{
-    /* nothing to do */
-}
-
-const struct csp_process_iface csp_skip_iface = {
-        &csp_skip_initials, &csp_skip_afters, &csp_skip_get_id,
-        &csp_skip_ud_size,  &csp_skip_init,   &csp_skip_done};
 
 struct csp *
 csp_new(void)
@@ -160,8 +209,8 @@ csp_new(void)
     if (unlikely(csp == NULL)) {
         return NULL;
     }
-    csp->events = NULL;
-    csp->processes = NULL;
+    csp_string_map_init(&csp->events);
+    csp_id_process_map_init(&csp->processes);
     csp->next_recursion_scope_id = 0;
     csp->public.tau = csp_get_event_id(&csp->public, TAU);
     csp->public.tick = csp_get_event_id(&csp->public, TICK);
@@ -178,32 +227,8 @@ void
 csp_free(struct csp *pcsp)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    UNNEEDED Word_t dummy;
-
-    {
-        Word_t *vname;
-        csp_id event = 0;
-        JLF(vname, csp->events, event);
-        while (vname != NULL) {
-            char *name = (void *) *vname;
-            free(name);
-            JLN(vname, csp->events, event);
-        }
-        JLFA(dummy, csp->events);
-    }
-
-    {
-        Word_t *vprocess;
-        csp_id process_id = 0;
-        JLF(vprocess, csp->processes, process_id);
-        while (vprocess != NULL) {
-            struct csp_process *process = (void *) *vprocess;
-            csp_process_free(&csp->public, process);
-            JLN(vprocess, csp->processes, process_id);
-        }
-        JLFA(dummy, csp->processes);
-    }
-
+    csp_string_map_done(&csp->events);
+    csp_id_process_map_done(&csp->public, &csp->processes);
     free(csp);
 }
 
@@ -212,12 +237,7 @@ csp_get_event_id(struct csp *pcsp, const char *name)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
     csp_id event = hash_name(name);
-    Word_t *vname;
-    JLI(vname, csp->events, event);
-    if (*vname == 0) {
-        const char *name_copy = strdup(name);
-        *vname = (Word_t) name_copy;
-    }
+    csp_string_map_insert(&csp->events, event, name);
     return event;
 }
 
@@ -226,14 +246,7 @@ csp_get_sized_event_id(struct csp *pcsp, const char *name, size_t name_length)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
     csp_id event = hash_sized_name(name, name_length);
-    Word_t *vname;
-    JLI(vname, csp->events, event);
-    if (*vname == 0) {
-        char *name_copy = malloc(name_length + 1);
-        memcpy(name_copy, name, name_length);
-        name_copy[name_length] = '\0';
-        *vname = (Word_t) name_copy;
-    }
+    csp_string_map_insert_sized(&csp->events, event, name, name_length);
     return event;
 }
 
@@ -241,13 +254,7 @@ const char *
 csp_get_event_name(struct csp *pcsp, csp_id event)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    Word_t *vname;
-    JLG(vname, csp->events, event);
-    if (vname == NULL) {
-        return NULL;
-    } else {
-        return (void *) *vname;
-    }
+    return csp_string_map_get(&csp->events, event);
 }
 
 csp_id
@@ -255,18 +262,14 @@ csp_process_init(struct csp *pcsp, const void *temp_ud, void **ud,
                  const struct csp_process_iface *iface)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    struct csp_process *process;
+    struct csp_process **process;
     csp_id process_id = iface->get_id(&csp->public, temp_ud);
-    Word_t *vprocess;
-    JLI(vprocess, csp->processes, process_id);
-    if (*vprocess == 0) {
-        process = csp_process_new(&csp->public, temp_ud, iface);
-        *vprocess = (Word_t) process;
-    } else {
-        process = (void *) *vprocess;
+    process = csp_id_process_map_at(&csp->processes, process_id);
+    if (*process == NULL) {
+        *process = csp_process_new(&csp->public, temp_ud, iface);
     }
     if (ud != NULL) {
-        *ud = csp_process_ud(process);
+        *ud = csp_process_ud(*process);
     }
     return process_id;
 }
@@ -274,12 +277,12 @@ csp_process_init(struct csp *pcsp, const void *temp_ud, void **ud,
 static struct csp_process *
 csp_process_get(struct csp_priv *csp, csp_id process_id)
 {
-    Word_t *vprocess;
-    JLG(vprocess, csp->processes, process_id);
+    struct csp_process *process =
+            csp_id_process_map_get(&csp->processes, process_id);
     /* It's an error to do something with a process that you haven't created
      * yet. */
-    assert(vprocess != NULL);
-    return (void *) *vprocess;
+    assert(process != NULL);
+    return process;
 }
 
 void
