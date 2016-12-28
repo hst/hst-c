@@ -15,6 +15,7 @@ check_PROGRAMS = \
 	tests/test-equivalences \
 	tests/test-id-maps \
 	tests/test-id-pairs \
+	tests/test-id-set-maps \
 	tests/test-id-sets \
 	tests/test-operators \
 	tests/test-refinement \
@@ -45,6 +46,8 @@ libhst_la_SOURCES = \
 	src/id-map.c \
 	src/id-set.h \
 	src/id-set.c \
+	src/id-set-map.h \
+	src/id-set-map.c \
 	src/macros.h \
 	src/map.h \
 	src/map.c \
@@ -83,6 +86,7 @@ tests_test_environment_LDFLAGS = -no-install
 tests_test_equivalences_LDFLAGS = -no-install
 tests_test_id_maps_LDFLAGS = -no-install
 tests_test_id_pairs_LDFLAGS = -no-install
+tests_test_id_set_maps_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
 tests_test_refinement_LDFLAGS = -no-install
