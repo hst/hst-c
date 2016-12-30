@@ -5,11 +5,13 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "operators.h"
+
 #include <assert.h>
 #include <stdlib.h>
 
-#include "ccan/likely/likely.h"
-#include "hst.h"
+#include "basics.h"
+#include "environment.h"
 
 struct csp_external_choice {
     struct csp_id_set ps;

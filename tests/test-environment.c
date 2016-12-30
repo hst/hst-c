@@ -5,9 +5,8 @@
  * -----------------------------------------------------------------------------
  */
 
-#include <string.h>
+#include "environment.h"
 
-#include "hst.h"
 #include "test-case-harness.h"
 #include "test-cases.h"
 

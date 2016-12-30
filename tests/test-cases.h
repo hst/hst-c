@@ -21,8 +21,11 @@
 #include "ccan/compiler/compiler.h"
 #include "ccan/cppmagic/cppmagic.h"
 #include "ccan/likely/likely.h"
-#include "hst.h"
+#include "csp0.h"
+#include "denotational.h"
+#include "equivalence.h"
 #include "id-map.h"
+#include "id-pair.h"
 #include "id-set.h"
 #include "string-map.h"
 

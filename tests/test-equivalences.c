@@ -5,7 +5,8 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "hst.h"
+#include "equivalence.h"
+
 #include "test-case-harness.h"
 #include "test-cases.h"
 

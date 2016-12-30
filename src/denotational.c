@@ -5,12 +5,13 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "denotational.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "ccan/likely/likely.h"
-#include "hst.h"
 
 /*------------------------------------------------------------------------------
  * Traces

@@ -5,9 +5,11 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "csp0.h"
+
 #include <string.h>
 
-#include "hst.h"
+#include "operators.h"
 #include "test-case-harness.h"
 #include "test-cases.h"
 

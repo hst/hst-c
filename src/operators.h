@@ -5,13 +5,39 @@
  * -----------------------------------------------------------------------------
  */
 
-#ifndef HST_OPERATORS_RECURSION_H
-#define HST_OPERATORS_RECURSION_H
+#ifndef HST_OPERATORS_H
+#define HST_OPERATORS_H
 
 #include <stdlib.h>
 
 #include "basics.h"
+#include "environment.h"
 #include "map.h"
+
+/*------------------------------------------------------------------------------
+ * Operators
+ */
+
+/* In all of the below:  `p` and `q` are processes.  `ps` is a set of processes.
+ * `a` is an event. */
+
+csp_id
+csp_external_choice(struct csp *csp, csp_id p, csp_id q);
+
+csp_id
+csp_internal_choice(struct csp *csp, csp_id p, csp_id q);
+
+csp_id
+csp_prefix(struct csp *csp, csp_id a, csp_id p);
+
+csp_id
+csp_replicated_external_choice(struct csp *csp, const struct csp_id_set *ps);
+
+csp_id
+csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps);
+
+csp_id
+csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
 
 /*------------------------------------------------------------------------------
  * Recursion
@@ -75,4 +101,4 @@ csp_recursion_scope_fill_sized(struct csp_recursion_scope *scope,
                                const char *name, size_t name_length,
                                csp_id process);
 
-#endif /* HST_OPERATORS_RECURSION_H */
+#endif /* HST_OPERATORS_H */

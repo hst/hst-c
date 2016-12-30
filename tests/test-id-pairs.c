@@ -5,7 +5,8 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "hst.h"
+#include "id-pair.h"
+
 #include "test-case-harness.h"
 
 #define CSP_ID_PAIR_ARRAY_FIRST_ALLOCATION_COUNT 32

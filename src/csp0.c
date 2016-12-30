@@ -5,12 +5,14 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "csp0.h"
+
 #include <assert.h>
 #include <string.h>
 
 #include "ccan/likely/likely.h"
-#include "hst.h"
-#include "operators/recursion.h"
+#include "environment.h"
+#include "operators.h"
 
 #if defined(CSP0_DEBUG)
 #include <stdio.h>

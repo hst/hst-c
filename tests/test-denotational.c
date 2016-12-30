@@ -5,7 +5,10 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "hst.h"
+#include "denotational.h"
+
+#include "csp0.h"
+#include "environment.h"
 #include "test-case-harness.h"
 
 #define CSP_TRACE_FIRST_ALLOCATION_COUNT 32

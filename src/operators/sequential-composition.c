@@ -5,10 +5,13 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "operators.h"
+
 #include <assert.h>
 #include <stdlib.h>
 
-#include "hst.h"
+#include "basics.h"
+#include "environment.h"
 
 struct csp_sequential_composition {
     csp_id p;
