@@ -59,6 +59,7 @@ libhst_la_SOURCES = \
 	src/operators/external-choice.c \
 	src/operators/internal-choice.c \
 	src/operators/prefix.c \
+	src/operators/recursion.h \
 	src/operators/recursion.c \
 	src/operators/sequential-composition.c \
 	third_party/ccan/build_assert/build_assert.h \
