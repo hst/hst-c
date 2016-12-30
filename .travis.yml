@@ -13,5 +13,4 @@ script: .travis/test.sh
 addons:
   apt:
     packages:
-      - libjudy-dev
       - valgrind
