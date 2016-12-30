@@ -397,8 +397,6 @@ check_set_eq_(const char *filename, unsigned int line,
         struct csp_id_set_iterator i;
         struct csp_id_set diff;
         fail_at(filename, line, "Expected sets to be equal");
-        printf("# hash of actual   = " CSP_ID_FMT "\n", actual->hash);
-        printf("# hash of expected = " CSP_ID_FMT "\n", expected->hash);
         csp_id_set_init(&diff);
 
         printf("# Elements only in actual:\n");

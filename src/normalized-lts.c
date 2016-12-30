@@ -209,7 +209,7 @@ bool
 csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
                             struct csp_id_set *processes, csp_id *dest)
 {
-    csp_id id = processes->hash;
+    csp_id id = csp_id_set_hash(processes);
     struct csp_normalized_lts_node **node =
             csp_normalized_lts_nodes_at(&lts->nodes, id);
     *dest = id;

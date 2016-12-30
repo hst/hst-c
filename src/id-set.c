@@ -25,8 +25,6 @@
 void
 csp_id_set_init(struct csp_id_set *set)
 {
-    set->hash = CSP_ID_SET_INITIAL_HASH;
-    set->count = 0;
     set->elements = NULL;
 }
 
@@ -44,32 +42,49 @@ csp_id_set_clear(struct csp_id_set *set)
     csp_id_set_init(set);
 }
 
+csp_id
+csp_id_set_hash(const struct csp_id_set *set)
+{
+    struct csp_id_set_iterator iter;
+    csp_id hash = CSP_ID_SET_INITIAL_HASH;
+    csp_id_set_foreach (set, &iter) {
+        hash ^= csp_id_set_iterator_get(&iter);
+    }
+    return hash;
+}
+
+bool
+csp_id_set_empty(const struct csp_id_set *set)
+{
+    return set->elements == NULL;
+}
+
+size_t
+csp_id_set_size(const struct csp_id_set *set)
+{
+    Word_t count;
+    J1C(count, set->elements, 0, -1);
+    return count;
+}
+
 bool
 csp_id_set_eq(const struct csp_id_set *set1, const struct csp_id_set *set2)
 {
-    if (set1->count != set2->count) {
-        return false;
-    } else if (set1->hash != set2->hash) {
-        return false;
-    } else {
-        struct csp_id_set_iterator iter1;
-        struct csp_id_set_iterator iter2;
-        /* Loop through the elements in `set1`, verifying that each one is also
-         * in `set2`. */
-        for (csp_id_set_get_iterator(set1, &iter1),
-             csp_id_set_get_iterator(set2, &iter2);
-             !csp_id_set_iterator_done(&iter1) &&
-             !csp_id_set_iterator_done(&iter2);
-             csp_id_set_iterator_advance(&iter1),
-             csp_id_set_iterator_advance(&iter2)) {
-            if (csp_id_set_iterator_get(&iter1) !=
-                csp_id_set_iterator_get(&iter2)) {
-                return false;
-            }
+    struct csp_id_set_iterator iter1;
+    struct csp_id_set_iterator iter2;
+    /* Loop through the elements in `set1`, verifying that each one is also
+     * in `set2`. */
+    for (csp_id_set_get_iterator(set1, &iter1),
+         csp_id_set_get_iterator(set2, &iter2);
+         !csp_id_set_iterator_done(&iter1) && !csp_id_set_iterator_done(&iter2);
+         csp_id_set_iterator_advance(&iter1),
+         csp_id_set_iterator_advance(&iter2)) {
+        if (csp_id_set_iterator_get(&iter1) !=
+            csp_id_set_iterator_get(&iter2)) {
+            return false;
         }
-        return csp_id_set_iterator_done(&iter1) ==
-               csp_id_set_iterator_done(&iter2);
     }
+    return csp_id_set_iterator_done(&iter1) == csp_id_set_iterator_done(&iter2);
 }
 
 bool
@@ -103,12 +118,6 @@ csp_id_set_add_one(struct csp_id_set *set, csp_id id)
 {
     int rc;
     J1S(rc, set->elements, id);
-    if (rc) {
-        /* Only update the set's hash and count if we actually added a new
-         * element. */
-        set->hash ^= id;
-        set->count++;
-    }
     return rc;
 }
 
@@ -117,12 +126,6 @@ csp_id_set_remove_one(struct csp_id_set *set, csp_id id)
 {
     int rc;
     J1U(rc, set->elements, id);
-    if (rc) {
-        /* Only update the set's hash and count if we actually removed an
-         * element. */
-        set->hash ^= id;
-        set->count--;
-    }
     return rc;
 }
 

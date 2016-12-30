@@ -129,7 +129,7 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
     }
 
     /* Keep processing normalized LTS nodes until we run out. */
-    while (current_pending->count > 0) {
+    while (!csp_id_set_empty(current_pending)) {
         struct csp_id_set_iterator i;
         csp_id_set_clear(next_pending);
         csp_id_set_foreach (current_pending, &i) {

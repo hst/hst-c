@@ -56,7 +56,7 @@ csp_behavior_finish_traces(struct csp *csp, struct csp_behavior *behavior)
 {
     behavior->model = CSP_TRACES;
     csp_id_set_remove(&behavior->initials, csp->tau);
-    behavior->hash = behavior->initials.hash;
+    behavior->hash = csp_id_set_hash(&behavior->initials);
 }
 
 static void

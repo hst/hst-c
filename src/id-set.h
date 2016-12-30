@@ -15,8 +15,6 @@
 
 /* A set of IDs */
 struct csp_id_set {
-    csp_id hash;
-    size_t count;
     void *elements;
 };
 
@@ -25,6 +23,15 @@ csp_id_set_init(struct csp_id_set *set);
 
 void
 csp_id_set_done(struct csp_id_set *set);
+
+csp_id
+csp_id_set_hash(const struct csp_id_set *set);
+
+bool
+csp_id_set_empty(const struct csp_id_set *set);
+
+size_t
+csp_id_set_size(const struct csp_id_set *set);
 
 bool
 csp_id_set_eq(const struct csp_id_set *set1, const struct csp_id_set *set2);
