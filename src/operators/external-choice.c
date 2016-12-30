@@ -41,7 +41,7 @@ csp_external_choice_initials(struct csp *csp, struct csp_id_set *set,
     struct csp_external_choice *choice = vchoice;
     struct csp_id_set_iterator i;
     csp_id_set_foreach (&choice->ps, &i) {
-        csp_process_build_initials(csp, i.current, set);
+        csp_process_build_initials(csp, csp_id_set_iterator_get(&i), set);
     }
 }
 
@@ -69,7 +69,7 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
         /* For all P ∈ Ps */
         csp_id_set_foreach (&choice->ps, &i) {
             struct csp_id_set_iterator j;
-            csp_id p = i.current;
+            csp_id p = csp_id_set_iterator_get(&i);
             /* Set Ps' to Ps ∖ {P} */
             csp_id_set_remove(&ps_prime, p);
             /* Grab afters(P, τ) */
@@ -77,7 +77,7 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
             csp_process_build_afters(csp, p, initial, &p_afters);
             /* For all P' ∈ afters(P, τ) */
             csp_id_set_foreach (&p_afters, &j) {
-                csp_id p_prime = j.current;
+                csp_id p_prime = csp_id_set_iterator_get(&j);
                 /* ps_prime currently contains Ps.  Add P' and remove P to
                  * produce (Ps ∖ {P} ∪ {P'}) */
                 csp_id_set_add(&ps_prime, p_prime);
@@ -98,7 +98,7 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
     } else {
         struct csp_id_set_iterator i;
         csp_id_set_foreach (&choice->ps, &i) {
-            csp_id p = i.current;
+            csp_id p = csp_id_set_iterator_get(&i);
             csp_process_build_afters(csp, p, initial, set);
         }
     }

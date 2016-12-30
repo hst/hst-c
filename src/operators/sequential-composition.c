@@ -69,7 +69,7 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
     csp_id_set_init(&afters);
     csp_process_build_afters(csp, seq->p, initial, &afters);
     csp_id_set_foreach (&afters, &i) {
-        csp_id p_prime = i.current;
+        csp_id p_prime = csp_id_set_iterator_get(&i);
         csp_id seq_prime = csp_sequential_composition(csp, p_prime, seq->q);
         csp_id_set_add(set, seq_prime);
     }
@@ -79,7 +79,7 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
     if (initial == csp->tau) {
         csp_id_set_clear(&afters);
         csp_process_build_afters(csp, seq->p, csp->tick, &afters);
-        if (afters.count > 0) {
+        if (!csp_id_set_empty(&afters)) {
             /* A can perform ✔, and we don't actually care what it leads to,
              * since we're going to lead to Q no matter what. */
             csp_id_set_add(set, seq->q);

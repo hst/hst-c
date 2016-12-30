@@ -16,6 +16,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+#include "equivalence.h"
 #include "id-set.h"
 
 /*------------------------------------------------------------------------------
@@ -170,46 +171,6 @@ csp_id_pair_set_build(struct csp_id_pair_set *set,
                       struct csp_id_pair_set_builder *builder);
 
 /*------------------------------------------------------------------------------
- * Equivalences
- */
-
-/* Stores information about the "equivalence classes" of a set of processes.
- * All of the processes that have "equivalent" behavior (according to one of
- * CSP's semantic models) belong to the same equivalence class. */
-struct csp_equivalences {
-    void *classes;
-    void *members;
-};
-
-void
-csp_equivalences_init(struct csp_equivalences *equiv);
-
-void
-csp_equivalences_done(struct csp_equivalences *equiv);
-
-/* Add a member to an equivalence class.  If the member was already in an
- * equivalence class, it is removed from that one before adding it to the new
- * one. */
-void
-csp_equivalences_add(struct csp_equivalences *equiv, csp_id class_id,
-                     csp_id member_id);
-
-/* Add the IDs of all of the equivalence classes to a set. */
-void
-csp_equivalences_build_classes(struct csp_equivalences *equiv,
-                               struct csp_id_set *set);
-
-/* Return the class that a member belongs to, or CSP_ID_NONE if that member
- * hasn't been added to an equivalence class yet. */
-csp_id
-csp_equivalences_get_class(struct csp_equivalences *equiv, csp_id member_id);
-
-/* Add all of the members of an equivalence class to a set. */
-void
-csp_equivalences_build_members(struct csp_equivalences *equiv, csp_id class_id,
-                               struct csp_id_set *set);
-
-/*------------------------------------------------------------------------------
  * Processes
  */
 
@@ -344,61 +305,6 @@ csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps);
 
 csp_id
 csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
-
-/*------------------------------------------------------------------------------
- * Recursion
- */
-
-/* A "recursion scope" is the main building block that you need to create
- * mutually recursive processes.  You can create one or more "recursion targets"
- * within the scope, each of which maps a name to a process.  But importantly,
- * you don't have to know in advance which process you're going to map each name
- * to.  That lets you define a name for a process, and then use that same name
- * in the definition of the process.  Presto, recursion! */
-
-struct csp_recursion_scope {
-    csp_id scope;
-    size_t unfilled_count;
-    void *names;
-};
-
-/* Initialize a new recursion scope.  You are responsible for passing in a
- * different `scope_id` for each recursion scope that you create. */
-void
-csp_recursion_scope_init(struct csp *csp, struct csp_recursion_scope *scope);
-
-void
-csp_recursion_scope_done(struct csp_recursion_scope *scope);
-
-/* Return the process ID of the recursion target with the given name, creating
- * it if necessary.  The recursion target will initially be empty; you must
- * "fill" it by calling csp_recursion_scope_fill before destroying the scope. */
-csp_id
-csp_recursion_scope_get(struct csp *csp, struct csp_recursion_scope *scope,
-                        const char *name);
-
-/* Same as csp_recursion_scope_add, but providing an explicit length for `name`.
- * `name` does not need to be NUL-terminated, but it cannot contain any NULs. */
-csp_id
-csp_recursion_scope_get_sized(struct csp *csp,
-                              struct csp_recursion_scope *scope,
-                              const char *name, size_t name_length);
-
-/* Fill a recursion target.  You must call this exactly once for each recursion
- * target that you create.  Returns false if this recursion target doesn't
- * exist, or if it has been filled already.  After this function returns, the
- * recursion target will behave exactly like `process`. */
-bool
-csp_recursion_scope_fill(struct csp_recursion_scope *scope, const char *name,
-                         csp_id process);
-
-/* Same as csp_recursion_scope_fill, but providing an explicit length for
- * `name`.  `name` does not need to be NUL-terminated, but it cannot contain any
- * NULs. */
-bool
-csp_recursion_scope_fill_sized(struct csp_recursion_scope *scope,
-                               const char *name, size_t name_length,
-                               csp_id process);
 
 /*------------------------------------------------------------------------------
  * CSP₀

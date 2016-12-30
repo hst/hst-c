@@ -22,7 +22,9 @@
 #include "ccan/cppmagic/cppmagic.h"
 #include "ccan/likely/likely.h"
 #include "hst.h"
+#include "id-map.h"
 #include "id-set.h"
+#include "string-map.h"
 
 /*------------------------------------------------------------------------------
  * Compiler attributes
@@ -395,8 +397,6 @@ check_set_eq_(const char *filename, unsigned int line,
         struct csp_id_set_iterator i;
         struct csp_id_set diff;
         fail_at(filename, line, "Expected sets to be equal");
-        printf("# hash of actual   = " CSP_ID_FMT "\n", actual->hash);
-        printf("# hash of expected = " CSP_ID_FMT "\n", expected->hash);
         csp_id_set_init(&diff);
 
         printf("# Elements only in actual:\n");
@@ -620,6 +620,19 @@ csp_id_set_factory_create(struct csp *csp, struct csp_id_set_factory factory)
     return factory.create(csp, factory.ud);
 }
 
+/* A factory that can create an ID→ID map */
+struct csp_id_map_factory {
+    struct csp_id_map *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_id_map *
+csp_id_map_factory_create(struct csp *csp, struct csp_id_map_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
 /* ID pair factories are functions that can create an ID pair. */
 struct csp_id_pair_factory {
     struct csp_id_pair (*create)(struct csp *csp, void *ud);
@@ -743,6 +756,44 @@ csp_id_factory_array_new_(size_t count, ...)
     }
     va_end(args);
     return array;
+}
+
+/* Creates a new ID→ID map factory that wraps a bunch of ID factories to create
+ * the contents of each map entry. */
+#define id_map(...) (id_map_(csp_id_factory_array_new(__VA_ARGS__)))
+
+static void
+csp_id_map_free_(void *varray)
+{
+    struct csp_id_map *array = varray;
+    csp_id_map_done(array);
+    free(array);
+}
+
+static struct csp_id_map *
+id_map_factory(struct csp *csp, void *vids)
+{
+    size_t i;
+    struct csp_id_factory_array *ids = vids;
+    struct csp_id_map *map = malloc(sizeof(struct csp_id_map));
+    assert(map != NULL);
+    csp_id_map_init(map);
+    test_case_cleanup_register(csp_id_map_free_, map);
+    for (i = 0; i < ids->count;) {
+        csp_id from = csp_id_factory_create(csp, ids->factories[i++]);
+        csp_id to = csp_id_factory_create(csp, ids->factories[i++]);
+        csp_id_map_insert(map, from, to);
+    }
+    return map;
+}
+
+UNNEEDED
+static struct csp_id_map_factory
+id_map_(struct csp_id_factory_array *ids)
+{
+    struct csp_id_map_factory factory = {id_map_factory, ids};
+    assert((ids->count % 2) == 0);
+    return factory;
 }
 
 /* Creates a new ID pair array factory that wraps a bunch of ID factories to

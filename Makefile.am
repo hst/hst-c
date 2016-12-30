@@ -13,10 +13,13 @@ check_PROGRAMS = \
 	tests/test-denotational \
 	tests/test-environment \
 	tests/test-equivalences \
+	tests/test-id-maps \
 	tests/test-id-pairs \
+	tests/test-id-set-maps \
 	tests/test-id-sets \
 	tests/test-operators \
-	tests/test-refinement
+	tests/test-refinement \
+	tests/test-string-maps
 bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
@@ -36,17 +39,27 @@ libhst_la_SOURCES = \
 	src/csp0.c \
 	src/denotational.c \
 	src/environment.c \
+	src/equivalence.h \
 	src/equivalence.c \
 	src/hst.h \
 	src/id-pair.c \
+	src/id-map.h \
+	src/id-map.c \
 	src/id-set.h \
 	src/id-set.c \
+	src/id-set-map.h \
+	src/id-set-map.c \
 	src/macros.h \
+	src/map.h \
+	src/map.c \
 	src/normalized-lts.c \
 	src/refinement.c \
+	src/string-map.h \
+	src/string-map.c \
 	src/operators/external-choice.c \
 	src/operators/internal-choice.c \
 	src/operators/prefix.c \
+	src/operators/recursion.h \
 	src/operators/recursion.c \
 	src/operators/sequential-composition.c \
 	third_party/ccan/build_assert/build_assert.h \
@@ -73,9 +86,12 @@ tests_test_csp0_LDFLAGS = -no-install
 tests_test_denotational_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install
 tests_test_equivalences_LDFLAGS = -no-install
+tests_test_id_maps_LDFLAGS = -no-install
 tests_test_id_pairs_LDFLAGS = -no-install
+tests_test_id_set_maps_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
 tests_test_refinement_LDFLAGS = -no-install
+tests_test_string_maps_LDFLAGS = -no-install
 
 dist_doc_DATA = README.md

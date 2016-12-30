@@ -56,7 +56,7 @@ csp_behavior_finish_traces(struct csp *csp, struct csp_behavior *behavior)
 {
     behavior->model = CSP_TRACES;
     csp_id_set_remove(&behavior->initials, csp->tau);
-    behavior->hash = behavior->initials.hash;
+    behavior->hash = csp_id_set_hash(&behavior->initials);
 }
 
 static void
@@ -90,7 +90,8 @@ csp_process_set_get_traces_behavior(struct csp *csp,
     struct csp_id_set_iterator iter;
     csp_id_set_clear(&behavior->initials);
     csp_id_set_foreach (processes, &iter) {
-        csp_process_add_traces_behavior(csp, iter.current, behavior);
+        csp_process_add_traces_behavior(csp, csp_id_set_iterator_get(&iter),
+                                        behavior);
     }
     csp_behavior_finish_traces(csp, behavior);
 }

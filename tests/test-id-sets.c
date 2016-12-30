@@ -5,10 +5,9 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "hst.h"
-#include "test-case-harness.h"
+#include "id-set.h"
 
-#define CSP_ID_SET_FIRST_ALLOCATION_COUNT 32
+#include "test-case-harness.h"
 
 TEST_CASE_GROUP("identifier sets");
 

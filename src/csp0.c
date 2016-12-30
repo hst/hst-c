@@ -10,6 +10,7 @@
 
 #include "ccan/likely/likely.h"
 #include "hst.h"
+#include "operators/recursion.h"
 
 #if defined(CSP0_DEBUG)
 #include <stdio.h>
@@ -273,10 +274,6 @@ parse_process1(struct csp0_parse_state *state, csp_id *dest)
     return -1;
 }
 
-/* Kind of C's equivalent of a friend declaration! */
-csp_id
-csp__recursion_create_id(csp_id scope, const char *name, size_t name_length);
-
 static int
 parse_process2(struct csp0_parse_state *state, csp_id *dest)
 {
@@ -296,7 +293,7 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
     if (parse_token(state, "@") == 0) {
         csp_id scope;
         require(parse_numeric_identifier(state, &scope));
-        *dest = csp__recursion_create_id(scope, id.start, id.length);
+        *dest = csp_recursion_create_id(scope, id.start, id.length);
         DEBUG("ACCEPT process2 %.*s@%lu = " CSP_ID_FMT, (int) id.length,
               id.start, (unsigned long) scope, *dest);
         return 0;
