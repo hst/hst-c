@@ -29,6 +29,7 @@ ForEachMacros:
   - csp_id_map_foreach
   - csp_id_set_foreach
   - csp_id_set_map_foreach
+  - csp_normalized_lts_nodes_foreach
   - csp_string_map_foreach
 IncludeCategories:
   - Regex:    '^<.*\.h>'

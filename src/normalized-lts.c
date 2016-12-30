@@ -8,13 +8,12 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#define JUDYERROR_NOTEST 1
-#include <Judy.h>
-
 #include "ccan/compiler/compiler.h"
 #include "basics.h"
 #include "hst.h"
+#include "id-map.h"
 #include "macros.h"
+#include "map.h"
 
 #if defined(REFINEMENT_DEBUG)
 #include <stdio.h>
@@ -27,10 +26,14 @@
 #define DEBUG(...)   /* do nothing */
 #endif
 
+/*------------------------------------------------------------------------------
+ * Normalized LTS node
+ */
+
 struct csp_normalized_lts_node {
     struct csp_id_set processes;
     struct csp_behavior behavior;
-    void *edges;
+    struct csp_id_map edges;
 };
 
 static struct csp_normalized_lts_node *
@@ -44,17 +47,16 @@ csp_normalized_lts_node_new(struct csp *csp, enum csp_semantic_model model,
     csp_id_set_init(processes);
     csp_behavior_init(&node->behavior);
     csp_process_set_get_behavior(csp, &node->processes, model, &node->behavior);
-    node->edges = NULL;
+    csp_id_map_init(&node->edges);
     return node;
 }
 
 static void
 csp_normalized_lts_node_free(struct csp_normalized_lts_node *node)
 {
-    UNNEEDED Word_t dummy;
     csp_id_set_done(&node->processes);
     csp_behavior_done(&node->behavior);
-    JLFA(dummy, node->edges);
+    csp_id_map_done(&node->edges);
     free(node);
 }
 
@@ -62,50 +64,125 @@ static void
 csp_normalized_lts_node_add_edge(struct csp_normalized_lts_node *node,
                                  csp_id event, csp_id to)
 {
-    Word_t *vto;
-    JLI(vto, node->edges, event);
-    assert(*vto == 0 || *vto == to);
-    *vto = to;
+    csp_id_map_insert(&node->edges, event, to);
 }
 
 static csp_id
 csp_normalized_lts_node_get_edge(struct csp_normalized_lts_node *node,
                                  csp_id event)
 {
-    Word_t *vto;
-    JLG(vto, node->edges, event);
-    if (vto == NULL) {
-        return CSP_NODE_NONE;
-    } else {
-        return *vto;
-    }
+    return csp_id_map_get(&node->edges, event);
 }
 
 static void
 csp_normalized_lts_node_get_edges(struct csp_normalized_lts_node *node,
                                   struct csp_id_pair_array *edges)
 {
-    Word_t count;
-    Word_t *vto;
-    csp_id event_id = 0;
     size_t i = 0;
-    JLC(count, node->edges, 0, -1);
+    struct csp_id_map_iterator iter;
+    size_t count = csp_id_map_size(&node->edges);
     csp_id_pair_array_ensure_size(edges, count);
-    JLF(vto, node->edges, event_id);
-    while (vto != NULL) {
-        csp_id to = *vto;
+    csp_id_map_foreach (&node->edges, &iter) {
         struct csp_id_pair *pair = &edges->pairs[i++];
-        pair->from = event_id;
-        pair->to = to;
-        JLN(vto, node->edges, event_id);
+        pair->from = csp_id_map_iterator_get_from(&iter);
+        pair->to = csp_id_map_iterator_get_to(&iter);
     }
 }
+
+/*------------------------------------------------------------------------------
+ * ID→normalized node map
+ */
+
+struct csp_normalized_lts_nodes {
+    struct csp_map map;
+};
+
+void
+csp_normalized_lts_nodes_init(struct csp_normalized_lts_nodes *nodes)
+{
+    csp_map_init(&nodes->map);
+}
+
+static void
+csp_normalized_lts_nodes_free_entry(void *ud, void *entry)
+{
+    struct csp_normalized_lts_node *node = entry;
+    csp_normalized_lts_node_free(node);
+}
+
+void
+csp_normalized_lts_nodes_done(struct csp_normalized_lts_nodes *nodes)
+{
+    csp_map_done(&nodes->map, csp_normalized_lts_nodes_free_entry, NULL);
+}
+
+struct csp_normalized_lts_node **
+csp_normalized_lts_nodes_at(struct csp_normalized_lts_nodes *nodes, csp_id id)
+{
+    return (struct csp_normalized_lts_node **) csp_map_at(&nodes->map, id);
+}
+
+struct csp_normalized_lts_node *
+csp_normalized_lts_nodes_get(const struct csp_normalized_lts_nodes *nodes,
+                             csp_id id)
+{
+    return csp_map_get(&nodes->map, id);
+}
+
+struct csp_normalized_lts_nodes_iterator {
+    struct csp_map_iterator iter;
+};
+
+void
+csp_normalized_lts_nodes_get_iterator(
+        const struct csp_normalized_lts_nodes *nodes,
+        struct csp_normalized_lts_nodes_iterator *iter)
+{
+    csp_map_get_iterator(&nodes->map, &iter->iter);
+}
+
+bool
+csp_normalized_lts_nodes_iterator_done(
+        struct csp_normalized_lts_nodes_iterator *iter)
+{
+    return csp_map_iterator_done(&iter->iter);
+}
+
+void
+csp_normalized_lts_nodes_iterator_advance(
+        struct csp_normalized_lts_nodes_iterator *iter)
+{
+    csp_map_iterator_advance(&iter->iter);
+}
+
+csp_id
+csp_normalized_lts_nodes_iterator_get_key(
+        const struct csp_normalized_lts_nodes_iterator *iter)
+{
+    return iter->iter.key;
+}
+
+struct csp_normalized_lts_node *
+csp_normalized_lts_nodes_iterator_get_value(
+        const struct csp_normalized_lts_nodes_iterator *iter)
+{
+    return *iter->iter.value;
+}
+
+#define csp_normalized_lts_nodes_foreach(nodes, iter)            \
+    for (csp_normalized_lts_nodes_get_iterator((nodes), (iter)); \
+         !csp_normalized_lts_nodes_iterator_done((iter));        \
+         csp_normalized_lts_nodes_iterator_advance((iter)))
+
+/*------------------------------------------------------------------------------
+ * Normalized LTS
+ */
 
 struct csp_normalized_lts {
     struct csp *csp;
     enum csp_semantic_model model;
     struct csp_equivalences roots;
-    void *nodes;
+    struct csp_normalized_lts_nodes nodes;
 };
 
 struct csp_normalized_lts *
@@ -116,25 +193,14 @@ csp_normalized_lts_new(struct csp *csp, enum csp_semantic_model model)
     lts->csp = csp;
     lts->model = model;
     csp_equivalences_init(&lts->roots);
-    lts->nodes = NULL;
+    csp_normalized_lts_nodes_init(&lts->nodes);
     return lts;
 }
 
 void
 csp_normalized_lts_free(struct csp_normalized_lts *lts)
 {
-    {
-        UNNEEDED Word_t dummy;
-        Word_t *vnode;
-        csp_id id = 0;
-        JLF(vnode, lts->nodes, id);
-        while (vnode != NULL) {
-            struct csp_normalized_lts_node *node = (void *) *vnode;
-            csp_normalized_lts_node_free(node);
-            JLN(vnode, lts->nodes, id);
-        }
-        JLFA(dummy, lts->nodes);
-    }
+    csp_normalized_lts_nodes_done(&lts->nodes);
     csp_equivalences_done(&lts->roots);
     free(lts);
 }
@@ -144,13 +210,11 @@ csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
                             struct csp_id_set *processes, csp_id *dest)
 {
     csp_id id = processes->hash;
-    Word_t *vnode;
+    struct csp_normalized_lts_node **node =
+            csp_normalized_lts_nodes_at(&lts->nodes, id);
     *dest = id;
-    JLI(vnode, lts->nodes, id);
-    if (*vnode == 0) {
-        struct csp_normalized_lts_node *node =
-                csp_normalized_lts_node_new(lts->csp, lts->model, processes);
-        *vnode = (Word_t) node;
+    if (*node == NULL) {
+        *node = csp_normalized_lts_node_new(lts->csp, lts->model, processes);
         return true;
     } else {
         return false;
@@ -160,10 +224,10 @@ csp_normalized_lts_add_node(struct csp_normalized_lts *lts,
 static struct csp_normalized_lts_node *
 csp_normalized_lts_get_node(struct csp_normalized_lts *lts, csp_id id)
 {
-    Word_t *vnode;
-    JLG(vnode, lts->nodes, id);
-    assert(vnode != NULL);
-    return (void *) *vnode;
+    struct csp_normalized_lts_node *node =
+            csp_normalized_lts_nodes_get(&lts->nodes, id);
+    assert(node != NULL);
+    return node;
 }
 
 void
@@ -228,12 +292,10 @@ void
 csp_normalized_lts_build_all_nodes(struct csp_normalized_lts *lts,
                                    struct csp_id_set *set)
 {
-    Word_t *vnode;
-    csp_id id = 0;
-    JLF(vnode, lts->nodes, id);
-    while (vnode != NULL) {
+    struct csp_normalized_lts_nodes_iterator iter;
+    csp_normalized_lts_nodes_foreach (&lts->nodes, &iter) {
+        csp_id id = csp_normalized_lts_nodes_iterator_get_key(&iter);
         csp_id_set_add(set, id);
-        JLN(vnode, lts->nodes, id);
     }
 }
 
@@ -243,15 +305,14 @@ csp_normalized_lts_init_bisimulation(struct csp_normalized_lts *lts,
 {
     /* We start by assuming that all nodes with the same behavior are
      * equivalent. */
-    Word_t  *vnode;
-    csp_id  id = 0;
+    struct csp_normalized_lts_nodes_iterator iter;
     DEBUG("=== initialize");
-    JLF(vnode, lts->nodes, id);
-    while (vnode != NULL) {
-        struct csp_normalized_lts_node  *node = (void *) *vnode;
+    csp_normalized_lts_nodes_foreach (&lts->nodes, &iter) {
+        csp_id id = csp_normalized_lts_nodes_iterator_get_key(&iter);
+        struct csp_normalized_lts_node *node =
+                csp_normalized_lts_nodes_iterator_get_value(&iter);
         DEBUG("  init " CSP_ID_FMT " ⇒ " CSP_ID_FMT, id, node->behavior.hash);
         csp_equivalences_add(equiv, node->behavior.hash, id);
-        JLN(vnode, lts->nodes, id);
     }
 }
 

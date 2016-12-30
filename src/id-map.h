@@ -25,6 +25,9 @@ csp_id_map_done(struct csp_id_map *map);
 bool
 csp_id_map_eq(const struct csp_id_map *map1, const struct csp_id_map *map2);
 
+size_t
+csp_id_map_size(const struct csp_id_map *map);
+
 /* Return the ID that `from` is mapped to. */
 csp_id
 csp_id_map_get(const struct csp_id_map *map, csp_id from);
@@ -55,9 +58,9 @@ csp_id_map_iterator_get_from(const struct csp_id_map_iterator *iter);
 csp_id
 csp_id_map_iterator_get_to(const struct csp_id_map_iterator *iter);
 
-#define csp_id_map_foreach(iter_factory, iter) \
-    for (csp_id_map_get_iterator((map), (i));  \
-         !csp_id_map_iterator_done((iter));    \
+#define csp_id_map_foreach(map, iter)            \
+    for (csp_id_map_get_iterator((map), (iter)); \
+         !csp_id_map_iterator_done((iter));      \
          csp_id_map_iterator_advance((iter)))
 
 #endif /* HST_ID_MAP_H */

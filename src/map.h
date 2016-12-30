@@ -38,6 +38,9 @@ bool
 csp_map_eq(const struct csp_map *map1, const struct csp_map *map2,
            csp_map_entry_eq_f *entry_eq, void *ud);
 
+size_t
+csp_map_size(const struct csp_map *map);
+
 /* Return NULL if the entry doesn't exist. */
 void *
 csp_map_get(const struct csp_map *map, csp_id id);

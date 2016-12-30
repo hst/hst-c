@@ -36,6 +36,12 @@ csp_id_map_eq(const struct csp_id_map *map1, const struct csp_id_map *map2)
     return csp_map_eq(&map1->map, &map2->map, csp_id_map_entry_eq, NULL);
 }
 
+size_t
+csp_id_map_size(const struct csp_id_map *map)
+{
+    return csp_map_size(&map->map);
+}
+
 csp_id
 csp_id_map_get(const struct csp_id_map *map, csp_id id)
 {

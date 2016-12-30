@@ -75,6 +75,14 @@ csp_map_eq(const struct csp_map *map1, const struct csp_map *map2,
     return true;
 }
 
+size_t
+csp_map_size(const struct csp_map *map)
+{
+    Word_t count;
+    JLC(count, map->entries, 0, -1);
+    return count;
+}
+
 void *
 csp_map_get(const struct csp_map *map, csp_id id)
 {
