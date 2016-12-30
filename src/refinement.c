@@ -5,7 +5,8 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "hst.h"
+#include "refinement.h"
+
 #include "macros.h"
 
 #if defined(REFINEMENT_DEBUG)

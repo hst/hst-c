@@ -14,7 +14,7 @@
 
 #include "ccan/compiler/compiler.h"
 #include "ccan/likely/likely.h"
-#include "hst.h"
+#include "id-pair.h"
 
 /*------------------------------------------------------------------------------
  * Arrays

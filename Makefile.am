@@ -35,13 +35,17 @@ dist-hook:
 
 libhst_la_SOURCES = \
 	src/basics.h \
+	src/behavior.h \
 	src/behavior.c \
+	src/csp0.h \
 	src/csp0.c \
+	src/denotational.h \
 	src/denotational.c \
+	src/environment.h \
 	src/environment.c \
 	src/equivalence.h \
 	src/equivalence.c \
-	src/hst.h \
+	src/id-pair.h \
 	src/id-pair.c \
 	src/id-map.h \
 	src/id-map.c \
@@ -52,14 +56,16 @@ libhst_la_SOURCES = \
 	src/macros.h \
 	src/map.h \
 	src/map.c \
+	src/normalized-lts.h \
 	src/normalized-lts.c \
+	src/refinement.h \
 	src/refinement.c \
 	src/string-map.h \
 	src/string-map.c \
+	src/operators.h \
 	src/operators/external-choice.c \
 	src/operators/internal-choice.c \
 	src/operators/prefix.c \
-	src/operators/recursion.h \
 	src/operators/recursion.c \
 	src/operators/sequential-composition.c \
 	third_party/ccan/build_assert/build_assert.h \

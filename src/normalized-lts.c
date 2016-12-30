@@ -5,12 +5,13 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "normalized-lts.h"
+
 #include <assert.h>
 #include <stdlib.h>
 
 #include "ccan/compiler/compiler.h"
 #include "basics.h"
-#include "hst.h"
 #include "id-map.h"
 #include "macros.h"
 #include "map.h"

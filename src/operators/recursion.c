@@ -5,7 +5,7 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "operators/recursion.h"
+#include "operators.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -14,7 +14,7 @@
 #include "ccan/container_of/container_of.h"
 #include "ccan/likely/likely.h"
 #include "basics.h"
-#include "hst.h"
+#include "environment.h"
 
 /*------------------------------------------------------------------------------
  * Recursive process

@@ -5,9 +5,15 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "refinement.h"
+
 #include <string.h>
 
-#include "hst.h"
+#include "basics.h"
+#include "behavior.h"
+#include "environment.h"
+#include "id-set.h"
+#include "normalized-lts.h"
 #include "test-case-harness.h"
 #include "test-cases.h"
 

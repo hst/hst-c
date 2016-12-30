@@ -5,6 +5,8 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "environment.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +15,6 @@
 #include "ccan/container_of/container_of.h"
 #include "ccan/hash/hash.h"
 #include "ccan/likely/likely.h"
-#include "hst.h"
 #include "map.h"
 #include "string-map.h"
 

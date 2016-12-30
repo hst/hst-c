@@ -11,8 +11,6 @@
 #include <inttypes.h>
 #include <stdint.h>
 
-struct csp;
-
 /* Each process and event is identified by a number. */
 typedef uint64_t csp_id;
 #define CSP_ID_FMT "0x%016" PRIx64

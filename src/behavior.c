@@ -5,10 +5,12 @@
  * -----------------------------------------------------------------------------
  */
 
+#include "behavior.h"
+
 #include <stdlib.h>
 
 #include "ccan/likely/likely.h"
-#include "hst.h"
+#include "environment.h"
 
 void
 csp_behavior_init(struct csp_behavior *behavior)
