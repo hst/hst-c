@@ -16,6 +16,7 @@
 #include "ccan/likely/likely.h"
 #include "basics.h"
 #include "map.h"
+#include "set.h"
 
 /*------------------------------------------------------------------------------
  * Events
@@ -162,4 +163,71 @@ csp_tick(void)
         tick = csp_event_get("✔");
     }
     return tick;
+}
+
+/*------------------------------------------------------------------------------
+ * Event sets
+ */
+
+void
+csp_event_set_init(struct csp_event_set *set)
+{
+    csp_set_init(&set->set);
+}
+
+void
+csp_event_set_done(struct csp_event_set *set)
+{
+    csp_set_done(&set->set, NULL, NULL);
+}
+
+bool
+csp_event_set_empty(const struct csp_event_set *set)
+{
+    return csp_set_empty(&set->set);
+}
+
+size_t
+csp_event_set_size(const struct csp_event_set *set)
+{
+    return csp_set_size(&set->set);
+}
+
+bool
+csp_event_set_eq(const struct csp_event_set *set1,
+                 const struct csp_event_set *set2)
+{
+    return csp_set_eq(&set1->set, &set2->set);
+}
+
+bool
+csp_event_set_subseteq(const struct csp_event_set *set1,
+                       const struct csp_event_set *set2)
+{
+    return csp_set_subseteq(&set1->set, &set2->set);
+}
+
+void
+csp_event_set_clear(struct csp_event_set *set)
+{
+    csp_set_clear(&set->set, NULL, NULL);
+}
+
+bool
+csp_event_set_add(struct csp_event_set *set, const struct csp_event *event)
+{
+    return csp_set_add(&set->set, (void *) event);
+}
+
+bool
+csp_event_set_remove(struct csp_event_set *set, const struct csp_event *event)
+{
+    return csp_set_remove(&set->set, (void *) event);
+}
+
+bool
+csp_event_set_union(struct csp_event_set *set,
+                    const struct csp_event_set *other)
+{
+    return csp_set_union(&set->set, &other->set);
 }

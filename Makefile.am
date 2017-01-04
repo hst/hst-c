@@ -14,6 +14,7 @@ check_PROGRAMS = \
 	tests/test-environment \
 	tests/test-equivalences \
 	tests/test-events \
+	tests/test-event-sets \
 	tests/test-id-maps \
 	tests/test-id-pairs \
 	tests/test-id-set-maps \
@@ -97,6 +98,7 @@ tests_test_denotational_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install
 tests_test_equivalences_LDFLAGS = -no-install
 tests_test_events_LDFLAGS = -no-install
+tests_test_event_sets_LDFLAGS = -no-install
 tests_test_id_maps_LDFLAGS = -no-install
 tests_test_id_pairs_LDFLAGS = -no-install
 tests_test_id_set_maps_LDFLAGS = -no-install
