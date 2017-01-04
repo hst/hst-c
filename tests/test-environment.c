@@ -12,32 +12,6 @@
 
 TEST_CASE_GROUP("environments");
 
-TEST_CASE("predefined events exist")
-{
-    static const char *const TAU = "τ";
-    static const char *const TICK = "✔";
-    struct csp *csp;
-    check_alloc(csp, csp_new());
-    check_streq(csp_get_event_name(csp, csp->tau), TAU);
-    check_streq(csp_get_event_name(csp, csp->tick), TICK);
-    csp_free(csp);
-}
-
-TEST_CASE("can create events")
-{
-    struct csp *csp;
-    check_alloc(csp, csp_new());
-    check_with_msg(csp_get_event_name(csp, 0) == NULL,
-                   "Should get a name for undefined event");
-    check_streq(csp_get_event_name(csp, csp_get_event_id(csp, "a")), "a");
-    check_streq(csp_get_event_name(csp, csp_get_sized_event_id(csp, "a", 1)),
-                "a");
-    check_streq(csp_get_event_name(csp, csp_get_event_id(csp, "b")), "b");
-    check_streq(csp_get_event_name(csp, csp_get_sized_event_id(csp, "b", 1)),
-                "b");
-    csp_free(csp);
-}
-
 TEST_CASE("predefined STOP process exists")
 {
     struct csp *csp;

@@ -15,9 +15,9 @@
 #include "ccan/container_of/container_of.h"
 #include "ccan/hash/hash.h"
 #include "ccan/likely/likely.h"
+#include "event.h"
 #include "map.h"
 #include "process.h"
-#include "string-map.h"
 
 static uint64_t
 hash_sized_name(const char *name, size_t name_length)
@@ -151,7 +151,6 @@ csp_id_process_map_at(struct csp_id_process_map *map, csp_id id)
 struct csp_priv {
     struct csp public;
     csp_id next_recursion_scope_id;
-    struct csp_string_map events;
     struct csp_id_process_map processes;
     struct csp_process *stop;
     struct csp_process *skip;
@@ -160,17 +159,14 @@ struct csp_priv {
 struct csp *
 csp_new(void)
 {
-    static const char *const TAU = "τ";
-    static const char *const TICK = "✔";
     struct csp_priv *csp = malloc(sizeof(struct csp_priv));
     if (unlikely(csp == NULL)) {
         return NULL;
     }
-    csp_string_map_init(&csp->events);
     csp_id_process_map_init(&csp->processes);
     csp->next_recursion_scope_id = 0;
-    csp->public.tau = csp_get_event_id(&csp->public, TAU);
-    csp->public.tick = csp_get_event_id(&csp->public, TICK);
+    csp->public.tau = csp_event_id(csp_tau());
+    csp->public.tick = csp_event_id(csp_tick());
     csp->stop = csp_stop();
     csp_register_process(&csp->public, csp->stop);
     csp->public.stop = csp->stop->id;
@@ -184,34 +180,8 @@ void
 csp_free(struct csp *pcsp)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    csp_string_map_done(&csp->events);
     csp_id_process_map_done(&csp->public, &csp->processes);
     free(csp);
-}
-
-csp_id
-csp_get_event_id(struct csp *pcsp, const char *name)
-{
-    struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    csp_id event = hash_name(name);
-    csp_string_map_insert(&csp->events, event, name);
-    return event;
-}
-
-csp_id
-csp_get_sized_event_id(struct csp *pcsp, const char *name, size_t name_length)
-{
-    struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    csp_id event = hash_sized_name(name, name_length);
-    csp_string_map_insert_sized(&csp->events, event, name, name_length);
-    return event;
-}
-
-const char *
-csp_get_event_name(struct csp *pcsp, csp_id event)
-{
-    struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    return csp_string_map_get(&csp->events, event);
 }
 
 void

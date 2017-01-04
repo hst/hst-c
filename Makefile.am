@@ -13,13 +13,13 @@ check_PROGRAMS = \
 	tests/test-denotational \
 	tests/test-environment \
 	tests/test-equivalences \
+	tests/test-events \
 	tests/test-id-maps \
 	tests/test-id-pairs \
 	tests/test-id-set-maps \
 	tests/test-id-sets \
 	tests/test-operators \
-	tests/test-refinement \
-	tests/test-string-maps
+	tests/test-refinement
 bin_PROGRAMS = hst
 TESTS = ${check_PROGRAMS}
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
@@ -45,6 +45,8 @@ libhst_la_SOURCES = \
 	src/environment.c \
 	src/equivalence.h \
 	src/equivalence.c \
+	src/event.h \
+	src/event.c \
 	src/id-pair.h \
 	src/id-pair.c \
 	src/id-map.h \
@@ -62,8 +64,6 @@ libhst_la_SOURCES = \
 	src/process.c \
 	src/refinement.h \
 	src/refinement.c \
-	src/string-map.h \
-	src/string-map.c \
 	src/operators.h \
 	src/operators/external-choice.c \
 	src/operators/internal-choice.c \
@@ -94,12 +94,12 @@ tests_test_csp0_LDFLAGS = -no-install
 tests_test_denotational_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install
 tests_test_equivalences_LDFLAGS = -no-install
+tests_test_events_LDFLAGS = -no-install
 tests_test_id_maps_LDFLAGS = -no-install
 tests_test_id_pairs_LDFLAGS = -no-install
 tests_test_id_set_maps_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
 tests_test_refinement_LDFLAGS = -no-install
-tests_test_string_maps_LDFLAGS = -no-install
 
 dist_doc_DATA = README.md

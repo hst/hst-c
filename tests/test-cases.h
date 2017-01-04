@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -24,10 +24,10 @@
 #include "csp0.h"
 #include "denotational.h"
 #include "equivalence.h"
+#include "event.h"
 #include "id-map.h"
 #include "id-pair.h"
 #include "id-set.h"
-#include "string-map.h"
 
 /*------------------------------------------------------------------------------
  * Compiler attributes
@@ -890,7 +890,8 @@ static csp_id
 event_factory(struct csp *csp, void *vevent_name)
 {
     const char *event_name = vevent_name;
-    return csp_get_event_id(csp, event_name);
+    const struct csp_event *event = csp_event_get(event_name);
+    return csp_event_id(event);
 }
 
 UNNEEDED
@@ -916,8 +917,9 @@ events_factory(struct csp *csp, void *vnames)
     test_case_cleanup_register(csp_id_set_free_, set);
     for (i = 0; i < names->count; i++) {
         const char *event_name = names->strings[i];
-        csp_id event = csp_get_event_id(csp, event_name);
-        csp_id_set_add(set, event);
+        const struct csp_event *event = csp_event_get(event_name);
+        csp_id event_id = csp_event_id(event);
+        csp_id_set_add(set, event_id);
     }
     return set;
 }
@@ -1092,7 +1094,8 @@ trace_factory(struct csp *csp, void *vnames)
     csp_trace_ensure_size(trace, names->count);
     for (i = 0; i < names->count; i++) {
         const char *event_name = names->strings[i];
-        trace->events[i] = csp_get_event_id(csp, event_name);
+        const struct csp_event *event = csp_event_get(event_name);
+        trace->events[i] = csp_event_id(event);
     }
     return trace;
 }
