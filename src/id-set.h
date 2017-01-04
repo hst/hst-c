@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -12,10 +12,11 @@
 #include <stdlib.h>
 
 #include "basics.h"
+#include "set.h"
 
 /* A set of IDs */
 struct csp_id_set {
-    void *elements;
+    struct csp_set set;
 };
 
 void
@@ -72,9 +73,7 @@ bool
 csp_id_set_union(struct csp_id_set *set, const struct csp_id_set *other);
 
 struct csp_id_set_iterator {
-    void *const *elements;
-    csp_id current;
-    int found;
+    struct csp_set_iterator iter;
 };
 
 void

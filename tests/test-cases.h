@@ -405,7 +405,7 @@ check_set_eq_(const char *filename, unsigned int line,
         printf("# Elements only in actual:\n");
         csp_id_set_union(&diff, expected);
         csp_id_set_foreach (actual, &i) {
-            csp_id curr = i.current;
+            csp_id curr = csp_id_set_iterator_get(&i);
             if (!csp_id_set_remove(&diff, curr)) {
                 printf("#   " CSP_ID_FMT "\n", curr);
             }
@@ -415,7 +415,7 @@ check_set_eq_(const char *filename, unsigned int line,
         printf("# Elements only in expected:\n");
         csp_id_set_union(&diff, actual);
         csp_id_set_foreach (expected, &i) {
-            csp_id curr = i.current;
+            csp_id curr = csp_id_set_iterator_get(&i);
             if (!csp_id_set_remove(&diff, curr)) {
                 printf("#   " CSP_ID_FMT "\n", curr);
             }

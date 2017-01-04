@@ -64,6 +64,8 @@ libhst_la_SOURCES = \
 	src/process.c \
 	src/refinement.h \
 	src/refinement.c \
+	src/set.h \
+	src/set.c \
 	src/operators.h \
 	src/operators/external-choice.c \
 	src/operators/internal-choice.c \
