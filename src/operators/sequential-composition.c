@@ -86,7 +86,8 @@ csp_sequential_composition_initials(struct csp *csp,
 
 static void
 csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
-                                  csp_id initial, struct csp_id_set *set)
+                                  csp_id initial,
+                                  struct csp_edge_visitor *visitor)
 {
     /* afters(P;Q a ≠ ✔) = afters(P, a)                                 [rule 1]
      * afters(P;Q, τ) = Q  if ✔ ∈ initials(P)                           [rule 2]
@@ -113,7 +114,7 @@ csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
     csp_id_set_foreach (&afters, &i) {
         csp_id p_prime = csp_id_set_iterator_get(&i);
         csp_id seq_prime = csp_sequential_composition(csp, p_prime, seq->q);
-        csp_id_set_add(set, seq_prime);
+        csp_edge_visitor_call(csp, visitor, initial, seq_prime);
     }
 
     /* If P can perform a ✔ leading to P', then P;Q can perform a τ leading to
@@ -124,7 +125,7 @@ csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
         if (!csp_id_set_empty(&afters)) {
             /* A can perform ✔, and we don't actually care what it leads to,
              * since we're going to lead to Q no matter what. */
-            csp_id_set_add(set, seq->q);
+            csp_edge_visitor_call(csp, visitor, initial, seq->q);
         }
     }
 

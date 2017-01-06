@@ -40,13 +40,13 @@ csp_prefix_initials(struct csp *csp, struct csp_process *process,
 
 static void
 csp_prefix_afters(struct csp *csp, struct csp_process *process, csp_id initial,
-                  struct csp_id_set *set)
+                  struct csp_edge_visitor *visitor)
 {
     /* afters(a → P, a) = P */
     struct csp_prefix *prefix =
             container_of(process, struct csp_prefix, process);
     if (initial == prefix->a) {
-        csp_id_set_add(set, prefix->p);
+        csp_edge_visitor_call(csp, visitor, initial, prefix->p);
     }
 }
 

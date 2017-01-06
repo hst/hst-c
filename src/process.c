@@ -40,6 +40,33 @@ csp_collect_events(struct csp_id_set *set)
 }
 
 /*------------------------------------------------------------------------------
+ * Edge visitors
+ */
+
+void
+csp_edge_visitor_call(struct csp *csp, struct csp_edge_visitor *visitor,
+                      csp_id event, csp_id after)
+{
+    visitor->visit(csp, visitor, event, after);
+}
+
+static void
+csp_collect_afters_visit(struct csp *csp, struct csp_edge_visitor *visitor,
+                         csp_id event, csp_id after)
+{
+    struct csp_collect_afters *self =
+            container_of(visitor, struct csp_collect_afters, visitor);
+    csp_id_set_add(self->set, after);
+}
+
+struct csp_collect_afters
+csp_collect_afters(struct csp_id_set *set)
+{
+    struct csp_collect_afters self = {{csp_collect_afters_visit}, set};
+    return self;
+}
+
+/*------------------------------------------------------------------------------
  * Processes
  */
 
@@ -57,8 +84,8 @@ csp_process_visit_initials(struct csp *csp, struct csp_process *process,
 }
 
 void
-csp_process_build_afters(struct csp *csp, struct csp_process *process,
-                         csp_id initial, struct csp_id_set *set)
+csp_process_visit_afters(struct csp *csp, struct csp_process *process,
+                         csp_id initial, struct csp_edge_visitor *visitor)
 {
-    process->iface->afters(csp, process, initial, set);
+    process->iface->afters(csp, process, initial, visitor);
 }

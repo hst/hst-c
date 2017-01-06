@@ -37,13 +37,17 @@ csp_internal_choice_initials(struct csp *csp, struct csp_process *process,
 
 static void
 csp_internal_choice_afters(struct csp *csp, struct csp_process *process,
-                           csp_id initial, struct csp_id_set *set)
+                           csp_id initial, struct csp_edge_visitor *visitor)
 {
     /* afters(⊓ Ps, τ) = Ps */
     struct csp_internal_choice *choice =
             container_of(process, struct csp_internal_choice, process);
     if (initial == csp->tau) {
-        csp_id_set_union(set, &choice->ps);
+        struct csp_id_set_iterator iter;
+        csp_id_set_foreach (&choice->ps, &iter) {
+            csp_id p = csp_id_set_iterator_get(&iter);
+            csp_edge_visitor_call(csp, visitor, initial, p);
+        }
     }
 }
 
