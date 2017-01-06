@@ -14,19 +14,19 @@
 void
 csp_process_free(struct csp *csp, struct csp_process *process)
 {
-    process->free(csp, process);
+    process->iface->free(csp, process);
 }
 
 void
 csp_process_build_initials(struct csp *csp, struct csp_process *process,
                            struct csp_id_set *set)
 {
-    process->initials(csp, process, set);
+    process->iface->initials(csp, process, set);
 }
 
 void
 csp_process_build_afters(struct csp *csp, struct csp_process *process,
                          csp_id initial, struct csp_id_set *set)
 {
-    process->afters(csp, process, initial, set);
+    process->iface->afters(csp, process, initial, set);
 }

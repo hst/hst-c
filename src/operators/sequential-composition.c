@@ -107,6 +107,10 @@ csp_sequential_composition_free(struct csp *csp, struct csp_process *process)
     free(seq);
 }
 
+static const struct csp_process_iface csp_sequential_composition_iface = {
+        csp_sequential_composition_initials, csp_sequential_composition_afters,
+        csp_sequential_composition_free};
+
 static csp_id
 csp_sequential_composition_get_id(csp_id p, csp_id q)
 {
@@ -126,9 +130,7 @@ csp_sequential_composition_new(struct csp *csp, csp_id p, csp_id q)
     seq = malloc(sizeof(struct csp_sequential_composition));
     assert(seq != NULL);
     seq->process.id = id;
-    seq->process.initials = csp_sequential_composition_initials;
-    seq->process.afters = csp_sequential_composition_afters;
-    seq->process.free = csp_sequential_composition_free;
+    seq->process.iface = &csp_sequential_composition_iface;
     seq->p = p;
     seq->q = q;
     csp_register_process(csp, &seq->process);
