@@ -75,6 +75,12 @@ csp_map_eq(const struct csp_map *map1, const struct csp_map *map2,
     return true;
 }
 
+bool
+csp_map_empty(const struct csp_map *map)
+{
+    return map->entries == NULL;
+}
+
 size_t
 csp_map_size(const struct csp_map *map)
 {

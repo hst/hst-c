@@ -491,7 +491,7 @@ check_bisimulation(struct csp_id_factory root_process,
     /* Prenormalize all of the requested processes. */
     prenormalized = csp_id_set_factory_create(csp, prenormalized_processes);
     csp_id_set_foreach (prenormalized, &iter) {
-        csp_process_prenormalize(csp, lts, iter.current);
+        csp_process_prenormalize(csp, lts, csp_id_set_iterator_get(&iter));
     }
     /* Bisimulate the prenormalized LTS. */
     csp_normalized_lts_bisimulate(lts, &equiv);
@@ -583,7 +583,7 @@ check_normalize(struct csp *csp, struct csp_normalized_lts *lts,
     /* Prenormalize all of the requested processes. */
     prenormalized = csp_id_set_factory_create(csp, prenormalized_processes);
     csp_id_set_foreach (prenormalized, &i) {
-        csp_process_prenormalize(csp, lts, i.current);
+        csp_process_prenormalize(csp, lts, csp_id_set_iterator_get(&i));
     }
     /* Bisimulate the prenormalized LTS. */
     csp_normalized_lts_bisimulate(lts, &equiv);

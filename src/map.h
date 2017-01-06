@@ -38,6 +38,9 @@ bool
 csp_map_eq(const struct csp_map *map1, const struct csp_map *map2,
            csp_map_entry_eq_f *entry_eq, void *ud);
 
+bool
+csp_map_empty(const struct csp_map *map);
+
 size_t
 csp_map_size(const struct csp_map *map);
 

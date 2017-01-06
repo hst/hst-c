@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -12,6 +12,7 @@
 
 #include "ccan/likely/likely.h"
 #include "environment.h"
+#include "event.h"
 #include "operators.h"
 
 #if defined(CSP0_DEBUG)
@@ -305,12 +306,12 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
 
     // prefix
     if (parse_token(state, "->") == 0 || parse_token(state, "→") == 0) {
-        csp_id event;
+        const struct csp_event *event;
         csp_id after;
         skip_whitespace(state);
         require(parse_process2(state, &after));
-        event = csp_get_sized_event_id(state->csp, id.start, id.length);
-        *dest = csp_prefix(state->csp, event, after);
+        event = csp_event_get_sized(id.start, id.length);
+        *dest = csp_prefix(state->csp, csp_event_id(event), after);
         DEBUG("ACCEPT process2 → " CSP_ID_FMT, *dest);
         return 0;
     }
