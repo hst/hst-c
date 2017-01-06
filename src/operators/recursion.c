@@ -35,12 +35,14 @@ struct csp_recursive_process {
 
 static void
 csp_recursive_process_initials(struct csp *csp, struct csp_process *process,
-                               struct csp_id_set *set)
+                               struct csp_event_visitor *visitor)
 {
     struct csp_recursive_process *recursive_process =
             container_of(process, struct csp_recursive_process, process);
+    struct csp_process *definition;
     assert(recursive_process->definition != CSP_PROCESS_NONE);
-    csp_build_process_initials(csp, recursive_process->definition, set);
+    definition = csp_require_process(csp, recursive_process->definition);
+    csp_process_visit_initials(csp, definition, visitor);
 }
 
 static void

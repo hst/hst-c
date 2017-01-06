@@ -65,6 +65,11 @@ csp_register_process(struct csp *csp, struct csp_process *process);
 struct csp_process *
 csp_get_process(struct csp *csp, csp_id id);
 
+/* Return the process registered with a particular ID, which is required to
+ * exist. */
+struct csp_process *
+csp_require_process(struct csp *csp, csp_id id);
+
 void
 csp_build_process_initials(struct csp *csp, csp_id process_id,
                            struct csp_id_set *set);

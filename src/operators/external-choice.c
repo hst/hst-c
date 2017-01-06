@@ -34,7 +34,7 @@ struct csp_external_choice {
 
 static void
 csp_external_choice_initials(struct csp *csp, struct csp_process *process,
-                             struct csp_id_set *set)
+                             struct csp_event_visitor *visitor)
 {
     /* 1) If P ∈ Ps can perform τ, then □ Ps can perform τ.
      * 2) If P ∈ Ps can perform a ≠ τ, then □ Ps can perform a ≠ τ.
@@ -48,7 +48,9 @@ csp_external_choice_initials(struct csp *csp, struct csp_process *process,
             container_of(process, struct csp_external_choice, process);
     struct csp_id_set_iterator i;
     csp_id_set_foreach (&choice->ps, &i) {
-        csp_build_process_initials(csp, csp_id_set_iterator_get(&i), set);
+        csp_id process_id = csp_id_set_iterator_get(&i);
+        struct csp_process *p = csp_require_process(csp, process_id);
+        csp_process_visit_initials(csp, p, visitor);
     }
 }
 
