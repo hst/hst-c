@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -87,7 +87,7 @@ csp_process_find_closure(struct csp *csp, csp_id event,
             DEBUG("process " CSP_ID_FMT, process);
             /* Enqueue each of the states that we can reach from `process` by
              * following a single `event`. */
-            csp_process_build_afters(csp, process, event, next_queue);
+            csp_build_process_afters(csp, process, event, next_queue);
         }
         another_round_needed = csp_id_set_union(processes, next_queue);
         swap(current_queue, next_queue);
@@ -148,7 +148,7 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
             csp_id_set_foreach (current_processes, &j) {
                 csp_id process = csp_id_set_iterator_get(&j);
                 DEBUG("Get initials of " CSP_ID_FMT, process);
-                csp_process_build_initials(csp, process, &initials);
+                csp_build_process_initials(csp, process, &initials);
             }
             csp_id_set_remove(&initials, csp->tau);
             XDEBUG("Merged initials are ");
@@ -165,7 +165,7 @@ csp_process_prenormalize(struct csp *csp, struct csp_normalized_lts *lts,
                     csp_id process = csp_id_set_iterator_get(&k);
                     DEBUG("Get afters of " CSP_ID_FMT " for %s", process,
                           csp_get_event_name(csp, initial));
-                    csp_process_build_afters(csp, process, initial, &closure);
+                    csp_build_process_afters(csp, process, initial, &closure);
                 }
 
                 /* Calculate the τ-closure of that set. */
@@ -250,7 +250,7 @@ csp_check_traces_refinement(struct csp *csp, struct csp_normalized_lts *lts,
             }
 
             csp_id_set_clear(&initials);
-            csp_process_build_initials(csp, impl_node, &initials);
+            csp_build_process_initials(csp, impl_node, &initials);
             csp_id_set_foreach (&initials, &j) {
                 struct csp_id_set_iterator k;
                 csp_id initial = csp_id_set_iterator_get(&j);
@@ -271,7 +271,7 @@ csp_check_traces_refinement(struct csp *csp, struct csp_normalized_lts *lts,
                       csp_get_event_name(csp, initial), spec_after);
 
                 csp_id_set_clear(&afters);
-                csp_process_build_afters(csp, impl_node, initial, &afters);
+                csp_build_process_afters(csp, impl_node, initial, &afters);
                 csp_id_set_foreach (&afters, &k) {
                     csp_id impl_after = csp_id_set_iterator_get(&k);
                     struct csp_id_pair next = {spec_after, impl_after};

@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -13,6 +13,7 @@
 #include <stdlib.h>
 
 #include "id-set.h"
+#include "process.h"
 
 /*------------------------------------------------------------------------------
  * Environments
@@ -54,57 +55,22 @@ csp_get_sized_event_id(struct csp *csp, const char *name, size_t name_length);
 const char *
 csp_get_event_name(struct csp *csp, csp_id event);
 
-/*------------------------------------------------------------------------------
- * Processes
- */
+/* Register a process.  There must not already be a process registered with the
+ * same ID. */
+void
+csp_register_process(struct csp *csp, struct csp_process *process);
 
-struct csp_process_iface {
-    void (*initials)(struct csp *csp, struct csp_id_set *set, void *ud);
-
-    void (*afters)(struct csp *csp, csp_id initial, struct csp_id_set *set,
-                   void *ud);
-
-    csp_id (*get_id)(struct csp *csp, const void *temp_ud);
-
-    size_t (*ud_size)(struct csp *csp, const void *temp_ud);
-
-    void (*init_ud)(struct csp *csp, void *ud, const void *temp_ud);
-
-    void (*done_ud)(struct csp *csp, void *ud);
-};
-
-/* Creates a new process.
- *
- * You provide a userdata object that contains whatever you need to define the
- * new process, and an interface that defines several callbacks related to the
- * process.  You pass in a "temporary" userdata, which only needs to exist for
- * the duration of this function call.  (So it's safe to allocate on the stack,
- * for instance.)
- *
- * This function is safe to call multiple times for the "same" process (i.e., a
- * process with exactly the same definition).  The first thing we do is call the
- * process's `get_id` callback to produce the ID of the new process.  If there
- * is already an existing process with the same ID, then we do nothing else and
- * return the ID of the existing process.
- *
- * If the process is new, then we need to turn the "temporary" userdata into a
- * "permanent" one.  To do this, we'll first call the process's `ud_size`
- * callback, which should return the size of the permanent userdata.  We'll then
- * allocate this much memory, and call the process's `init_ud` callback to fill
- * it in from the temporary userdata.
- *
- * If `ud` is non-NULL, we will fill it in with a pointer to the permanent
- * userdata that we create for you. */
-csp_id
-csp_process_init(struct csp *csp, const void *temp_ud, void **ud,
-                 const struct csp_process_iface *iface);
+/* Return the process registered with a particular ID, or NULL if there isn't
+ * one. */
+struct csp_process *
+csp_get_process(struct csp *csp, csp_id id);
 
 void
-csp_process_build_initials(struct csp *csp, csp_id process,
+csp_build_process_initials(struct csp *csp, csp_id process_id,
                            struct csp_id_set *set);
 
 void
-csp_process_build_afters(struct csp *csp, csp_id process, csp_id initial,
+csp_build_process_afters(struct csp *csp, csp_id process_id, csp_id initial,
                          struct csp_id_set *set);
 
 /*------------------------------------------------------------------------------

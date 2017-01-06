@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -10,10 +10,14 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include "ccan/container_of/container_of.h"
 #include "basics.h"
 #include "environment.h"
+#include "macros.h"
+#include "process.h"
 
 struct csp_external_choice {
+    struct csp_process process;
     struct csp_id_set ps;
 };
 
@@ -29,8 +33,8 @@ struct csp_external_choice {
  */
 
 static void
-csp_external_choice_initials(struct csp *csp, struct csp_id_set *set,
-                             void *vchoice)
+csp_external_choice_initials(struct csp *csp, struct csp_process *process,
+                             struct csp_id_set *set)
 {
     /* 1) If P ∈ Ps can perform τ, then □ Ps can perform τ.
      * 2) If P ∈ Ps can perform a ≠ τ, then □ Ps can perform a ≠ τ.
@@ -40,22 +44,24 @@ csp_external_choice_initials(struct csp *csp, struct csp_id_set *set,
      *
      *                = ⋃ { initials(P) | P ∈ Ps }
      */
-    struct csp_external_choice *choice = vchoice;
+    struct csp_external_choice *choice =
+            container_of(process, struct csp_external_choice, process);
     struct csp_id_set_iterator i;
     csp_id_set_foreach (&choice->ps, &i) {
-        csp_process_build_initials(csp, csp_id_set_iterator_get(&i), set);
+        csp_build_process_initials(csp, csp_id_set_iterator_get(&i), set);
     }
 }
 
 static void
-csp_external_choice_afters(struct csp *csp, csp_id initial,
-                           struct csp_id_set *set, void *vchoice)
+csp_external_choice_afters(struct csp *csp, struct csp_process *process,
+                           csp_id initial, struct csp_id_set *set)
 {
     /* afters(□ Ps, τ) = ⋃ { □ Ps ∖ {P} ∪ {P'} | P ∈ Ps, P' ∈ afters(P, τ) }
      *                                                                  [rule 1]
      * afters(□ Ps, a ≠ τ) = ⋃ { P' | P ∈ Ps, P' ∈ afters(P, a) }       [rule 2]
      */
-    struct csp_external_choice *choice = vchoice;
+    struct csp_external_choice *choice =
+            container_of(process, struct csp_external_choice, process);
     if (initial == csp->tau) {
         struct csp_id_set_iterator i;
         /* We'll need to grab afters(P, τ) for each P ∈ Ps. */
@@ -76,7 +82,7 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
             csp_id_set_remove(&ps_prime, p);
             /* Grab afters(P, τ) */
             csp_id_set_clear(&p_afters);
-            csp_process_build_afters(csp, p, initial, &p_afters);
+            csp_build_process_afters(csp, p, initial, &p_afters);
             /* For all P' ∈ afters(P, τ) */
             csp_id_set_foreach (&p_afters, &j) {
                 csp_id p_prime = csp_id_set_iterator_get(&j);
@@ -101,63 +107,62 @@ csp_external_choice_afters(struct csp *csp, csp_id initial,
         struct csp_id_set_iterator i;
         csp_id_set_foreach (&choice->ps, &i) {
             csp_id p = csp_id_set_iterator_get(&i);
-            csp_process_build_afters(csp, p, initial, set);
+            csp_build_process_afters(csp, p, initial, set);
         }
     }
 }
 
-static csp_id
-csp_external_choice_get_id(struct csp *csp, const void *vps)
+static void
+csp_external_choice_free(struct csp *csp, struct csp_process *process)
 {
-    const struct csp_id_set *ps = vps;
+    struct csp_external_choice *choice =
+            container_of(process, struct csp_external_choice, process);
+    csp_id_set_done(&choice->ps);
+    free(choice);
+}
+
+static csp_id
+csp_external_choice_get_id(const struct csp_id_set *ps)
+{
     static struct csp_id_scope external_choice;
     csp_id id = csp_id_start(&external_choice);
     id = csp_id_add_id_set(id, ps);
     return id;
 }
 
-static size_t
-csp_external_choice_ud_size(struct csp *csp, const void *vps)
+static struct csp_process *
+csp_external_choice_new(struct csp *csp, const struct csp_id_set *ps)
 {
-    return sizeof(struct csp_external_choice);
-}
-
-static void
-csp_external_choice_init(struct csp *csp, void *vchoice, const void *vps)
-{
-    struct csp_external_choice *choice = vchoice;
-    const struct csp_id_set *ps = vps;
+    csp_id id = csp_external_choice_get_id(ps);
+    struct csp_external_choice *choice;
+    return_if_nonnull(csp_get_process(csp, id));
+    choice = malloc(sizeof(struct csp_external_choice));
+    assert(choice != NULL);
+    choice->process.id = id;
+    choice->process.initials = csp_external_choice_initials;
+    choice->process.afters = csp_external_choice_afters;
+    choice->process.free = csp_external_choice_free;
     csp_id_set_init(&choice->ps);
     csp_id_set_union(&choice->ps, ps);
+    csp_register_process(csp, &choice->process);
+    return &choice->process;
 }
-
-static void
-csp_external_choice_done(struct csp *csp, void *vchoice)
-{
-    struct csp_external_choice *choice = vchoice;
-    csp_id_set_done(&choice->ps);
-}
-
-static const struct csp_process_iface csp_external_choice_iface = {
-        &csp_external_choice_initials, &csp_external_choice_afters,
-        &csp_external_choice_get_id,   &csp_external_choice_ud_size,
-        &csp_external_choice_init,     &csp_external_choice_done};
 
 csp_id
 csp_external_choice(struct csp *csp, csp_id a, csp_id b)
 {
-    csp_id id;
+    struct csp_process *process;
     struct csp_id_set ps;
     csp_id_set_init(&ps);
     csp_id_set_add(&ps, a);
     csp_id_set_add(&ps, b);
-    id = csp_process_init(csp, &ps, NULL, &csp_external_choice_iface);
+    process = csp_external_choice_new(csp, &ps);
     csp_id_set_done(&ps);
-    return id;
+    return process->id;
 }
 
 csp_id
 csp_replicated_external_choice(struct csp *csp, const struct csp_id_set *ps)
 {
-    return csp_process_init(csp, ps, NULL, &csp_external_choice_iface);
+    return csp_external_choice_new(csp, ps)->id;
 }

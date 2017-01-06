@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -50,7 +50,7 @@ static void
 csp_process_add_traces_behavior(struct csp *csp, csp_id process,
                                 struct csp_behavior *behavior)
 {
-    csp_process_build_initials(csp, process, &behavior->initials);
+    csp_build_process_initials(csp, process, &behavior->initials);
 }
 
 static void

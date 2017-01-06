@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -15,6 +15,8 @@
 #include "ccan/likely/likely.h"
 #include "basics.h"
 #include "environment.h"
+#include "macros.h"
+#include "process.h"
 
 /*------------------------------------------------------------------------------
  * Recursive process
@@ -27,65 +29,61 @@
  * like a forward declaration. */
 
 struct csp_recursive_process {
+    struct csp_process process;
     csp_id definition;
 };
 
 static void
-csp_recursive_process_initials(struct csp *csp, struct csp_id_set *set,
-                               void *vrecursive_process)
+csp_recursive_process_initials(struct csp *csp, struct csp_process *process,
+                               struct csp_id_set *set)
 {
-    struct csp_recursive_process *recursive_process = vrecursive_process;
+    struct csp_recursive_process *recursive_process =
+            container_of(process, struct csp_recursive_process, process);
     assert(recursive_process->definition != CSP_PROCESS_NONE);
-    csp_process_build_initials(csp, recursive_process->definition, set);
+    csp_build_process_initials(csp, recursive_process->definition, set);
 }
 
 static void
-csp_recursive_process_afters(struct csp *csp, csp_id initial,
-                             struct csp_id_set *set, void *vrecursive_process)
+csp_recursive_process_afters(struct csp *csp, struct csp_process *process,
+                             csp_id initial, struct csp_id_set *set)
 {
-    struct csp_recursive_process *recursive_process = vrecursive_process;
+    struct csp_recursive_process *recursive_process =
+            container_of(process, struct csp_recursive_process, process);
     assert(recursive_process->definition != CSP_PROCESS_NONE);
-    csp_process_build_afters(csp, recursive_process->definition, initial, set);
-}
-
-static csp_id
-csp_recursive_process_get_id(struct csp *csp, const void *vinput)
-{
-    const csp_id *input = vinput;
-    return *input;
-}
-
-static size_t
-csp_recursive_process_ud_size(struct csp *csp, const void *vinput)
-{
-    return sizeof(struct csp_recursive_process);
+    csp_build_process_afters(csp, recursive_process->definition, initial, set);
 }
 
 static void
-csp_recursive_process_init(struct csp *csp, void *vrecursive_process,
-                           const void *vinput)
+csp_recursive_process_free(struct csp *csp, struct csp_process *process)
 {
-    struct csp_recursive_process *recursive_process = vrecursive_process;
+    struct csp_recursive_process *recursive_process =
+            container_of(process, struct csp_recursive_process, process);
+    free(recursive_process);
+}
+
+static struct csp_process *
+csp_recursive_process_new(struct csp *csp, csp_id id)
+{
+    struct csp_recursive_process *recursive_process;
+    return_if_nonnull(csp_get_process(csp, id));
+    recursive_process = malloc(sizeof(struct csp_recursive_process));
+    assert(recursive_process != NULL);
+    recursive_process->process.id = id;
+    recursive_process->process.initials = csp_recursive_process_initials;
+    recursive_process->process.afters = csp_recursive_process_afters;
+    recursive_process->process.free = csp_recursive_process_free;
     recursive_process->definition = CSP_PROCESS_NONE;
+    csp_register_process(csp, &recursive_process->process);
+    return &recursive_process->process;
 }
-
-static void
-csp_recursive_process_done(struct csp *csp, void *vrecursive_process)
-{
-    /* nothing to do */
-}
-
-static const struct csp_process_iface csp_recursion_iface = {
-        &csp_recursive_process_initials, &csp_recursive_process_afters,
-        &csp_recursive_process_get_id,   &csp_recursive_process_ud_size,
-        &csp_recursive_process_init,     &csp_recursive_process_done};
 
 static void
 csp_recursive_process(struct csp *csp, csp_id id,
                       struct csp_recursive_process **recursive_process)
 {
-    csp_process_init(csp, &id, (void **) recursive_process,
-                     &csp_recursion_iface);
+    struct csp_process *process = csp_recursive_process_new(csp, id);
+    *recursive_process =
+            container_of(process, struct csp_recursive_process, process);
 }
 
 /*------------------------------------------------------------------------------

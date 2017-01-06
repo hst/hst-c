@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -47,15 +47,15 @@ TEST_CASE("predefined STOP process exists")
     check_alloc(csp, csp_new());
     /* Verify the initials set of the STOP process. */
     csp_id_set_clear(&set);
-    csp_process_build_initials(csp, csp->stop, &set);
+    csp_build_process_initials(csp, csp->stop, &set);
     check_set_eq(&set, id_set());
     /* Verify the afters of τ. */
     csp_id_set_clear(&set);
-    csp_process_build_afters(csp, csp->stop, csp->tau, &set);
+    csp_build_process_afters(csp, csp->stop, csp->tau, &set);
     check_set_eq(&set, id_set());
     /* Verify the afters of ✔. */
     csp_id_set_clear(&set);
-    csp_process_build_afters(csp, csp->stop, csp->tick, &set);
+    csp_build_process_afters(csp, csp->stop, csp->tick, &set);
     check_set_eq(&set, id_set());
     /* Clean up. */
     csp_id_set_done(&set);
@@ -71,15 +71,15 @@ TEST_CASE("predefined SKIP process exists")
     check_alloc(csp, csp_new());
     /* Verify the initials set of the SKIP process. */
     csp_id_set_clear(&set);
-    csp_process_build_initials(csp, csp->skip, &set);
+    csp_build_process_initials(csp, csp->skip, &set);
     check_set_eq(&set, id_set(csp->tick));
     /* Verify the afters of τ. */
     csp_id_set_clear(&set);
-    csp_process_build_afters(csp, csp->skip, csp->tau, &set);
+    csp_build_process_afters(csp, csp->skip, csp->tau, &set);
     check_set_eq(&set, id_set());
     /* Verify the afters of ✔. */
     csp_id_set_clear(&set);
-    csp_process_build_afters(csp, csp->skip, csp->tick, &set);
+    csp_build_process_afters(csp, csp->skip, csp->tick, &set);
     check_set_eq(&set, id_set(csp->stop));
     /* Clean up. */
     csp_id_set_done(&set);

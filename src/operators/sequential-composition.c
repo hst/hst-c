@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -10,10 +10,14 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include "ccan/container_of/container_of.h"
 #include "basics.h"
 #include "environment.h"
+#include "macros.h"
+#include "process.h"
 
 struct csp_sequential_composition {
+    struct csp_process process;
     csp_id p;
     csp_id q;
 };
@@ -30,25 +34,27 @@ struct csp_sequential_composition {
  */
 
 static void
-csp_sequential_composition_initials(struct csp *csp, struct csp_id_set *set,
-                                    void *vseq)
+csp_sequential_composition_initials(struct csp *csp,
+                                    struct csp_process *process,
+                                    struct csp_id_set *set)
 {
-    struct csp_sequential_composition *seq = vseq;
+    struct csp_sequential_composition *seq =
+            container_of(process, struct csp_sequential_composition, process);
     /* 1) P;Q can perform all of the same events as P, except for ✔.
      * 2) If P can perform ✔, then P;Q can perform τ.
      *
      * initials(P;Q) = initials(P) ∖ {✔}                                [rule 1]
      *               ∪ (✔ ∈ initials(P)? {τ}: {})                       [rule 2]
      */
-    csp_process_build_initials(csp, seq->p, set);
+    csp_build_process_initials(csp, seq->p, set);
     if (csp_id_set_remove(set, csp->tick)) {
         csp_id_set_add(set, csp->tau);
     }
 }
 
 static void
-csp_sequential_composition_afters(struct csp *csp, csp_id initial,
-                                  struct csp_id_set *set, void *vseq)
+csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
+                                  csp_id initial, struct csp_id_set *set)
 {
     /* afters(P;Q a ≠ ✔) = afters(P, a)                                 [rule 1]
      * afters(P;Q, τ) = Q  if ✔ ∈ initials(P)                           [rule 2]
@@ -57,7 +63,8 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
      *
      * (Note that τ is covered by both rules)
      */
-    struct csp_sequential_composition *seq = vseq;
+    struct csp_sequential_composition *seq =
+            container_of(process, struct csp_sequential_composition, process);
     struct csp_id_set_iterator i;
     struct csp_id_set afters;
 
@@ -70,7 +77,7 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
     /* If P can perform a non-✔ event (including τ) leading to P', then P;Q can
      * also perform that event, leading to P';Q. */
     csp_id_set_init(&afters);
-    csp_process_build_afters(csp, seq->p, initial, &afters);
+    csp_build_process_afters(csp, seq->p, initial, &afters);
     csp_id_set_foreach (&afters, &i) {
         csp_id p_prime = csp_id_set_iterator_get(&i);
         csp_id seq_prime = csp_sequential_composition(csp, p_prime, seq->q);
@@ -81,7 +88,7 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
      * Q.  Note that we don't care what P' is; we just care that it exists. */
     if (initial == csp->tau) {
         csp_id_set_clear(&afters);
-        csp_process_build_afters(csp, seq->p, csp->tick, &afters);
+        csp_build_process_afters(csp, seq->p, csp->tick, &afters);
         if (!csp_id_set_empty(&afters)) {
             /* A can perform ✔, and we don't actually care what it leads to,
              * since we're going to lead to Q no matter what. */
@@ -92,50 +99,44 @@ csp_sequential_composition_afters(struct csp *csp, csp_id initial,
     csp_id_set_done(&afters);
 }
 
-static csp_id
-csp_sequential_composition_get_id(struct csp *csp, const void *vinput)
+static void
+csp_sequential_composition_free(struct csp *csp, struct csp_process *process)
 {
-    const struct csp_sequential_composition *input = vinput;
+    struct csp_sequential_composition *seq =
+            container_of(process, struct csp_sequential_composition, process);
+    free(seq);
+}
+
+static csp_id
+csp_sequential_composition_get_id(csp_id p, csp_id q)
+{
     static struct csp_id_scope sequential_composition;
     csp_id id = csp_id_start(&sequential_composition);
-    id = csp_id_add_id(id, input->p);
-    id = csp_id_add_id(id, input->q);
+    id = csp_id_add_id(id, p);
+    id = csp_id_add_id(id, q);
     return id;
 }
 
-static size_t
-csp_sequential_composition_ud_size(struct csp *csp, const void *vinput)
+static struct csp_process *
+csp_sequential_composition_new(struct csp *csp, csp_id p, csp_id q)
 {
-    return sizeof(struct csp_sequential_composition);
+    csp_id id = csp_sequential_composition_get_id(p, q);
+    struct csp_sequential_composition *seq;
+    return_if_nonnull(csp_get_process(csp, id));
+    seq = malloc(sizeof(struct csp_sequential_composition));
+    assert(seq != NULL);
+    seq->process.id = id;
+    seq->process.initials = csp_sequential_composition_initials;
+    seq->process.afters = csp_sequential_composition_afters;
+    seq->process.free = csp_sequential_composition_free;
+    seq->p = p;
+    seq->q = q;
+    csp_register_process(csp, &seq->process);
+    return &seq->process;
 }
-
-static void
-csp_sequential_composition_init(struct csp *csp, void *vseq, const void *vinput)
-{
-    struct csp_sequential_composition *seq = vseq;
-    const struct csp_sequential_composition *input = vinput;
-    seq->p = input->p;
-    seq->q = input->q;
-}
-
-static void
-csp_sequential_composition_done(struct csp *csp, void *vseq)
-{
-    /* nothing to do */
-}
-
-static const struct csp_process_iface csp_sequential_composition_iface = {
-        &csp_sequential_composition_initials,
-        &csp_sequential_composition_afters,
-        &csp_sequential_composition_get_id,
-        &csp_sequential_composition_ud_size,
-        &csp_sequential_composition_init,
-        &csp_sequential_composition_done};
 
 csp_id
 csp_sequential_composition(struct csp *csp, csp_id p, csp_id q)
 {
-    struct csp_sequential_composition input = {p, q};
-    return csp_process_init(csp, &input, NULL,
-                            &csp_sequential_composition_iface);
+    return csp_sequential_composition_new(csp, p, q)->id;
 }

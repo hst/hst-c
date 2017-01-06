@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------------------------
-# Copyright © 2016, HST Project.
+# Copyright © 2016-2017, HST Project.
 # Please see the COPYING file in this distribution for license details.
 # ------------------------------------------------------------------------------
 
@@ -58,6 +58,8 @@ libhst_la_SOURCES = \
 	src/map.c \
 	src/normalized-lts.h \
 	src/normalized-lts.c \
+	src/process.h \
+	src/process.c \
 	src/refinement.h \
 	src/refinement.c \
 	src/string-map.h \
