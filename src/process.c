@@ -7,9 +7,41 @@
 
 #include "process.h"
 
+#include "ccan/container_of/container_of.h"
 #include "basics.h"
 #include "environment.h"
 #include "id-set.h"
+
+/*------------------------------------------------------------------------------
+ * Event visitors
+ */
+
+void
+csp_event_visitor_call(struct csp *csp, struct csp_event_visitor *visitor,
+                       csp_id event)
+{
+    visitor->visit(csp, visitor, event);
+}
+
+static void
+csp_collect_events_visit(struct csp *csp, struct csp_event_visitor *visitor,
+                         csp_id event)
+{
+    struct csp_collect_events *self =
+            container_of(visitor, struct csp_collect_events, visitor);
+    csp_id_set_add(self->set, event);
+}
+
+struct csp_collect_events
+csp_collect_events(struct csp_id_set *set)
+{
+    struct csp_collect_events self = {{csp_collect_events_visit}, set};
+    return self;
+}
+
+/*------------------------------------------------------------------------------
+ * Processes
+ */
 
 void
 csp_process_free(struct csp *csp, struct csp_process *process)
@@ -18,10 +50,10 @@ csp_process_free(struct csp *csp, struct csp_process *process)
 }
 
 void
-csp_process_build_initials(struct csp *csp, struct csp_process *process,
-                           struct csp_id_set *set)
+csp_process_visit_initials(struct csp *csp, struct csp_process *process,
+                           struct csp_event_visitor *visitor)
 {
-    process->iface->initials(csp, process, set);
+    process->iface->initials(csp, process, visitor);
 }
 
 void

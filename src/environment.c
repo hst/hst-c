@@ -37,7 +37,7 @@ hash_name(const char *name)
 
 static void
 csp_stop_initials(struct csp *csp, struct csp_process *process,
-                  struct csp_id_set *set)
+                  struct csp_event_visitor *visitor)
 {
 }
 
@@ -69,9 +69,9 @@ csp_stop(void)
 
 static void
 csp_skip_initials(struct csp *csp, struct csp_process *process,
-                  struct csp_id_set *set)
+                  struct csp_event_visitor *visitor)
 {
-    csp_id_set_add(set, csp->tick);
+    csp_event_visitor_call(csp, visitor, csp->tick);
 }
 
 static void
@@ -231,21 +231,29 @@ csp_get_process(struct csp *pcsp, csp_id process_id)
     return csp_id_process_map_get(&csp->processes, process_id);
 }
 
+struct csp_process *
+csp_require_process(struct csp *csp, csp_id id)
+{
+    struct csp_process *process = csp_get_process(csp, id);
+    assert(process != NULL);
+    return process;
+}
+
 void
 csp_build_process_initials(struct csp *csp, csp_id process_id,
                            struct csp_id_set *set)
 {
-    struct csp_process *process = csp_get_process(csp, process_id);
-    assert(process != NULL);
-    csp_process_build_initials(csp, process, set);
+    struct csp_process *process = csp_require_process(csp, process_id);
+    struct csp_collect_events collect;
+    collect = csp_collect_events(set);
+    csp_process_visit_initials(csp, process, &collect.visitor);
 }
 
 void
 csp_build_process_afters(struct csp *csp, csp_id process_id, csp_id initial,
                          struct csp_id_set *set)
 {
-    struct csp_process *process = csp_get_process(csp, process_id);
-    assert(process != NULL);
+    struct csp_process *process = csp_require_process(csp, process_id);
     csp_process_build_afters(csp, process, initial, set);
 }
 

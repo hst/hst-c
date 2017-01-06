@@ -30,12 +30,12 @@ struct csp_prefix {
 
 static void
 csp_prefix_initials(struct csp *csp, struct csp_process *process,
-                    struct csp_id_set *set)
+                    struct csp_event_visitor *visitor)
 {
     /* initials(a → P) = {a} */
     struct csp_prefix *prefix =
             container_of(process, struct csp_prefix, process);
-    csp_id_set_add(set, prefix->a);
+    csp_event_visitor_call(csp, visitor, prefix->a);
 }
 
 static void

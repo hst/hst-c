@@ -16,6 +16,37 @@
 #include "macros.h"
 #include "process.h"
 
+/*------------------------------------------------------------------------------
+ * Translate ✔ to τ
+ */
+
+struct csp_translate_tick_to_tau {
+    struct csp_event_visitor visitor;
+    struct csp_event_visitor *wrapped;
+};
+
+static void
+csp_translate_tick_to_tau_visit(struct csp *csp,
+                                struct csp_event_visitor *visitor, csp_id event)
+{
+    struct csp_translate_tick_to_tau *self =
+            container_of(visitor, struct csp_translate_tick_to_tau, visitor);
+    csp_event_visitor_call(csp, self->wrapped,
+                           event == csp->tick ? csp->tau : event);
+}
+
+struct csp_translate_tick_to_tau
+csp_translate_tick_to_tau(struct csp_event_visitor *wrapped)
+{
+    struct csp_translate_tick_to_tau self = {{csp_translate_tick_to_tau_visit},
+                                             wrapped};
+    return self;
+}
+
+/*------------------------------------------------------------------------------
+ * Sequential composition
+ */
+
 struct csp_sequential_composition {
     struct csp_process process;
     csp_id p;
@@ -36,20 +67,21 @@ struct csp_sequential_composition {
 static void
 csp_sequential_composition_initials(struct csp *csp,
                                     struct csp_process *process,
-                                    struct csp_id_set *set)
+                                    struct csp_event_visitor *visitor)
 {
     struct csp_sequential_composition *seq =
             container_of(process, struct csp_sequential_composition, process);
+    struct csp_process *p;
+    struct csp_translate_tick_to_tau translate;
     /* 1) P;Q can perform all of the same events as P, except for ✔.
      * 2) If P can perform ✔, then P;Q can perform τ.
      *
      * initials(P;Q) = initials(P) ∖ {✔}                                [rule 1]
      *               ∪ (✔ ∈ initials(P)? {τ}: {})                       [rule 2]
      */
-    csp_build_process_initials(csp, seq->p, set);
-    if (csp_id_set_remove(set, csp->tick)) {
-        csp_id_set_add(set, csp->tau);
-    }
+    p = csp_require_process(csp, seq->p);
+    translate = csp_translate_tick_to_tau(visitor);
+    csp_process_visit_initials(csp, p, &translate.visitor);
 }
 
 static void

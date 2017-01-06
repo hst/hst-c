@@ -29,10 +29,10 @@ struct csp_internal_choice {
 
 static void
 csp_internal_choice_initials(struct csp *csp, struct csp_process *process,
-                             struct csp_id_set *set)
+                             struct csp_event_visitor *visitor)
 {
     /* initials(⊓ Ps) = {τ} */
-    csp_id_set_add(set, csp->tau);
+    csp_event_visitor_call(csp, visitor, csp->tau);
 }
 
 static void
