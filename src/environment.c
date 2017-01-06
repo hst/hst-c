@@ -43,7 +43,7 @@ csp_stop_initials(struct csp *csp, struct csp_process *process,
 
 static void
 csp_stop_afters(struct csp *csp, struct csp_process *process, csp_id initial,
-                struct csp_id_set *set)
+                struct csp_edge_visitor *visitor)
 {
 }
 
@@ -76,10 +76,10 @@ csp_skip_initials(struct csp *csp, struct csp_process *process,
 
 static void
 csp_skip_afters(struct csp *csp, struct csp_process *process, csp_id initial,
-                struct csp_id_set *set)
+                struct csp_edge_visitor *visitor)
 {
     if (initial == csp->tick) {
-        csp_id_set_add(set, csp->stop);
+        csp_edge_visitor_call(csp, visitor, initial, csp->stop);
     }
 }
 
@@ -244,8 +244,7 @@ csp_build_process_initials(struct csp *csp, csp_id process_id,
                            struct csp_id_set *set)
 {
     struct csp_process *process = csp_require_process(csp, process_id);
-    struct csp_collect_events collect;
-    collect = csp_collect_events(set);
+    struct csp_collect_events collect = csp_collect_events(set);
     csp_process_visit_initials(csp, process, &collect.visitor);
 }
 
@@ -254,7 +253,8 @@ csp_build_process_afters(struct csp *csp, csp_id process_id, csp_id initial,
                          struct csp_id_set *set)
 {
     struct csp_process *process = csp_require_process(csp, process_id);
-    csp_process_build_afters(csp, process, initial, set);
+    struct csp_collect_afters collect = csp_collect_afters(set);
+    csp_process_visit_afters(csp, process, initial, &collect.visitor);
 }
 
 csp_id
