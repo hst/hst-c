@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -34,7 +34,7 @@ check_process_initials(struct csp_id_factory process,
     check_alloc(csp, csp_new());
     csp_id_set_init(&actual);
     process_id = csp_id_factory_create(csp, process);
-    csp_process_build_initials(csp, process_id, &actual);
+    csp_build_process_initials(csp, process_id, &actual);
     check_set_eq(&actual, csp_id_set_factory_create(csp, expected_initials));
     csp_id_set_done(&actual);
     csp_free(csp);
@@ -54,7 +54,7 @@ check_process_afters(struct csp_id_factory process,
     csp_id_set_init(&actual);
     process_id = csp_id_factory_create(csp, process);
     initial_id = csp_id_factory_create(csp, initial);
-    csp_process_build_afters(csp, process_id, initial_id, &actual);
+    csp_build_process_afters(csp, process_id, initial_id, &actual);
     check_set_eq(&actual, csp_id_set_factory_create(csp, expected_afters));
     csp_id_set_done(&actual);
     csp_free(csp);
@@ -94,7 +94,7 @@ check_process_sub_initials(struct csp_id_factory process,
     csp_id_set_init(&actual);
     process_id = csp_id_factory_create(csp, process);
     subprocess_id = csp_id_factory_create(csp, subprocess);
-    csp_process_build_initials(csp, subprocess_id, &actual);
+    csp_build_process_initials(csp, subprocess_id, &actual);
     check_set_eq(&actual, csp_id_set_factory_create(csp, expected_initials));
     csp_id_set_done(&actual);
     csp_free(csp);
@@ -118,7 +118,7 @@ check_process_sub_afters(struct csp_id_factory process,
     process_id = csp_id_factory_create(csp, process);
     subprocess_id = csp_id_factory_create(csp, subprocess);
     initial_id = csp_id_factory_create(csp, initial);
-    csp_process_build_afters(csp, subprocess_id, initial_id, &actual);
+    csp_build_process_afters(csp, subprocess_id, initial_id, &actual);
     check_set_eq(&actual, csp_id_set_factory_create(csp, expected_afters));
     csp_id_set_done(&actual);
     csp_free(csp);
