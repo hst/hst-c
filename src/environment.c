@@ -52,6 +52,9 @@ csp_stop_free(struct csp *csp, struct csp_process *process)
 {
 }
 
+static const struct csp_process_iface csp_stop_iface = {
+        csp_stop_initials, csp_stop_afters, csp_stop_free};
+
 static struct csp_process *
 csp_stop(void)
 {
@@ -59,10 +62,7 @@ csp_stop(void)
     static bool initialized = false;
     if (unlikely(!initialized)) {
         stop.id = hash_name("STOP");
-        stop.initials = csp_stop_initials;
-        stop.afters = csp_stop_afters;
-        stop.free = csp_stop_free;
-        initialized = true;
+        stop.iface = &csp_stop_iface;
     }
     return &stop;
 }
@@ -88,6 +88,9 @@ csp_skip_free(struct csp *csp, struct csp_process *process)
 {
 }
 
+static const struct csp_process_iface csp_skip_iface = {
+        csp_skip_initials, csp_skip_afters, csp_skip_free};
+
 static struct csp_process *
 csp_skip(void)
 {
@@ -95,9 +98,7 @@ csp_skip(void)
     static bool initialized = false;
     if (unlikely(!initialized)) {
         skip.id = hash_name("skip");
-        skip.initials = csp_skip_initials;
-        skip.afters = csp_skip_afters;
-        skip.free = csp_skip_free;
+        skip.iface = &csp_skip_iface;
         initialized = true;
     }
     return &skip;

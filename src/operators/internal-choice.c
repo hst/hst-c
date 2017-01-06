@@ -56,6 +56,10 @@ csp_internal_choice_free(struct csp *csp, struct csp_process *process)
     free(choice);
 }
 
+static const struct csp_process_iface csp_internal_choice_iface = {
+        csp_internal_choice_initials, csp_internal_choice_afters,
+        csp_internal_choice_free};
+
 static csp_id
 csp_internal_choice_get_id(const struct csp_id_set *ps)
 {
@@ -74,9 +78,7 @@ csp_internal_choice_new(struct csp *csp, const struct csp_id_set *ps)
     choice = malloc(sizeof(struct csp_internal_choice));
     assert(choice != NULL);
     choice->process.id = id;
-    choice->process.initials = csp_internal_choice_initials;
-    choice->process.afters = csp_internal_choice_afters;
-    choice->process.free = csp_internal_choice_free;
+    choice->process.iface = &csp_internal_choice_iface;
     csp_id_set_init(&choice->ps);
     csp_id_set_union(&choice->ps, ps);
     csp_register_process(csp, &choice->process);

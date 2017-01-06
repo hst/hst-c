@@ -58,6 +58,9 @@ csp_prefix_free(struct csp *csp, struct csp_process *process)
     free(prefix);
 }
 
+static const struct csp_process_iface csp_prefix_iface = {
+        csp_prefix_initials, csp_prefix_afters, csp_prefix_free};
+
 static csp_id
 csp_prefix_get_id(csp_id a, csp_id p)
 {
@@ -77,9 +80,7 @@ csp_prefix_new(struct csp *csp, csp_id a, csp_id p)
     prefix = malloc(sizeof(struct csp_prefix));
     assert(prefix != NULL);
     prefix->process.id = id;
-    prefix->process.initials = csp_prefix_initials;
-    prefix->process.afters = csp_prefix_afters;
-    prefix->process.free = csp_prefix_free;
+    prefix->process.iface = &csp_prefix_iface;
     prefix->a = a;
     prefix->p = p;
     csp_register_process(csp, &prefix->process);

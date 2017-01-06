@@ -61,6 +61,10 @@ csp_recursive_process_free(struct csp *csp, struct csp_process *process)
     free(recursive_process);
 }
 
+static const struct csp_process_iface csp_recursive_process_iface = {
+        csp_recursive_process_initials, csp_recursive_process_afters,
+        csp_recursive_process_free};
+
 static struct csp_process *
 csp_recursive_process_new(struct csp *csp, csp_id id)
 {
@@ -69,9 +73,7 @@ csp_recursive_process_new(struct csp *csp, csp_id id)
     recursive_process = malloc(sizeof(struct csp_recursive_process));
     assert(recursive_process != NULL);
     recursive_process->process.id = id;
-    recursive_process->process.initials = csp_recursive_process_initials;
-    recursive_process->process.afters = csp_recursive_process_afters;
-    recursive_process->process.free = csp_recursive_process_free;
+    recursive_process->process.iface = &csp_recursive_process_iface;
     recursive_process->definition = CSP_PROCESS_NONE;
     csp_register_process(csp, &recursive_process->process);
     return &recursive_process->process;

@@ -16,10 +16,9 @@
  */
 
 struct csp;
+struct csp_process;
 
-struct csp_process {
-    csp_id id;
-
+struct csp_process_iface {
     void (*initials)(struct csp *csp, struct csp_process *process,
                      struct csp_id_set *set);
 
@@ -27,6 +26,11 @@ struct csp_process {
                    struct csp_id_set *set);
 
     void (*free)(struct csp *csp, struct csp_process *process);
+};
+
+struct csp_process {
+    csp_id id;
+    const struct csp_process_iface *iface;
 };
 
 void
