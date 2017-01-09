@@ -57,6 +57,27 @@ struct csp_collect_afters
 csp_collect_afters(struct csp_id_set *set);
 
 /*------------------------------------------------------------------------------
+ * Process visitors
+ */
+
+struct csp_process_visitor {
+    void (*visit)(struct csp *csp, struct csp_process_visitor *visitor,
+                  struct csp_process *process);
+};
+
+void
+csp_process_visitor_call(struct csp *csp, struct csp_process_visitor *visitor,
+                         struct csp_process *process);
+
+struct csp_collect_processes {
+    struct csp_process_visitor visitor;
+    struct csp_id_set *set;
+};
+
+struct csp_collect_processes
+csp_collect_processes(struct csp_id_set *set);
+
+/*------------------------------------------------------------------------------
  * Processes
  */
 
@@ -85,5 +106,13 @@ csp_process_visit_initials(struct csp *csp, struct csp_process *process,
 void
 csp_process_visit_afters(struct csp *csp, struct csp_process *process,
                          csp_id initial, struct csp_edge_visitor *visitor);
+
+void
+csp_process_visit_transitions(struct csp *csp, struct csp_process *process,
+                              struct csp_edge_visitor *visitor);
+
+void
+csp_process_bfs(struct csp *csp, struct csp_process *process,
+                struct csp_process_visitor *visitor);
 
 #endif /* HST_PROCESS_H */
