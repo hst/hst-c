@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -21,43 +21,6 @@ struct csp_id_pair {
     csp_id from;
     csp_id to;
 };
-
-/* We preallocate a certain number of entries in the csp_id_pair_array struct
- * itself, to minimize malloc overhead for small arrays.  We automatically
- * calculate a number that makes the size of the csp_id_pair_array itself a nice
- * multiple of sizeof(void *).  On 64-bit platforms this should currently
- * evaluate to 6. */
-#define CSP_ID_PAIR_ARRAY_INTERNAL_SIZE                        \
-    (((sizeof(void *) * 16)          /* target overall size */ \
-      - sizeof(struct csp_id_pair *) /* pairs */               \
-      - sizeof(size_t)               /* count */               \
-      - sizeof(size_t)               /* allocated_count */     \
-      ) /                                                      \
-     sizeof(struct csp_id_pair))
-
-/* An array of pairs of IDs. */
-struct csp_id_pair_array {
-    struct csp_id_pair *pairs;
-    size_t count;
-    size_t allocated_count;
-    struct csp_id_pair internal[CSP_ID_PAIR_ARRAY_INTERNAL_SIZE];
-};
-
-void
-csp_id_pair_array_init(struct csp_id_pair_array *array);
-
-void
-csp_id_pair_array_done(struct csp_id_pair_array *array);
-
-/* Ensure that the array's `pairs` field has enough allocated space to hold
- * `count` pairs.  The array's `count` will be set to `count` after this
- * returns; you must then fill in the `pairs` field with the actual ID pairs. */
-void
-csp_id_pair_array_ensure_size(struct csp_id_pair_array *array, size_t count);
-
-bool
-csp_id_pair_array_eq(const struct csp_id_pair_array *a1,
-                     const struct csp_id_pair_array *a2);
 
 /* We preallocate a certain number of entries in the csp_id_pair_set struct
  * itself, to minimize malloc overhead for small sets.  We automatically
