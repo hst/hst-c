@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -20,11 +20,17 @@ struct csp_equivalences {
     struct csp_id_map members;
 };
 
+struct csp_equivalences *
+csp_equivalences_new(void);
+
 void
 csp_equivalences_init(struct csp_equivalences *equiv);
 
 void
 csp_equivalences_done(struct csp_equivalences *equiv);
+
+void
+csp_equivalences_free(struct csp_equivalences *equiv);
 
 /* Add a member to an equivalence class.  If the member was already in an
  * equivalence class, it is removed from that one before adding it to the new

@@ -121,4 +121,7 @@ csp_id_add_name(csp_id id, const char *name);
 csp_id
 csp_id_add_name_sized(csp_id id, const char *name, size_t name_length);
 
+csp_id
+csp_id_add_process(csp_id id, struct csp_process *process);
+
 #endif /* HST_ENVIRONMENT_H */

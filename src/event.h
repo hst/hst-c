@@ -40,6 +40,10 @@ const struct csp_event *
 csp_event_get_sized(const char *name, size_t name_length);
 
 PURE_FUNCTION
+const struct csp_event *
+csp_event_get_by_id(csp_id id);
+
+PURE_FUNCTION
 csp_id
 csp_event_id(const struct csp_event *event);
 
