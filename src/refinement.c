@@ -17,21 +17,22 @@
 #if defined(REFINEMENT_DEBUG)
 #include <stdio.h>
 #define XDEBUG(...) fprintf(stderr, __VA_ARGS__)
-#define XDEBUG_EVENT_SET(set)                               \
-    do {                                                    \
-        bool __first = true;                                \
-        struct csp_id_set_iterator __iter;                  \
-        XDEBUG("{");                                        \
-        csp_id_set_foreach ((set), &__iter) {               \
-            csp_id __id = csp_id_set_iterator_get(&__iter); \
-            if (__first) {                                  \
-                __first = false;                            \
-            } else {                                        \
-                XDEBUG(",");                                \
-            }                                               \
-            XDEBUG("%s", csp_get_event_name(__id));         \
-        }                                                   \
-        XDEBUG("}");                                        \
+#define XDEBUG_EVENT_SET(set)                            \
+    do {                                                 \
+        bool __first = true;                             \
+        struct csp_event_set_iterator __iter;            \
+        XDEBUG("{");                                     \
+        csp_event_set_foreach ((set), &__iter) {         \
+            const struct csp_event *__event =            \
+                    csp_event_set_iterator_get(&__iter); \
+            if (__first) {                               \
+                __first = false;                         \
+            } else {                                     \
+                XDEBUG(",");                             \
+            }                                            \
+            XDEBUG("%s", csp_event_name(__event));       \
+        }                                                \
+        XDEBUG("}");                                     \
     } while (0)
 #define XDEBUG_PROCESS_SET(set)                             \
     do {                                                    \
@@ -71,13 +72,6 @@
         XDEBUG("\n");            \
     } while (0)
 
-UNNEEDED
-static const char *
-csp_get_event_name(csp_id id)
-{
-    return csp_event_name(csp_event_get_by_id(id));
-}
-
 static bool
 csp_perform_traces_refinement_check(struct csp *csp,
                                     struct csp_process *normalized_spec,
@@ -86,7 +80,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
     struct csp_id_pair_set checked;
     struct csp_id_pair_set checking;
     struct csp_id_pair_set_builder pending;
-    struct csp_id_set initials;
+    struct csp_event_set initials;
     struct csp_id_set afters;
     struct csp_behavior spec_behavior;
     struct csp_behavior impl_behavior;
@@ -95,7 +89,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
     csp_id_pair_set_init(&checked);
     csp_id_pair_set_init(&checking);
     csp_id_pair_set_builder_init(&pending);
-    csp_id_set_init(&initials);
+    csp_event_set_init(&initials);
     csp_id_set_init(&afters);
     csp_behavior_init(&spec_behavior);
     csp_behavior_init(&impl_behavior);
@@ -108,7 +102,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
         csp_id_pair_set_build(&checking, &pending);
         DEBUG("--- new round; checking %zu pairs", checking.count);
         for (i = 0; i < checking.count; i++) {
-            struct csp_id_set_iterator j;
+            struct csp_event_set_iterator j;
             const struct csp_id_pair *current = &checking.pairs[i];
             csp_id spec_id = current->from;
             csp_id impl_id = current->to;
@@ -128,13 +122,14 @@ csp_perform_traces_refinement_check(struct csp *csp,
                 goto failure;
             }
 
-            csp_id_set_clear(&initials);
+            csp_event_set_clear(&initials);
             csp_build_process_initials(csp, impl_id, &initials);
-            csp_id_set_foreach (&initials, &j) {
+            csp_event_set_foreach (&initials, &j) {
                 struct csp_id_set_iterator k;
-                csp_id initial = csp_id_set_iterator_get(&j);
+                const struct csp_event *initial =
+                        csp_event_set_iterator_get(&j);
                 const struct csp_process *spec_after;
-                DEBUG("    impl -%s→ {...}", csp_get_event_name(initial));
+                DEBUG("    impl -%s→ {...}", csp_event_name(initial));
                 if (initial == csp->tau) {
                     spec_after = spec;
                 } else {
@@ -146,7 +141,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
                         goto failure;
                     }
                 }
-                DEBUG("    spec -%s→ " CSP_ID_FMT, csp_get_event_name(initial),
+                DEBUG("    spec -%s→ " CSP_ID_FMT, csp_event_name(initial),
                       spec_after->id);
 
                 csp_id_set_clear(&afters);
@@ -154,8 +149,8 @@ csp_perform_traces_refinement_check(struct csp *csp,
                 csp_id_set_foreach (&afters, &k) {
                     csp_id impl_after = csp_id_set_iterator_get(&k);
                     struct csp_id_pair next = {spec_after->id, impl_after};
-                    DEBUG("    impl -%s→ " CSP_ID_FMT,
-                          csp_get_event_name(initial), impl_after);
+                    DEBUG("    impl -%s→ " CSP_ID_FMT, csp_event_name(initial),
+                          impl_after);
                     if (!csp_id_pair_set_contains(&checked, next)) {
                         DEBUG("      enqueue (" CSP_ID_FMT "," CSP_ID_FMT ")",
                               spec_after->id, impl_after);
@@ -171,7 +166,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
     csp_id_pair_set_done(&checked);
     csp_id_pair_set_done(&checking);
     csp_id_pair_set_builder_done(&pending);
-    csp_id_set_done(&initials);
+    csp_event_set_done(&initials);
     csp_id_set_done(&afters);
     csp_behavior_done(&spec_behavior);
     csp_behavior_done(&impl_behavior);
@@ -181,7 +176,7 @@ failure:
     csp_id_pair_set_done(&checked);
     csp_id_pair_set_done(&checking);
     csp_id_pair_set_builder_done(&pending);
-    csp_id_set_done(&initials);
+    csp_event_set_done(&initials);
     csp_id_set_done(&afters);
     csp_behavior_done(&spec_behavior);
     csp_behavior_done(&impl_behavior);

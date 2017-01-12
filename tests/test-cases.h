@@ -495,6 +495,53 @@ id_range_set(size_t start, size_t end)
     return set;
 }
 
+UNNEEDED
+static void
+csp_event_set_free_(void *vset)
+{
+    struct csp_event_set *set = vset;
+    csp_event_set_done(set);
+    free(set);
+}
+
+/* Creates a new empty set.  The set will be automatically freed for you at the
+ * end of the test case. */
+UNNEEDED
+static struct csp_event_set *
+empty_event_set(void)
+{
+    struct csp_event_set *set = malloc(sizeof(struct csp_event_set));
+    assert(set != NULL);
+    csp_event_set_init(set);
+    test_case_cleanup_register(csp_event_set_free_, set);
+    return set;
+}
+
+/* Creates a new set containing the given events.  The set will be automatically
+ * freed for you at the end of the test case. */
+#define event_set(...)                                 \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
+    (event_set_(LENGTH(__VA_ARGS__), __VA_ARGS__))(empty_event_set())
+
+UNNEEDED
+static struct csp_event_set *
+event_set_(size_t count, ...)
+{
+    size_t i;
+    va_list args;
+    struct csp_event_set *set = malloc(sizeof(struct csp_event_set));
+    assert(set != NULL);
+    csp_event_set_init(set);
+    test_case_cleanup_register(csp_event_set_free_, set);
+    va_start(args, count);
+    for (i = 0; i < count; i++) {
+        const char *name = va_arg(args, const char *);
+        csp_event_set_add(set, csp_event_get(name));
+    }
+    va_end(args);
+    return set;
+}
+
 /* Create a new pair with the given contents. */
 struct csp_id_pair
 pair(csp_id from, csp_id to)
@@ -533,6 +580,33 @@ strings_(size_t count, ...)
     }
     va_end(args);
     return array;
+}
+
+/* Event factories are functions that can create an event. */
+struct csp_event_factory {
+    const struct csp_event *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static const struct csp_event *
+csp_event_factory_create(struct csp *csp, struct csp_event_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
+/* Set factories are functions that can create a set of events. */
+struct csp_event_set_factory {
+    struct csp_event_set *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_event_set *
+csp_event_set_factory_create(struct csp *csp,
+                             struct csp_event_set_factory factory)
+{
+    return factory.create(csp, factory.ud);
 }
 
 /* ID factories are functions that can create an ID.  We need this thunk layer
@@ -774,22 +848,21 @@ pair_set_(struct csp_id_factory_array *ids)
 
 /* Creates a new ID factory that returns the ID of an event. */
 UNNEEDED
-static struct csp_id_factory
+static struct csp_event_factory
 event(const char *event_name);
 
-static csp_id
+static const struct csp_event *
 event_factory(struct csp *csp, void *vevent_name)
 {
     const char *event_name = vevent_name;
-    const struct csp_event *event = csp_event_get(event_name);
-    return csp_event_id(event);
+    return csp_event_get(event_name);
 }
 
 UNNEEDED
-static struct csp_id_factory
+static struct csp_event_factory
 event(const char *event_name)
 {
-    struct csp_id_factory factory = {event_factory, (void *) event_name};
+    struct csp_event_factory factory = {event_factory, (void *) event_name};
     return factory;
 }
 
@@ -797,29 +870,28 @@ event(const char *event_name)
  * The set will be automatically freed for you at the end of the test case. */
 #define events(...) events_(strings(__VA_ARGS__))
 
-static struct csp_id_set *
+static struct csp_event_set *
 events_factory(struct csp *csp, void *vnames)
 {
     struct string_array *names = vnames;
     size_t i;
-    struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
+    struct csp_event_set *set = malloc(sizeof(struct csp_id_set));
     assert(set != NULL);
-    csp_id_set_init(set);
-    test_case_cleanup_register(csp_id_set_free_, set);
+    csp_event_set_init(set);
+    test_case_cleanup_register(csp_event_set_free_, set);
     for (i = 0; i < names->count; i++) {
         const char *event_name = names->strings[i];
         const struct csp_event *event = csp_event_get(event_name);
-        csp_id event_id = csp_event_id(event);
-        csp_id_set_add(set, event_id);
+        csp_event_set_add(set, event);
     }
     return set;
 }
 
 UNNEEDED
-static struct csp_id_set_factory
+static struct csp_event_set_factory
 events_(struct string_array *names)
 {
-    struct csp_id_set_factory factory = {events_factory, names};
+    struct csp_event_set_factory factory = {events_factory, names};
     return factory;
 }
 

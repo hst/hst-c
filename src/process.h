@@ -9,6 +9,7 @@
 #define HST_PROCESS_H
 
 #include "basics.h"
+#include "event.h"
 #include "id-set.h"
 
 struct csp;
@@ -20,29 +21,30 @@ struct csp_process;
 
 struct csp_event_visitor {
     void (*visit)(struct csp *csp, struct csp_event_visitor *visitor,
-                  csp_id event);
+                  const struct csp_event *event);
 };
 
 void
 csp_event_visitor_call(struct csp *csp, struct csp_event_visitor *visitor,
-                       csp_id event);
+                       const struct csp_event *event);
 
 struct csp_collect_events {
     struct csp_event_visitor visitor;
-    struct csp_id_set *set;
+    struct csp_event_set *set;
 };
 
 struct csp_collect_events
-csp_collect_events(struct csp_id_set *set);
+csp_collect_events(struct csp_event_set *set);
 
 struct csp_ignore_event {
     struct csp_event_visitor visitor;
     struct csp_event_visitor *wrapped;
-    csp_id event;
+    const struct csp_event *event;
 };
 
 struct csp_ignore_event
-csp_ignore_event(struct csp_event_visitor *wrapped, csp_id event);
+csp_ignore_event(struct csp_event_visitor *wrapped,
+                 const struct csp_event *event);
 
 /*------------------------------------------------------------------------------
  * Edge visitors
@@ -50,12 +52,12 @@ csp_ignore_event(struct csp_event_visitor *wrapped, csp_id event);
 
 struct csp_edge_visitor {
     void (*visit)(struct csp *csp, struct csp_edge_visitor *visitor,
-                  csp_id event, csp_id after);
+                  const struct csp_event *event, csp_id after);
 };
 
 void
 csp_edge_visitor_call(struct csp *csp, struct csp_edge_visitor *visitor,
-                      csp_id event, csp_id after);
+                      const struct csp_event *event, csp_id after);
 
 struct csp_collect_afters {
     struct csp_edge_visitor visitor;
@@ -94,7 +96,8 @@ struct csp_process_iface {
     void (*initials)(struct csp *csp, struct csp_process *process,
                      struct csp_event_visitor *visitor);
 
-    void (*afters)(struct csp *csp, struct csp_process *process, csp_id initial,
+    void (*afters)(struct csp *csp, struct csp_process *process,
+                   const struct csp_event *initial,
                    struct csp_edge_visitor *visitor);
 
     void (*free)(struct csp *csp, struct csp_process *process);
@@ -114,7 +117,8 @@ csp_process_visit_initials(struct csp *csp, struct csp_process *process,
 
 void
 csp_process_visit_afters(struct csp *csp, struct csp_process *process,
-                         csp_id initial, struct csp_edge_visitor *visitor);
+                         const struct csp_event *initial,
+                         struct csp_edge_visitor *visitor);
 
 void
 csp_process_visit_transitions(struct csp *csp, struct csp_process *process,

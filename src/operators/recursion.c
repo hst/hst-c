@@ -15,6 +15,7 @@
 #include "ccan/likely/likely.h"
 #include "basics.h"
 #include "environment.h"
+#include "event.h"
 #include "macros.h"
 #include "process.h"
 
@@ -47,7 +48,8 @@ csp_recursive_process_initials(struct csp *csp, struct csp_process *process,
 
 static void
 csp_recursive_process_afters(struct csp *csp, struct csp_process *process,
-                             csp_id initial, struct csp_edge_visitor *visitor)
+                             const struct csp_event *initial,
+                             struct csp_edge_visitor *visitor)
 {
     struct csp_recursive_process *recursive_process =
             container_of(process, struct csp_recursive_process, process);

@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "event.h"
 #include "id-set.h"
 #include "process.h"
 
@@ -27,8 +28,8 @@ typedef uint64_t csp_id;
 #define CSP_PROCESS_NONE CSP_ID_NONE
 
 struct csp {
-    csp_id tau;
-    csp_id tick;
+    const struct csp_event *tau;
+    const struct csp_event *tick;
     csp_id skip;
     csp_id stop;
 };
@@ -57,10 +58,11 @@ csp_require_process(struct csp *csp, csp_id id);
 
 void
 csp_build_process_initials(struct csp *csp, csp_id process_id,
-                           struct csp_id_set *set);
+                           struct csp_event_set *set);
 
 void
-csp_build_process_afters(struct csp *csp, csp_id process_id, csp_id initial,
+csp_build_process_afters(struct csp *csp, csp_id process_id,
+                         const struct csp_event *initial,
                          struct csp_id_set *set);
 
 /*------------------------------------------------------------------------------
@@ -108,6 +110,9 @@ struct csp_id_scope {
 
 csp_id
 csp_id_start(struct csp_id_scope *scope);
+
+csp_id
+csp_id_add_event(csp_id id, const struct csp_event *event);
 
 csp_id
 csp_id_add_id(csp_id id, csp_id id_to_add);

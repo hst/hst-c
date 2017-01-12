@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -10,6 +10,7 @@
 
 #include "basics.h"
 #include "environment.h"
+#include "event.h"
 
 /*------------------------------------------------------------------------------
  * Process behavior
@@ -20,7 +21,7 @@ enum csp_semantic_model { CSP_TRACES };
 struct csp_behavior {
     enum csp_semantic_model model;
     csp_id hash;
-    struct csp_id_set initials;
+    struct csp_event_set initials;
 };
 
 void

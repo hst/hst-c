@@ -311,7 +311,7 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
         skip_whitespace(state);
         require(parse_process2(state, &after));
         event = csp_event_get_sized(id.start, id.length);
-        *dest = csp_prefix(state->csp, csp_event_id(event), after);
+        *dest = csp_prefix(state->csp, event, after);
         DEBUG("ACCEPT process2 → " CSP_ID_FMT, *dest);
         return 0;
     }

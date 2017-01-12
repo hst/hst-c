@@ -15,48 +15,54 @@ TEST_CASE_GROUP("environments");
 TEST_CASE("predefined STOP process exists")
 {
     struct csp *csp;
-    struct csp_id_set set;
+    struct csp_event_set initials;
+    struct csp_id_set afters;
     /* Create the CSP environment. */
-    csp_id_set_init(&set);
+    csp_event_set_init(&initials);
+    csp_id_set_init(&afters);
     check_alloc(csp, csp_new());
     /* Verify the initials set of the STOP process. */
-    csp_id_set_clear(&set);
-    csp_build_process_initials(csp, csp->stop, &set);
-    check_set_eq(&set, id_set());
+    csp_event_set_clear(&initials);
+    csp_build_process_initials(csp, csp->stop, &initials);
+    check(csp_event_set_eq(&initials, event_set()));
     /* Verify the afters of τ. */
-    csp_id_set_clear(&set);
-    csp_build_process_afters(csp, csp->stop, csp->tau, &set);
-    check_set_eq(&set, id_set());
+    csp_id_set_clear(&afters);
+    csp_build_process_afters(csp, csp->stop, csp->tau, &afters);
+    check_set_eq(&afters, id_set());
     /* Verify the afters of ✔. */
-    csp_id_set_clear(&set);
-    csp_build_process_afters(csp, csp->stop, csp->tick, &set);
-    check_set_eq(&set, id_set());
+    csp_id_set_clear(&afters);
+    csp_build_process_afters(csp, csp->stop, csp->tick, &afters);
+    check_set_eq(&afters, id_set());
     /* Clean up. */
-    csp_id_set_done(&set);
+    csp_event_set_done(&initials);
+    csp_id_set_done(&afters);
     csp_free(csp);
 }
 
 TEST_CASE("predefined SKIP process exists")
 {
     struct csp *csp;
-    struct csp_id_set set;
+    struct csp_event_set initials;
+    struct csp_id_set afters;
     /* Create the CSP environment. */
-    csp_id_set_init(&set);
+    csp_event_set_init(&initials);
+    csp_id_set_init(&afters);
     check_alloc(csp, csp_new());
     /* Verify the initials set of the SKIP process. */
-    csp_id_set_clear(&set);
-    csp_build_process_initials(csp, csp->skip, &set);
-    check_set_eq(&set, id_set(csp->tick));
+    csp_event_set_clear(&initials);
+    csp_build_process_initials(csp, csp->skip, &initials);
+    check(csp_event_set_eq(&initials, event_set("✔")));
     /* Verify the afters of τ. */
-    csp_id_set_clear(&set);
-    csp_build_process_afters(csp, csp->skip, csp->tau, &set);
-    check_set_eq(&set, id_set());
+    csp_id_set_clear(&afters);
+    csp_build_process_afters(csp, csp->skip, csp->tau, &afters);
+    check_set_eq(&afters, id_set());
     /* Verify the afters of ✔. */
-    csp_id_set_clear(&set);
-    csp_build_process_afters(csp, csp->skip, csp->tick, &set);
-    check_set_eq(&set, id_set(csp->stop));
+    csp_id_set_clear(&afters);
+    csp_build_process_afters(csp, csp->skip, csp->tick, &afters);
+    check_set_eq(&afters, id_set(csp->stop));
     /* Clean up. */
-    csp_id_set_done(&set);
+    csp_event_set_done(&initials);
+    csp_id_set_done(&afters);
     csp_free(csp);
 }
 

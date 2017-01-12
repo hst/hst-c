@@ -10,8 +10,8 @@
 
 #include <stdbool.h>
 
-#include "basics.h"
 #include "environment.h"
+#include "process.h"
 
 /*------------------------------------------------------------------------------
  * Refinement

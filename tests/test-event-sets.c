@@ -16,50 +16,6 @@ e(const char *name)
     return csp_event_get(name);
 }
 
-static void
-csp_event_set_free_(void *vset)
-{
-    struct csp_event_set *set = vset;
-    csp_event_set_done(set);
-    free(set);
-}
-
-/* Creates a new empty set.  The set will be automatically freed for you at the
- * end of the test case. */
-static struct csp_event_set *
-empty_event_set(void)
-{
-    struct csp_event_set *set = malloc(sizeof(struct csp_event_set));
-    assert(set != NULL);
-    csp_event_set_init(set);
-    test_case_cleanup_register(csp_event_set_free_, set);
-    return set;
-}
-
-/* Creates a new set containing the given events.  The set will be automatically
- * freed for you at the end of the test case. */
-#define event_set(...)                                 \
-    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
-    (event_set_(LENGTH(__VA_ARGS__), __VA_ARGS__))(empty_event_set())
-
-static struct csp_event_set *
-event_set_(size_t count, ...)
-{
-    size_t i;
-    va_list args;
-    struct csp_event_set *set = malloc(sizeof(struct csp_event_set));
-    assert(set != NULL);
-    csp_event_set_init(set);
-    test_case_cleanup_register(csp_event_set_free_, set);
-    va_start(args, count);
-    for (i = 0; i < count; i++) {
-        const char *name = va_arg(args, const char *);
-        csp_event_set_add(set, e(name));
-    }
-    va_end(args);
-    return set;
-}
-
 TEST_CASE_GROUP("events sets");
 
 TEST_CASE("can create empty set")

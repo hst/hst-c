@@ -13,6 +13,7 @@
 #include "ccan/container_of/container_of.h"
 #include "basics.h"
 #include "environment.h"
+#include "event.h"
 #include "macros.h"
 #include "process.h"
 
@@ -27,7 +28,8 @@ struct csp_translate_tick_to_tau {
 
 static void
 csp_translate_tick_to_tau_visit(struct csp *csp,
-                                struct csp_event_visitor *visitor, csp_id event)
+                                struct csp_event_visitor *visitor,
+                                const struct csp_event *event)
 {
     struct csp_translate_tick_to_tau *self =
             container_of(visitor, struct csp_translate_tick_to_tau, visitor);
@@ -86,7 +88,7 @@ csp_sequential_composition_initials(struct csp *csp,
 
 static void
 csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
-                                  csp_id initial,
+                                  const struct csp_event *initial,
                                   struct csp_edge_visitor *visitor)
 {
     /* afters(P;Q a ≠ ✔) = afters(P, a)                                 [rule 1]
