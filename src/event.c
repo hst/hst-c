@@ -81,6 +81,12 @@ csp_event_map_at(struct csp_event_map *map, csp_id id)
     return (const struct csp_event **) csp_map_at(&map->map, id);
 }
 
+static const struct csp_event *
+csp_event_map_get(struct csp_event_map *map, csp_id id)
+{
+    return csp_map_get(&map->map, id);
+}
+
 static struct csp_event_map events;
 
 static void
@@ -127,6 +133,15 @@ csp_event_get_sized(const char *name, size_t name_length)
         *event = csp_event_new(event_id, name, name_length);
     }
     return *event;
+}
+
+const struct csp_event *
+csp_event_get_by_id(csp_id event_id)
+{
+    struct csp_event_map *map = get_event_map();
+    const struct csp_event *event = csp_event_map_get(map, event_id);
+    assert(event != NULL);
+    return event;
 }
 
 csp_id

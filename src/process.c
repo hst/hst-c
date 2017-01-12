@@ -40,6 +40,24 @@ csp_collect_events(struct csp_id_set *set)
     return self;
 }
 
+static void
+csp_ignore_event_visit(struct csp *csp, struct csp_event_visitor *visitor,
+                         csp_id event)
+{
+    struct csp_ignore_event *self =
+            container_of(visitor, struct csp_ignore_event, visitor);
+    if (event != self->event) {
+        csp_event_visitor_call(csp, self->wrapped, event);
+    }
+}
+
+struct csp_ignore_event
+csp_ignore_event(struct csp_event_visitor *wrapped, csp_id event)
+{
+    struct csp_ignore_event self = {{csp_ignore_event_visit}, wrapped, event};
+    return self;
+}
+
 /*------------------------------------------------------------------------------
  * Edge visitors
  */

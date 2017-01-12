@@ -33,6 +33,16 @@ csp_id_set_clear(struct csp_id_set *set)
 }
 
 csp_id
+csp_id_set_get_one(const struct csp_id_set *set)
+{
+    struct csp_id_set_iterator iter;
+    csp_id_set_foreach (set, &iter) {
+        return csp_id_set_iterator_get(&iter);
+    }
+    abort();
+}
+
+csp_id
 csp_id_set_hash(const struct csp_id_set *set)
 {
     return csp_set_hash(&set->set, CSP_ID_SET_INITIAL_HASH);

@@ -260,3 +260,9 @@ csp_id_add_name_sized(csp_id id, const char *name, size_t name_length)
 {
     return hash64_any(name, name_length, id);
 }
+
+csp_id
+csp_id_add_process(csp_id id, struct csp_process *process)
+{
+    return csp_id_add_id(id, process->id);
+}

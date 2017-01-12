@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -15,6 +15,15 @@
 #include "id-set-map.h"
 #include "id-set.h"
 
+struct csp_equivalences *
+csp_equivalences_new(void)
+{
+    struct csp_equivalences *equiv = malloc(sizeof(struct csp_equivalences));
+    assert(equiv != NULL);
+    csp_equivalences_init(equiv);
+    return equiv;
+}
+
 void
 csp_equivalences_init(struct csp_equivalences *equiv)
 {
@@ -27,6 +36,13 @@ csp_equivalences_done(struct csp_equivalences *equiv)
 {
     csp_id_set_map_done(&equiv->classes);
     csp_id_map_done(&equiv->members);
+}
+
+void
+csp_equivalences_free(struct csp_equivalences *equiv)
+{
+    csp_equivalences_done(equiv);
+    free(equiv);
 }
 
 void

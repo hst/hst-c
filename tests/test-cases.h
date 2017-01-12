@@ -427,62 +427,6 @@ check_set_eq_(const char *filename, unsigned int line,
 }
 #define check_set_eq ADD_FILE_AND_LINE(check_set_eq_)
 
-UNNEEDED
-static void
-check_pair_array_eq_(const char *filename, unsigned int line,
-                     const struct csp_id_pair_array *actual,
-                     const struct csp_id_pair_array *expected)
-{
-    if (unlikely(!csp_id_pair_array_eq(actual, expected))) {
-        size_t i;
-        size_t min_size;
-        fail_at(filename, line, "Expected pair arrays to be equal");
-        printf("# size(actual) == %zu, size(expected) == %zu\n", actual->count,
-               expected->count);
-        min_size = (actual->count < expected->count) ? actual->count :
-                                                       expected->count;
-
-        for (i = 0; i < min_size; i++) {
-            if (actual->pairs[i].from != expected->pairs[i].from) {
-                printf("#  actual  [%zu].from == " CSP_ID_FMT "\n", i,
-                       actual->pairs[i].from);
-                printf("#  expected[%zu].from == " CSP_ID_FMT "\n", i,
-                       expected->pairs[i].from);
-            }
-            if (actual->pairs[i].to != expected->pairs[i].to) {
-                printf("#  actual  [%zu].to   == " CSP_ID_FMT "\n", i,
-                       actual->pairs[i].to);
-                printf("#  expected[%zu].to   == " CSP_ID_FMT "\n", i,
-                       expected->pairs[i].to);
-            }
-        }
-
-        if (actual->count > min_size) {
-            for (i = min_size; i < actual->count; i++) {
-                printf("#  actual  [%zu].from == " CSP_ID_FMT "\n", i,
-                       actual->pairs[i].from);
-                printf("#  expected[%zu].from == [none]\n", i);
-                printf("#  actual  [%zu].to   == " CSP_ID_FMT "\n", i,
-                       actual->pairs[i].to);
-                printf("#  expected[%zu].to   == [none]\n", i);
-            }
-        }
-
-        if (expected->count > min_size) {
-            for (i = min_size; i < expected->count; i++) {
-                printf("#  actual  [%zu].from == [none]\n", i);
-                printf("#  expected[%zu].from == " CSP_ID_FMT "\n", i,
-                       expected->pairs[i].from);
-                printf("#  actual  [%zu].to   == [none]\n", i);
-                printf("#  expected[%zu].to   == " CSP_ID_FMT "\n", i,
-                       expected->pairs[i].to);
-            }
-        }
-        abort_test();
-    }
-}
-#define check_pair_array_eq ADD_FILE_AND_LINE(check_pair_array_eq_)
-
 /*-----------------------------------------------------------------------------
  * Data constructors
  */
@@ -649,20 +593,6 @@ csp_id_pair_factory_create(struct csp *csp, struct csp_id_pair_factory factory)
     return factory.create(csp, factory.ud);
 }
 
-/* ID pair array factories are functions that can create an ID pair array. */
-struct csp_id_pair_array_factory {
-    struct csp_id_pair_array *(*create)(struct csp *csp, void *ud);
-    void *ud;
-};
-
-UNNEEDED
-static struct csp_id_pair_array *
-csp_id_pair_array_factory_create(struct csp *csp,
-                                 struct csp_id_pair_array_factory factory)
-{
-    return factory.create(csp, factory.ud);
-}
-
 /* ID pair set factories are functions that can create an ID pair set. */
 struct csp_id_pair_set_factory {
     struct csp_id_pair_set *(*create)(struct csp *csp, void *ud);
@@ -795,45 +725,6 @@ static struct csp_id_map_factory
 id_map_(struct csp_id_factory_array *ids)
 {
     struct csp_id_map_factory factory = {id_map_factory, ids};
-    assert((ids->count % 2) == 0);
-    return factory;
-}
-
-/* Creates a new ID pair array factory that wraps a bunch of ID factories to
- * create the contents of each pair. */
-#define pairs(...) (pairs_(csp_id_factory_array_new(__VA_ARGS__)))
-
-static void
-csp_id_pair_array_free_(void *varray)
-{
-    struct csp_id_pair_array *array = varray;
-    csp_id_pair_array_done(array);
-    free(array);
-}
-
-static struct csp_id_pair_array *
-pairs_factory(struct csp *csp, void *vids)
-{
-    size_t  i;
-    size_t  j;
-    struct csp_id_factory_array *ids = vids;
-    struct csp_id_pair_array *array = malloc(sizeof(struct csp_id_pair_array));
-    assert(array != NULL);
-    csp_id_pair_array_init(array);
-    test_case_cleanup_register(csp_id_pair_array_free_, array);
-    csp_id_pair_array_ensure_size(array, ids->count / 2);
-    for (i = 0, j = 0; j < ids->count; i++) {
-        array->pairs[i].from = csp_id_factory_create(csp, ids->factories[j++]);
-        array->pairs[i].to = csp_id_factory_create(csp, ids->factories[j++]);
-    }
-    return array;
-}
-
-UNNEEDED
-static struct csp_id_pair_array_factory
-pairs_(struct csp_id_factory_array *ids)
-{
-    struct csp_id_pair_array_factory factory = {pairs_factory, ids};
     assert((ids->count % 2) == 0);
     return factory;
 }
@@ -1034,37 +925,34 @@ check_equivalence_class_members(struct csp *csp, struct csp_equivalences *equiv,
     csp_id_set_done(&actual);
 }
 
-/* Creates a new factory for an array of normalized LTS nodes.  This is
- * represented by an array of ID set factories; each element of the array
- * defines the set of processes that belong to the normalized node. */
-struct normalized_node_array {
+/* An array of ID set factories. */
+struct csp_id_set_factory_array {
     size_t count;
-    struct csp_id_set_factory *nodes;
+    struct csp_id_set_factory *sets;
 };
 
-#define normalized_nodes(...)                              \
-    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__))        \
-    (normalized_nodes_(LENGTH(__VA_ARGS__), __VA_ARGS__))( \
-            normalized_nodes_(0, NULL))
+#define id_sets(...)                                \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
+    (id_sets_(LENGTH(__VA_ARGS__), __VA_ARGS__))(id_sets_(0, NULL))
 
 UNNEEDED
-static struct normalized_node_array *
-normalized_nodes_(size_t count, ...)
+static struct csp_id_set_factory_array *
+id_sets_(size_t count, ...)
 {
     size_t i;
     size_t size = (count * sizeof(struct csp_id_set_factory)) +
-                  sizeof(struct normalized_node_array);
+                  sizeof(struct csp_id_set_factory_array);
     va_list args;
-    struct normalized_node_array *array = malloc(size);
+    struct csp_id_set_factory_array *array = malloc(size);
     assert(array != NULL);
     test_case_cleanup_register(free, array);
     array->count = count;
-    array->nodes = (void *) (array + 1);
+    array->sets = (void *) (array + 1);
     va_start(args, count);
     for (i = 0; i < count; i++) {
         struct csp_id_set_factory factory =
                 va_arg(args, struct csp_id_set_factory);
-        array->nodes[i] = factory;
+        array->sets[i] = factory;
     }
     va_end(args);
     return array;

@@ -25,6 +25,10 @@ csp_id_set_init(struct csp_id_set *set);
 void
 csp_id_set_done(struct csp_id_set *set);
 
+/* Returns an arbitrary single element from `set`.  `set` must be non-empty. */
+csp_id
+csp_id_set_get_one(const struct csp_id_set *set);
+
 csp_id
 csp_id_set_hash(const struct csp_id_set *set);
 

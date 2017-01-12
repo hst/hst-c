@@ -59,8 +59,8 @@ libhst_la_SOURCES = \
 	src/macros.h \
 	src/map.h \
 	src/map.c \
-	src/normalized-lts.h \
-	src/normalized-lts.c \
+	src/normalization.h \
+	src/normalization.c \
 	src/process.h \
 	src/process.c \
 	src/refinement.h \

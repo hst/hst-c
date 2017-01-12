@@ -35,6 +35,15 @@ struct csp_collect_events {
 struct csp_collect_events
 csp_collect_events(struct csp_id_set *set);
 
+struct csp_ignore_event {
+    struct csp_event_visitor visitor;
+    struct csp_event_visitor *wrapped;
+    csp_id event;
+};
+
+struct csp_ignore_event
+csp_ignore_event(struct csp_event_visitor *wrapped, csp_id event);
+
 /*------------------------------------------------------------------------------
  * Edge visitors
  */
