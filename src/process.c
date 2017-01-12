@@ -239,3 +239,88 @@ csp_process_bfs(struct csp *csp, struct csp_process *root,
     }
     csp_process_bfs_done(&self);
 }
+
+/*------------------------------------------------------------------------------
+ * Process sets
+ */
+
+void
+csp_process_set_init(struct csp_process_set *set)
+{
+    csp_set_init(&set->set);
+}
+
+void
+csp_process_set_done(struct csp_process_set *set)
+{
+    csp_set_done(&set->set, NULL, NULL);
+}
+
+bool
+csp_process_set_empty(const struct csp_process_set *set)
+{
+    return csp_set_empty(&set->set);
+}
+
+size_t
+csp_process_set_size(const struct csp_process_set *set)
+{
+    return csp_set_size(&set->set);
+}
+
+bool
+csp_process_set_eq(const struct csp_process_set *set1,
+                   const struct csp_process_set *set2)
+{
+    return csp_set_eq(&set1->set, &set2->set);
+}
+
+void
+csp_process_set_clear(struct csp_process_set *set)
+{
+    csp_set_clear(&set->set, NULL, NULL);
+}
+
+bool
+csp_process_set_add(struct csp_process_set *set, struct csp_process *process)
+{
+    return csp_set_add(&set->set, (void *) process);
+}
+
+bool
+csp_process_set_remove(struct csp_process_set *set, struct csp_process *process)
+{
+    return csp_set_remove(&set->set, (void *) process);
+}
+
+bool
+csp_process_set_union(struct csp_process_set *set,
+                      const struct csp_process_set *other)
+{
+    return csp_set_union(&set->set, &other->set);
+}
+
+void
+csp_process_set_get_iterator(const struct csp_process_set *set,
+                             struct csp_process_set_iterator *iter)
+{
+    csp_set_get_iterator(&set->set, &iter->iter);
+}
+
+struct csp_process *
+csp_process_set_iterator_get(const struct csp_process_set_iterator *iter)
+{
+    return csp_set_iterator_get(&iter->iter);
+}
+
+bool
+csp_process_set_iterator_done(struct csp_process_set_iterator *iter)
+{
+    return csp_set_iterator_done(&iter->iter);
+}
+
+void
+csp_process_set_iterator_advance(struct csp_process_set_iterator *iter)
+{
+    csp_set_iterator_advance(&iter->iter);
+}

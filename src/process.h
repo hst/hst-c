@@ -124,4 +124,70 @@ void
 csp_process_bfs(struct csp *csp, struct csp_process *process,
                 struct csp_process_visitor *visitor);
 
+/*------------------------------------------------------------------------------
+ * Process sets
+ */
+
+struct csp_process_set {
+    struct csp_set set;
+};
+
+void
+csp_process_set_init(struct csp_process_set *set);
+
+void
+csp_process_set_done(struct csp_process_set *set);
+
+bool
+csp_process_set_empty(const struct csp_process_set *set);
+
+size_t
+csp_process_set_size(const struct csp_process_set *set);
+
+bool
+csp_process_set_eq(const struct csp_process_set *set1,
+                   const struct csp_process_set *set2);
+
+void
+csp_process_set_clear(struct csp_process_set *set);
+
+/* Add a single process to a set.  Return whether the process is new (i.e., it
+ * wasn't already in `set`.) */
+bool
+csp_process_set_add(struct csp_process_set *set, struct csp_process *process);
+
+/* Remove a single process from a set.  Returns whether that process was in the
+ * set or not. */
+bool
+csp_process_set_remove(struct csp_process_set *set,
+                       struct csp_process *process);
+
+/* Add the contents of an existing set to a set.  Returns true if any new
+ * elements were added. */
+bool
+csp_process_set_union(struct csp_process_set *set,
+                      const struct csp_process_set *other);
+
+struct csp_process_set_iterator {
+    struct csp_set_iterator iter;
+};
+
+void
+csp_process_set_get_iterator(const struct csp_process_set *set,
+                             struct csp_process_set_iterator *iter);
+
+struct csp_process *
+csp_process_set_iterator_get(const struct csp_process_set_iterator *iter);
+
+bool
+csp_process_set_iterator_done(struct csp_process_set_iterator *iter);
+
+void
+csp_process_set_iterator_advance(struct csp_process_set_iterator *iter);
+
+#define csp_process_set_foreach(set, iter)            \
+    for (csp_process_set_get_iterator((set), (iter)); \
+         !csp_process_set_iterator_done((iter));      \
+         csp_process_set_iterator_advance((iter)))
+
 #endif /* HST_PROCESS_H */

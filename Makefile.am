@@ -19,6 +19,7 @@ check_PROGRAMS = \
 	tests/test-id-pairs \
 	tests/test-id-set-maps \
 	tests/test-id-sets \
+	tests/test-process-sets \
 	tests/test-operators \
 	tests/test-refinement
 bin_PROGRAMS = hst
@@ -104,6 +105,7 @@ tests_test_id_pairs_LDFLAGS = -no-install
 tests_test_id_set_maps_LDFLAGS = -no-install
 tests_test_id_sets_LDFLAGS = -no-install
 tests_test_operators_LDFLAGS = -no-install
+tests_test_process_sets_LDFLAGS = -no-install
 tests_test_refinement_LDFLAGS = -no-install
 
 dist_doc_DATA = README.md
