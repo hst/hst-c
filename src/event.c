@@ -246,3 +246,28 @@ csp_event_set_union(struct csp_event_set *set,
 {
     return csp_set_union(&set->set, &other->set);
 }
+
+void
+csp_event_set_get_iterator(const struct csp_event_set *set,
+                           struct csp_event_set_iterator *iter)
+{
+    csp_set_get_iterator(&set->set, &iter->iter);
+}
+
+const struct csp_event *
+csp_event_set_iterator_get(const struct csp_event_set_iterator *iter)
+{
+    return csp_set_iterator_get(&iter->iter);
+}
+
+bool
+csp_event_set_iterator_done(struct csp_event_set_iterator *iter)
+{
+    return csp_set_iterator_done(&iter->iter);
+}
+
+void
+csp_event_set_iterator_advance(struct csp_event_set_iterator *iter)
+{
+    csp_set_iterator_advance(&iter->iter);
+}

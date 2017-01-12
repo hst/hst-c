@@ -70,7 +70,7 @@ TEST_CASE("can create empty set")
     csp_event_set_done(&set);
 }
 
-TEST_CASE("can add individual events")
+TEST_CASE("can add events")
 {
     struct csp_event_set set;
     csp_event_set_init(&set);
@@ -81,7 +81,7 @@ TEST_CASE("can add individual events")
     csp_event_set_done(&set);
 }
 
-TEST_CASE("can add duplicate individual events")
+TEST_CASE("can add duplicate events")
 {
     struct csp_event_set set;
     csp_event_set_init(&set);
@@ -95,7 +95,7 @@ TEST_CASE("can add duplicate individual events")
     csp_event_set_done(&set);
 }
 
-TEST_CASE("can remove individual events")
+TEST_CASE("can remove events")
 {
     struct csp_event_set set;
     csp_event_set_init(&set);
@@ -107,7 +107,7 @@ TEST_CASE("can remove individual events")
     csp_event_set_done(&set);
 }
 
-TEST_CASE("can remove missing individual events")
+TEST_CASE("can remove missing events")
 {
     struct csp_event_set set;
     csp_event_set_init(&set);
