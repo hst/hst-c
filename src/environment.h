@@ -30,8 +30,8 @@ typedef uint64_t csp_id;
 struct csp {
     const struct csp_event *tau;
     const struct csp_event *tick;
-    csp_id skip;
-    csp_id stop;
+    struct csp_process *skip;
+    struct csp_process *stop;
 };
 
 struct csp *
@@ -55,15 +55,6 @@ csp_get_process(struct csp *csp, csp_id id);
  * exist. */
 struct csp_process *
 csp_require_process(struct csp *csp, csp_id id);
-
-void
-csp_build_process_initials(struct csp *csp, csp_id process_id,
-                           struct csp_event_set *set);
-
-void
-csp_build_process_afters(struct csp *csp, csp_id process_id,
-                         const struct csp_event *initial,
-                         struct csp_id_set *set);
 
 /*------------------------------------------------------------------------------
  * Constructing process IDs
@@ -128,5 +119,8 @@ csp_id_add_name_sized(csp_id id, const char *name, size_t name_length);
 
 csp_id
 csp_id_add_process(csp_id id, struct csp_process *process);
+
+csp_id
+csp_id_add_process_set(csp_id id, const struct csp_process_set *set);
 
 #endif /* HST_ENVIRONMENT_H */

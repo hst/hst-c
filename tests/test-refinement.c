@@ -29,21 +29,22 @@
  * calculate the closure for. */
 static void
 check_closure_(const char *filename, unsigned int line, struct csp *csp,
-               struct csp_id_factory process, struct csp_event_factory event_,
-               struct csp_id_set_factory expected)
+               struct csp_process_factory process_,
+               struct csp_event_factory event_,
+               struct csp_process_set_factory expected_)
 {
-    csp_id process_id;
+    struct csp_process *process;
     const struct csp_event *event;
-    const struct csp_id_set *expected_set;
-    struct csp_id_set actual;
-    csp_id_set_init(&actual);
-    process_id = csp_id_factory_create(csp, process);
+    const struct csp_process_set *expected;
+    struct csp_process_set actual;
+    csp_process_set_init(&actual);
+    process = csp_process_factory_create(csp, process_);
     event = csp_event_factory_create(csp, event_);
-    expected_set = csp_id_set_factory_create(csp, expected);
-    csp_id_set_add(&actual, process_id);
+    expected = csp_process_set_factory_create(csp, expected_);
+    csp_process_set_add(&actual, process);
     csp_find_process_closure(csp, event, &actual);
-    check_set_eq_(filename, line, &actual, expected_set);
-    csp_id_set_done(&actual);
+    check_(filename, line, csp_process_set_eq(&actual, expected));
+    csp_process_set_done(&actual);
 }
 
 #define check_closure ADD_FILE_AND_LINE(check_closure_)
@@ -108,37 +109,35 @@ TEST_CASE("a → STOP ⊓ (b → STOP ⊓ c → STOP)")
 TEST_CASE_GROUP("prenormalization");
 
 static void
-check_prenormalize(struct csp *csp, struct csp_id_factory process_,
-                   struct csp_id_set_factory expected_closure_)
+check_prenormalize(struct csp *csp, struct csp_process_factory process_,
+                   struct csp_process_set_factory expected_closure_)
 {
-    csp_id process_id;
     struct csp_process *process;
     struct csp_process *prenormalized;
-    const struct csp_id_set *actual_closure_set;
-    const struct csp_id_set *expected_closure_set;
-    process_id = csp_id_factory_create(csp, process_);
-    process = csp_require_process(csp, process_id);
+    const struct csp_process_set *actual_closure;
+    const struct csp_process_set *expected_closure;
+    process = csp_process_factory_create(csp, process_);
     prenormalized = csp_prenormalize_process(csp, process);
-    actual_closure_set = csp_prenormalized_process_get_processes(prenormalized);
-    expected_closure_set = csp_id_set_factory_create(csp, expected_closure_);
-    check_set_eq(actual_closure_set, expected_closure_set);
+    actual_closure = csp_prenormalized_process_get_processes(prenormalized);
+    expected_closure = csp_process_set_factory_create(csp, expected_closure_);
+    check(csp_process_set_eq(actual_closure, expected_closure));
 }
 
 /* `from` and `to` must both be τ-closed */
 static void
-check_prenormalized_edge(struct csp *csp, struct csp_id_set_factory from_,
+check_prenormalized_edge(struct csp *csp, struct csp_process_set_factory from_,
                          struct csp_event_factory event_,
-                         struct csp_id_set_factory to_)
+                         struct csp_process_set_factory to_)
 {
-    const struct csp_id_set *from;
+    const struct csp_process_set *from;
     struct csp_process *from_prenormalized;
-    const struct csp_id_set *to;
+    const struct csp_process_set *to;
     struct csp_process *to_prenormalized;
     struct csp_process *actual;
     const struct csp_event *event;
-    from = csp_id_set_factory_create(csp, from_);
+    from = csp_process_set_factory_create(csp, from_);
     from_prenormalized = csp_prenormalized_process_new(csp, from);
-    to = csp_id_set_factory_create(csp, to_);
+    to = csp_process_set_factory_create(csp, to_);
     to_prenormalized = csp_prenormalized_process_new(csp, to);
     event = csp_event_factory_create(csp, event_);
     actual = csp_process_get_single_after(csp, from_prenormalized, event);
@@ -147,17 +146,17 @@ check_prenormalized_edge(struct csp *csp, struct csp_id_set_factory from_,
 
 static void
 check_prenormalized_node_traces_behavior(
-        struct csp *csp, struct csp_id_set_factory processes_,
+        struct csp *csp, struct csp_process_set_factory processes_,
         struct csp_event_set_factory expected_initials_)
 {
-    const struct csp_id_set *processes_set;
+    const struct csp_process_set *processes;
     struct csp_process *prenormalized;
     struct csp_behavior behavior;
     const struct csp_event_set *expected_initials;
-    processes_set = csp_id_set_factory_create(csp, processes_);
-    prenormalized = csp_prenormalized_process_new(csp, processes_set);
+    processes = csp_process_set_factory_create(csp, processes_);
+    prenormalized = csp_prenormalized_process_new(csp, processes);
     csp_behavior_init(&behavior);
-    csp_process_get_behavior(csp, prenormalized->id, CSP_TRACES, &behavior);
+    csp_process_get_behavior(csp, prenormalized, CSP_TRACES, &behavior);
     expected_initials = csp_event_set_factory_create(csp, expected_initials_);
     check(csp_event_set_eq(&behavior.initials, expected_initials));
     csp_behavior_done(&behavior);
@@ -248,12 +247,11 @@ TEST_CASE("a → SKIP ; b → STOP")
  * prenormalized nodes in `equivalent_nodes` belong to the same equivalence
  * class. */
 static void
-check_bisimulation(struct csp_id_factory root_,
-                   struct csp_id_set_factory_array *equivalent_)
+check_bisimulation(struct csp_process_factory root_,
+                   struct csp_process_set_factory_array *equivalent_)
 {
     size_t i;
     struct csp *csp;
-    csp_id root_id;
     struct csp_process *root;
     struct csp_process *prenormalized;
     struct csp_equivalences equiv;
@@ -266,8 +264,7 @@ check_bisimulation(struct csp_id_factory root_,
     csp_id_set_init(&actual);
     csp_id_set_init(&expected);
     /* Load the main process. */
-    root_id = csp_id_factory_create(csp, root_);
-    root = csp_require_process(csp, root_id);
+    root = csp_process_factory_create(csp, root_);
     /* Prenormalize and bisimulate the root process. */
     prenormalized = csp_prenormalize_process(csp, root);
     csp_calculate_bisimulation(csp, prenormalized, &equiv);
@@ -275,8 +272,8 @@ check_bisimulation(struct csp_id_factory root_,
      * expected to be equivalent. */
     check(equivalent_->count > 0);
     for (i = 0; i < equivalent_->count; i++) {
-        const struct csp_id_set *node_processes =
-                csp_id_set_factory_create(csp, equivalent_->sets[i]);
+        const struct csp_process_set *node_processes =
+                csp_process_set_factory_create(csp, equivalent_->sets[i]);
         struct csp_process *node =
                 csp_prenormalized_process_new(csp, node_processes);
         csp_id_set_add(&expected, node->id);
@@ -313,9 +310,9 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (separate branches)") {
             "  E = □ {a→F} "
             "  F = □ {} "
             "within root";
-    check_bisimulation(csp0(process), id_sets(csp0s("A@0"), csp0s("D@0")));
-    check_bisimulation(csp0(process), id_sets(csp0s("B@0"), csp0s("E@0")));
-    check_bisimulation(csp0(process), id_sets(csp0s("C@0"), csp0s("F@0")));
+    check_bisimulation(csp0(process), process_sets(csp0s("A@0"), csp0s("D@0")));
+    check_bisimulation(csp0(process), process_sets(csp0s("B@0"), csp0s("E@0")));
+    check_bisimulation(csp0(process), process_sets(csp0s("C@0"), csp0s("F@0")));
 }
 
 TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
@@ -327,9 +324,9 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
             "  D = □ {a→E} "
             "  E = □ {} "
             "within A";
-    check_bisimulation(csp0(process), id_sets(csp0s("A@0")));
-    check_bisimulation(csp0(process), id_sets(csp0s("B@0", "D@0")));
-    check_bisimulation(csp0(process), id_sets(csp0s("C@0", "E@0")));
+    check_bisimulation(csp0(process), process_sets(csp0s("A@0")));
+    check_bisimulation(csp0(process), process_sets(csp0s("B@0", "D@0")));
+    check_bisimulation(csp0(process), process_sets(csp0s("C@0", "E@0")));
 }
 
 /*------------------------------------------------------------------------------
@@ -337,58 +334,54 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
  */
 
 static void
-check_normalize(struct csp_id_factory process_,
-                struct csp_id_set_factory expected_closure_)
+check_normalize(struct csp_process_factory process_,
+                struct csp_process_set_factory expected_closure_)
 {
     struct csp *csp;
-    csp_id process_id;
     struct csp_process *process;
     struct csp_process *prenormalized;
     struct csp_process *normalized;
-    struct csp_id_set actual_closure_set;
-    const struct csp_id_set *expected_closure_set;
+    struct csp_process_set actual_closure;
+    const struct csp_process_set *expected_closure;
     check_alloc(csp, csp_new());
-    process_id = csp_id_factory_create(csp, process_);
-    process = csp_require_process(csp, process_id);
+    process = csp_process_factory_create(csp, process_);
     prenormalized = csp_prenormalize_process(csp, process);
     normalized = csp_normalize_process(csp, prenormalized);
-    csp_id_set_init(&actual_closure_set);
-    csp_normalized_process_get_processes(csp, normalized, &actual_closure_set);
-    expected_closure_set = csp_id_set_factory_create(csp, expected_closure_);
-    check_set_eq(&actual_closure_set, expected_closure_set);
-    csp_id_set_done(&actual_closure_set);
+    csp_process_set_init(&actual_closure);
+    csp_normalized_process_get_processes(csp, normalized, &actual_closure);
+    expected_closure = csp_process_set_factory_create(csp, expected_closure_);
+    check(csp_process_set_eq(&actual_closure, expected_closure));
+    csp_process_set_done(&actual_closure);
     csp_free(csp);
 }
 
 static void
-check_normalized_edge(struct csp_id_factory root_,
-                      struct csp_id_set_factory from_,
+check_normalized_edge(struct csp_process_factory root_,
+                      struct csp_process_set_factory from_,
                       struct csp_event_factory event_,
-                      struct csp_id_set_factory to_)
+                      struct csp_process_set_factory to_)
 {
     struct csp *csp;
-    csp_id root_id;
     struct csp_process *root;
     struct csp_process *prenormalized;
     struct csp_process *normalized;
-    const struct csp_id_set *from;
+    const struct csp_process_set *from;
     struct csp_process *from_prenormalized;
     struct csp_process *from_normalized;
-    const struct csp_id_set *to;
+    const struct csp_process_set *to;
     struct csp_process *to_prenormalized;
     struct csp_process *to_normalized;
     struct csp_process *actual;
     const struct csp_event *event;
     check_alloc(csp, csp_new());
-    root_id = csp_id_factory_create(csp, root_);
-    root = csp_require_process(csp, root_id);
+    root = csp_process_factory_create(csp, root_);
     prenormalized = csp_prenormalize_process(csp, root);
     normalized = csp_normalize_process(csp, prenormalized);
-    from = csp_id_set_factory_create(csp, from_);
+    from = csp_process_set_factory_create(csp, from_);
     from_prenormalized = csp_prenormalized_process_new(csp, from);
     from_normalized =
             csp_normalized_subprocess(csp, normalized, from_prenormalized);
-    to = csp_id_set_factory_create(csp, to_);
+    to = csp_process_set_factory_create(csp, to_);
     to_prenormalized = csp_prenormalized_process_new(csp, to);
     to_normalized =
             csp_normalized_subprocess(csp, normalized, to_prenormalized);
@@ -446,37 +439,29 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (single head)") {
  */
 
 static void
-check_traces_refinement(struct csp_id_factory spec_,
-                        struct csp_id_factory impl_)
+check_traces_refinement(struct csp_process_factory spec_,
+                        struct csp_process_factory impl_)
 {
     struct csp *csp;
-    csp_id spec_id;
     struct csp_process *spec;
-    csp_id impl_id;
     struct csp_process *impl;
     check_alloc(csp, csp_new());
-    spec_id = csp_id_factory_create(csp, spec_);
-    spec = csp_require_process(csp, spec_id);
-    impl_id = csp_id_factory_create(csp, impl_);
-    impl = csp_require_process(csp, impl_id);
+    spec = csp_process_factory_create(csp, spec_);
+    impl = csp_process_factory_create(csp, impl_);
     check(csp_check_traces_refinement(csp, spec, impl));
     csp_free(csp);
 }
 
 static void
-xcheck_traces_refinement(struct csp_id_factory spec_,
-                         struct csp_id_factory impl_)
+xcheck_traces_refinement(struct csp_process_factory spec_,
+                         struct csp_process_factory impl_)
 {
     struct csp *csp;
-    csp_id spec_id;
     struct csp_process *spec;
-    csp_id impl_id;
     struct csp_process *impl;
     check_alloc(csp, csp_new());
-    spec_id = csp_id_factory_create(csp, spec_);
-    spec = csp_require_process(csp, spec_id);
-    impl_id = csp_id_factory_create(csp, impl_);
-    impl = csp_require_process(csp, impl_id);
+    spec = csp_process_factory_create(csp, spec_);
+    impl = csp_process_factory_create(csp, impl_);
     check(!csp_check_traces_refinement(csp, spec, impl));
     csp_free(csp);
 }

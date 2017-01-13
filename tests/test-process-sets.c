@@ -15,50 +15,6 @@ static struct csp_process p2;
 static struct csp_process p5;
 static struct csp_process p6;
 
-static void
-csp_process_set_free_(void *vset)
-{
-    struct csp_process_set *set = vset;
-    csp_process_set_done(set);
-    free(set);
-}
-
-/* Creates a new empty set.  The set will be automatically freed for you at the
- * end of the test case. */
-static struct csp_process_set *
-empty_process_set(void)
-{
-    struct csp_process_set *set = malloc(sizeof(struct csp_process_set));
-    assert(set != NULL);
-    csp_process_set_init(set);
-    test_case_cleanup_register(csp_process_set_free_, set);
-    return set;
-}
-
-/* Creates a new set containing the given processes.  The set will be
- * automatically freed for you at the end of the test case. */
-#define process_set(...)                                 \
-    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
-    (process_set_(LENGTH(__VA_ARGS__), __VA_ARGS__))(empty_process_set())
-
-static struct csp_process_set *
-process_set_(size_t count, ...)
-{
-    size_t i;
-    va_list args;
-    struct csp_process_set *set = malloc(sizeof(struct csp_process_set));
-    assert(set != NULL);
-    csp_process_set_init(set);
-    test_case_cleanup_register(csp_process_set_free_, set);
-    va_start(args, count);
-    for (i = 0; i < count; i++) {
-        struct csp_process *process = va_arg(args, struct csp_process *);
-        csp_process_set_add(set, process);
-    }
-    va_end(args);
-    return set;
-}
-
 TEST_CASE_GROUP("process sets");
 
 TEST_CASE("can create empty set")

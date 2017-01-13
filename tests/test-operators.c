@@ -12,6 +12,7 @@
 #include "environment.h"
 #include "event.h"
 #include "id-set.h"
+#include "process.h"
 #include "test-case-harness.h"
 #include "test-cases.h"
 
@@ -26,79 +27,79 @@
 
 /* Verify the `initials` of the given CSP₀ process. */
 static void
-check_process_initials(struct csp_id_factory process,
-                       struct csp_event_set_factory expected_initials)
+check_process_initials(struct csp_process_factory process_,
+                       struct csp_event_set_factory expected_initials_)
 {
     struct csp *csp;
-    csp_id process_id;
+    struct csp_process *process;
     struct csp_event_set actual;
+    struct csp_collect_events collect = csp_collect_events(&actual);
     check_alloc(csp, csp_new());
     csp_event_set_init(&actual);
-    process_id = csp_id_factory_create(csp, process);
-    csp_build_process_initials(csp, process_id, &actual);
+    process = csp_process_factory_create(csp, process_);
+    csp_process_visit_initials(csp, process, &collect.visitor);
     check(csp_event_set_eq(
-            &actual, csp_event_set_factory_create(csp, expected_initials)));
+            &actual, csp_event_set_factory_create(csp, expected_initials_)));
     csp_event_set_done(&actual);
     csp_free(csp);
 }
 
 /* Verify the `afters` of the given CSP₀ process after performing `initial`. */
 static void
-check_process_afters(struct csp_id_factory process,
-                     struct csp_event_factory initial,
-                     struct csp_id_set_factory expected_afters)
+check_process_afters(struct csp_process_factory process_,
+                     struct csp_event_factory initial_,
+                     struct csp_process_set_factory expected_afters_)
 {
     struct csp *csp;
-    csp_id process_id;
-    const struct csp_event *initial_event;
-    struct csp_id_set actual;
+    struct csp_process *process;
+    const struct csp_event *initial;
+    struct csp_process_set actual;
+    struct csp_collect_afters collect = csp_collect_afters(&actual);
     check_alloc(csp, csp_new());
-    csp_id_set_init(&actual);
-    process_id = csp_id_factory_create(csp, process);
-    initial_event = csp_event_factory_create(csp, initial);
-    csp_build_process_afters(csp, process_id, initial_event, &actual);
-    check_set_eq(&actual, csp_id_set_factory_create(csp, expected_afters));
-    csp_id_set_done(&actual);
+    csp_process_set_init(&actual);
+    process = csp_process_factory_create(csp, process_);
+    initial = csp_event_factory_create(csp, initial_);
+    csp_process_visit_afters(csp, process, initial, &collect.visitor);
+    check(csp_process_set_eq(
+            &actual, csp_process_set_factory_create(csp, expected_afters_)));
+    csp_process_set_done(&actual);
     csp_free(csp);
 }
 
 /* Verify all of the subprocesses that are reachable from `process`. */
 static void
-check_process_reachable(struct csp_id_factory process_,
-                        struct csp_id_set_factory expected_reachable)
+check_process_reachable(struct csp_process_factory process_,
+                        struct csp_process_set_factory expected_reachable_)
 {
     struct csp *csp;
-    csp_id process_id;
     struct csp_process *process;
-    struct csp_id_set actual;
-    struct csp_collect_processes collect;
+    struct csp_process_set actual;
+    struct csp_collect_processes collect = csp_collect_processes(&actual);
     check_alloc(csp, csp_new());
-    process_id = csp_id_factory_create(csp, process_);
-    process = csp_require_process(csp, process_id);
-    csp_id_set_init(&actual);
-    collect = csp_collect_processes(&actual);
+    process = csp_process_factory_create(csp, process_);
+    csp_process_set_init(&actual);
     csp_process_bfs(csp, process, &collect.visitor);
-    check_set_eq(&actual, csp_id_set_factory_create(csp, expected_reachable));
-    csp_id_set_done(&actual);
+    check(csp_process_set_eq(
+            &actual, csp_process_set_factory_create(csp, expected_reachable_)));
+    csp_process_set_done(&actual);
     csp_free(csp);
 }
 
 /* Verify the traces behavior of the given CSP₀ process. */
 static void
-check_process_traces_behavior(struct csp_id_factory process,
-                              struct csp_event_set_factory expected_initials)
+check_process_traces_behavior(struct csp_process_factory process_,
+                              struct csp_event_set_factory expected_initials_)
 {
     struct csp *csp;
-    csp_id process_id;
-    const struct csp_event_set *expected_initials_set;
+    struct csp_process *process;
+    const struct csp_event_set *expected_initials;
     struct csp_behavior behavior;
     check_alloc(csp, csp_new());
     csp_behavior_init(&behavior);
-    process_id = csp_id_factory_create(csp, process);
-    expected_initials_set =
-            csp_event_set_factory_create(csp, expected_initials);
-    csp_process_get_behavior(csp, process_id, CSP_TRACES, &behavior);
-    check(csp_event_set_eq(&behavior.initials, expected_initials_set));
+    process = csp_process_factory_create(csp, process_);
+    expected_initials = csp_event_set_factory_create(csp, expected_initials_);
+    csp_process_get_behavior(csp, process, CSP_TRACES, &behavior);
+    check(csp_event_set_eq(&behavior.initials, expected_initials));
     csp_behavior_done(&behavior);
     csp_free(csp);
 }
@@ -106,21 +107,22 @@ check_process_traces_behavior(struct csp_id_factory process,
 /* Verify the `initials` of a subprocess.  `subprocess` should be a process that
  * has been defined as part of `process`. */
 static void
-check_process_sub_initials(struct csp_id_factory process,
-                           struct csp_id_factory subprocess,
-                           struct csp_event_set_factory expected_initials)
+check_process_sub_initials(struct csp_process_factory process_,
+                           struct csp_process_factory subprocess_,
+                           struct csp_event_set_factory expected_initials_)
 {
     struct csp *csp;
-    UNNEEDED csp_id process_id;
-    csp_id subprocess_id;
+    UNNEEDED struct csp_process *process;
+    struct csp_process *subprocess;
     struct csp_event_set actual;
+    struct csp_collect_events collect = csp_collect_events(&actual);
     check_alloc(csp, csp_new());
     csp_event_set_init(&actual);
-    process_id = csp_id_factory_create(csp, process);
-    subprocess_id = csp_id_factory_create(csp, subprocess);
-    csp_build_process_initials(csp, subprocess_id, &actual);
+    process = csp_process_factory_create(csp, process_);
+    subprocess = csp_process_factory_create(csp, subprocess_);
+    csp_process_visit_initials(csp, subprocess, &collect.visitor);
     check(csp_event_set_eq(
-            &actual, csp_event_set_factory_create(csp, expected_initials)));
+            &actual, csp_event_set_factory_create(csp, expected_initials_)));
     csp_event_set_done(&actual);
     csp_free(csp);
 }
@@ -128,24 +130,26 @@ check_process_sub_initials(struct csp_id_factory process,
 /* Verify the `afters` of a subprocess after performing `initial`.  `subprocess`
  * should be a process that has been defined as part of `process`. */
 static void
-check_process_sub_afters(struct csp_id_factory process,
-                         struct csp_id_factory subprocess,
-                         struct csp_event_factory initial,
-                         struct csp_id_set_factory expected_afters)
+check_process_sub_afters(struct csp_process_factory process_,
+                         struct csp_process_factory subprocess_,
+                         struct csp_event_factory initial_,
+                         struct csp_process_set_factory expected_afters_)
 {
     struct csp *csp;
-    UNNEEDED csp_id process_id;
-    csp_id subprocess_id;
-    const struct csp_event *initial_event;
-    struct csp_id_set actual;
+    UNNEEDED struct csp_process *process;
+    struct csp_process *subprocess;
+    const struct csp_event *initial;
+    struct csp_process_set actual;
+    struct csp_collect_afters collect = csp_collect_afters(&actual);
     check_alloc(csp, csp_new());
-    csp_id_set_init(&actual);
-    process_id = csp_id_factory_create(csp, process);
-    subprocess_id = csp_id_factory_create(csp, subprocess);
-    initial_event = csp_event_factory_create(csp, initial);
-    csp_build_process_afters(csp, subprocess_id, initial_event, &actual);
-    check_set_eq(&actual, csp_id_set_factory_create(csp, expected_afters));
-    csp_id_set_done(&actual);
+    csp_process_set_init(&actual);
+    process = csp_process_factory_create(csp, process_);
+    subprocess = csp_process_factory_create(csp, subprocess_);
+    initial = csp_event_factory_create(csp, initial_);
+    csp_process_visit_afters(csp, subprocess, initial, &collect.visitor);
+    check(csp_process_set_eq(
+            &actual, csp_process_set_factory_create(csp, expected_afters_)));
+    csp_process_set_done(&actual);
     csp_free(csp);
 }
 
@@ -153,22 +157,22 @@ check_process_sub_afters(struct csp_id_factory process,
  * a process that has been defined as part of `process`. */
 static void
 check_process_sub_traces_behavior(
-        struct csp_id_factory process, struct csp_id_factory subprocess,
-        struct csp_event_set_factory expected_initials)
+        struct csp_process_factory process_,
+        struct csp_process_factory subprocess_,
+        struct csp_event_set_factory expected_initials_)
 {
     struct csp *csp;
-    UNNEEDED csp_id process_id;
-    csp_id subprocess_id;
-    const struct csp_event_set *expected_initials_set;
+    UNNEEDED struct csp_process *process;
+    struct csp_process *subprocess;
+    const struct csp_event_set *expected_initials;
     struct csp_behavior behavior;
     check_alloc(csp, csp_new());
     csp_behavior_init(&behavior);
-    process_id = csp_id_factory_create(csp, process);
-    subprocess_id = csp_id_factory_create(csp, subprocess);
-    expected_initials_set =
-            csp_event_set_factory_create(csp, expected_initials);
-    csp_process_get_behavior(csp, subprocess_id, CSP_TRACES, &behavior);
-    check(csp_event_set_eq(&behavior.initials, expected_initials_set));
+    process = csp_process_factory_create(csp, process_);
+    subprocess = csp_process_factory_create(csp, subprocess_);
+    expected_initials = csp_event_set_factory_create(csp, expected_initials_);
+    csp_process_get_behavior(csp, subprocess, CSP_TRACES, &behavior);
+    check(csp_event_set_eq(&behavior.initials, expected_initials));
     csp_behavior_done(&behavior);
     csp_free(csp);
 }

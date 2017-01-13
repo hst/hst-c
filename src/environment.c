@@ -154,8 +154,6 @@ struct csp_priv {
     struct csp public;
     csp_id next_recursion_scope_id;
     struct csp_id_process_map processes;
-    struct csp_process *stop;
-    struct csp_process *skip;
 };
 
 struct csp *
@@ -169,12 +167,10 @@ csp_new(void)
     csp->next_recursion_scope_id = 0;
     csp->public.tau = csp_tau();
     csp->public.tick = csp_tick();
-    csp->stop = csp_stop();
-    csp_register_process(&csp->public, csp->stop);
-    csp->public.stop = csp->stop->id;
-    csp->skip = csp_skip();
-    csp_register_process(&csp->public, csp->skip);
-    csp->public.skip = csp->skip->id;
+    csp->public.stop = csp_stop();
+    csp_register_process(&csp->public, csp->public.stop);
+    csp->public.skip = csp_skip();
+    csp_register_process(&csp->public, csp->public.skip);
     return &csp->public;
 }
 
@@ -209,25 +205,6 @@ csp_require_process(struct csp *csp, csp_id id)
     struct csp_process *process = csp_get_process(csp, id);
     assert(process != NULL);
     return process;
-}
-
-void
-csp_build_process_initials(struct csp *csp, csp_id process_id,
-                           struct csp_event_set *set)
-{
-    struct csp_process *process = csp_require_process(csp, process_id);
-    struct csp_collect_events collect = csp_collect_events(set);
-    csp_process_visit_initials(csp, process, &collect.visitor);
-}
-
-void
-csp_build_process_afters(struct csp *csp, csp_id process_id,
-                         const struct csp_event *initial,
-                         struct csp_id_set *set)
-{
-    struct csp_process *process = csp_require_process(csp, process_id);
-    struct csp_collect_afters collect = csp_collect_afters(set);
-    csp_process_visit_afters(csp, process, initial, &collect.visitor);
 }
 
 csp_id
@@ -274,4 +251,14 @@ csp_id
 csp_id_add_process(csp_id id, struct csp_process *process)
 {
     return csp_id_add_id(id, process->id);
+}
+
+csp_id
+csp_id_add_process_set(csp_id id, const struct csp_process_set *set)
+{
+    struct csp_process_set_iterator iter;
+    csp_process_set_foreach(set, &iter) {
+        id = csp_id_add_process(id, csp_process_set_iterator_get(&iter));
+    }
+    return id;
 }

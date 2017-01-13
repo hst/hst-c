@@ -310,6 +310,8 @@ check_with_msg_(const char *filename, unsigned int line, bool result,
     }
 }
 #define check_with_msg ADD_FILE_AND_LINE(check_with_msg_)
+#define check_(filename, line, call) \
+    check_with_msg_(filename, line, call, "Error occurred")
 #define check(call) check_with_msg(call, "Error occurred")
 
 UNNEEDED
@@ -504,6 +506,15 @@ csp_event_set_free_(void *vset)
     free(set);
 }
 
+UNNEEDED
+static void
+csp_process_set_free_(void *vset)
+{
+    struct csp_process_set *set = vset;
+    csp_process_set_done(set);
+    free(set);
+}
+
 /* Creates a new empty set.  The set will be automatically freed for you at the
  * end of the test case. */
 UNNEEDED
@@ -519,7 +530,7 @@ empty_event_set(void)
 
 /* Creates a new set containing the given events.  The set will be automatically
  * freed for you at the end of the test case. */
-#define event_set(...)                                 \
+#define event_set(...)                              \
     CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
     (event_set_(LENGTH(__VA_ARGS__), __VA_ARGS__))(empty_event_set())
 
@@ -537,6 +548,44 @@ event_set_(size_t count, ...)
     for (i = 0; i < count; i++) {
         const char *name = va_arg(args, const char *);
         csp_event_set_add(set, csp_event_get(name));
+    }
+    va_end(args);
+    return set;
+}
+
+/* Creates a new empty set.  The set will be automatically freed for you at the
+ * end of the test case. */
+UNNEEDED
+static struct csp_process_set *
+empty_process_set(void)
+{
+    struct csp_process_set *set = malloc(sizeof(struct csp_process_set));
+    assert(set != NULL);
+    csp_process_set_init(set);
+    test_case_cleanup_register(csp_process_set_free_, set);
+    return set;
+}
+
+/* Creates a new set containing the given processs.  The set will be automatically
+ * freed for you at the end of the test case. */
+#define process_set(...)                            \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
+    (process_set_(LENGTH(__VA_ARGS__), __VA_ARGS__))(empty_process_set())
+
+UNNEEDED
+static struct csp_process_set *
+process_set_(size_t count, ...)
+{
+    size_t i;
+    va_list args;
+    struct csp_process_set *set = malloc(sizeof(struct csp_process_set));
+    assert(set != NULL);
+    csp_process_set_init(set);
+    test_case_cleanup_register(csp_process_set_free_, set);
+    va_start(args, count);
+    for (i = 0; i < count; i++) {
+        struct csp_process *process = va_arg(args, struct csp_process *);
+        csp_process_set_add(set, process);
     }
     va_end(args);
     return set;
@@ -677,6 +726,33 @@ UNNEEDED
 static struct csp_id_pair_set *
 csp_id_pair_set_factory_create(struct csp *csp,
                                struct csp_id_pair_set_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
+/* Factory for creating a single process. */
+struct csp_process_factory {
+    struct csp_process *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_process *
+csp_process_factory_create(struct csp *csp, struct csp_process_factory factory)
+{
+    return factory.create(csp, factory.ud);
+}
+
+/* Factory for creating a set of processes. */
+struct csp_process_set_factory {
+    struct csp_process_set *(*create)(struct csp *csp, void *ud);
+    void *ud;
+};
+
+UNNEEDED
+static struct csp_process_set *
+csp_process_set_factory_create(struct csp *csp,
+                               struct csp_process_set_factory factory)
 {
     return factory.create(csp, factory.ud);
 }
@@ -895,25 +971,25 @@ events_(struct string_array *names)
     return factory;
 }
 
-/* Creates a new ID factory that returns the ID of a CSP₀ process. */
+/* Creates a new process factory that returns a CSP₀ process. */
 UNNEEDED
-static struct csp_id_factory
+static struct csp_process_factory
 csp0(const char *csp0);
 
-static csp_id
+static struct csp_process *
 csp0_factory(struct csp *csp, void *vcsp0)
 {
     const char *csp0 = vcsp0;
-    csp_id process;
-    check0(csp_load_csp0_string(csp, csp0, &process));
+    struct csp_process *process;
+    check_nonnull(process = csp_load_csp0_string(csp, csp0));
     return process;
 }
 
 UNNEEDED
-static struct csp_id_factory
+static struct csp_process_factory
 csp0(const char *csp0)
 {
-    struct csp_id_factory factory = {csp0_factory, (void *) csp0};
+    struct csp_process_factory factory = {csp0_factory, (void *) csp0};
     return factory;
 }
 
@@ -922,29 +998,29 @@ csp0(const char *csp0)
  * test case. */
 #define csp0s(...) csp0s_(strings(__VA_ARGS__))
 
-static struct csp_id_set *
+static struct csp_process_set *
 csp0s_factory(struct csp *csp, void *vprocesses)
 {
     struct string_array *processes = vprocesses;
     size_t i;
-    struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
+    struct csp_process_set *set = malloc(sizeof(struct csp_process_set));
     assert(set != NULL);
-    csp_id_set_init(set);
-    test_case_cleanup_register(csp_id_set_free_, set);
+    csp_process_set_init(set);
+    test_case_cleanup_register(csp_process_set_free_, set);
     for (i = 0; i < processes->count; i++) {
         const char *csp0 = processes->strings[i];
-        csp_id process;
-        check0(csp_load_csp0_string(csp, csp0, &process));
-        csp_id_set_add(set, process);
+        struct csp_process *process;
+        check_nonnull(process = csp_load_csp0_string(csp, csp0));
+        csp_process_set_add(set, process);
     }
     return set;
 }
 
 UNNEEDED
-static struct csp_id_set_factory
+static struct csp_process_set_factory
 csp0s_(struct string_array *processes)
 {
-    struct csp_id_set_factory factory = {csp0s_factory, processes};
+    struct csp_process_set_factory factory = {csp0s_factory, processes};
     return factory;
 }
 
@@ -998,32 +1074,32 @@ check_equivalence_class_members(struct csp *csp, struct csp_equivalences *equiv,
 }
 
 /* An array of ID set factories. */
-struct csp_id_set_factory_array {
+struct csp_process_set_factory_array {
     size_t count;
-    struct csp_id_set_factory *sets;
+    struct csp_process_set_factory *sets;
 };
 
-#define id_sets(...)                                \
+#define process_sets(...)                           \
     CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
-    (id_sets_(LENGTH(__VA_ARGS__), __VA_ARGS__))(id_sets_(0, NULL))
+    (process_sets_(LENGTH(__VA_ARGS__), __VA_ARGS__))(process_sets_(0, NULL))
 
 UNNEEDED
-static struct csp_id_set_factory_array *
-id_sets_(size_t count, ...)
+static struct csp_process_set_factory_array *
+process_sets_(size_t count, ...)
 {
     size_t i;
-    size_t size = (count * sizeof(struct csp_id_set_factory)) +
-                  sizeof(struct csp_id_set_factory_array);
+    size_t size = (count * sizeof(struct csp_process_set_factory)) +
+                  sizeof(struct csp_process_set_factory_array);
     va_list args;
-    struct csp_id_set_factory_array *array = malloc(size);
+    struct csp_process_set_factory_array *array = malloc(size);
     assert(array != NULL);
     test_case_cleanup_register(free, array);
     array->count = count;
     array->sets = (void *) (array + 1);
     va_start(args, count);
     for (i = 0; i < count; i++) {
-        struct csp_id_set_factory factory =
-                va_arg(args, struct csp_id_set_factory);
+        struct csp_process_set_factory factory =
+                va_arg(args, struct csp_process_set_factory);
         array->sets[i] = factory;
     }
     va_end(args);

@@ -51,8 +51,8 @@ csp_translate_tick_to_tau(struct csp_event_visitor *wrapped)
 
 struct csp_sequential_composition {
     struct csp_process process;
-    csp_id p;
-    csp_id q;
+    struct csp_process *p;
+    struct csp_process *q;
 };
 
 /* Operational semantics for P ; Q
@@ -73,7 +73,6 @@ csp_sequential_composition_initials(struct csp *csp,
 {
     struct csp_sequential_composition *seq =
             container_of(process, struct csp_sequential_composition, process);
-    struct csp_process *p;
     struct csp_translate_tick_to_tau translate;
     /* 1) P;Q can perform all of the same events as P, except for ✔.
      * 2) If P can perform ✔, then P;Q can perform τ.
@@ -81,9 +80,8 @@ csp_sequential_composition_initials(struct csp *csp,
      * initials(P;Q) = initials(P) ∖ {✔}                                [rule 1]
      *               ∪ (✔ ∈ initials(P)? {τ}: {})                       [rule 2]
      */
-    p = csp_require_process(csp, seq->p);
     translate = csp_translate_tick_to_tau(visitor);
-    csp_process_visit_initials(csp, p, &translate.visitor);
+    csp_process_visit_initials(csp, seq->p, &translate.visitor);
 }
 
 static void
@@ -100,8 +98,9 @@ csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
      */
     struct csp_sequential_composition *seq =
             container_of(process, struct csp_sequential_composition, process);
-    struct csp_id_set_iterator i;
-    struct csp_id_set afters;
+    struct csp_process_set_iterator i;
+    struct csp_process_set afters;
+    struct csp_collect_afters collect = csp_collect_afters(&afters);
 
     /* The composition can never perform a ✔; that's always translated into a τ
      * that activates process Q. */
@@ -111,27 +110,28 @@ csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
 
     /* If P can perform a non-✔ event (including τ) leading to P', then P;Q can
      * also perform that event, leading to P';Q. */
-    csp_id_set_init(&afters);
-    csp_build_process_afters(csp, seq->p, initial, &afters);
-    csp_id_set_foreach (&afters, &i) {
-        csp_id p_prime = csp_id_set_iterator_get(&i);
-        csp_id seq_prime = csp_sequential_composition(csp, p_prime, seq->q);
+    csp_process_set_init(&afters);
+    csp_process_visit_afters(csp, seq->p, initial, &collect.visitor);
+    csp_process_set_foreach (&afters, &i) {
+        struct csp_process *p_prime = csp_process_set_iterator_get(&i);
+        struct csp_process *seq_prime =
+                csp_sequential_composition(csp, p_prime, seq->q);
         csp_edge_visitor_call(csp, visitor, initial, seq_prime);
     }
 
     /* If P can perform a ✔ leading to P', then P;Q can perform a τ leading to
      * Q.  Note that we don't care what P' is; we just care that it exists. */
     if (initial == csp->tau) {
-        csp_id_set_clear(&afters);
-        csp_build_process_afters(csp, seq->p, csp->tick, &afters);
-        if (!csp_id_set_empty(&afters)) {
+        csp_process_set_clear(&afters);
+        csp_process_visit_afters(csp, seq->p, csp->tick, &collect.visitor);
+        if (!csp_process_set_empty(&afters)) {
             /* A can perform ✔, and we don't actually care what it leads to,
              * since we're going to lead to Q no matter what. */
             csp_edge_visitor_call(csp, visitor, initial, seq->q);
         }
     }
 
-    csp_id_set_done(&afters);
+    csp_process_set_done(&afters);
 }
 
 static void
@@ -147,17 +147,18 @@ static const struct csp_process_iface csp_sequential_composition_iface = {
         csp_sequential_composition_free};
 
 static csp_id
-csp_sequential_composition_get_id(csp_id p, csp_id q)
+csp_sequential_composition_get_id(struct csp_process *p, struct csp_process *q)
 {
     static struct csp_id_scope sequential_composition;
     csp_id id = csp_id_start(&sequential_composition);
-    id = csp_id_add_id(id, p);
-    id = csp_id_add_id(id, q);
+    id = csp_id_add_process(id, p);
+    id = csp_id_add_process(id, q);
     return id;
 }
 
 static struct csp_process *
-csp_sequential_composition_new(struct csp *csp, csp_id p, csp_id q)
+csp_sequential_composition_new(struct csp *csp, struct csp_process *p,
+                               struct csp_process *q)
 {
     csp_id id = csp_sequential_composition_get_id(p, q);
     struct csp_sequential_composition *seq;
@@ -172,8 +173,9 @@ csp_sequential_composition_new(struct csp *csp, csp_id p, csp_id q)
     return &seq->process;
 }
 
-csp_id
-csp_sequential_composition(struct csp *csp, csp_id p, csp_id q)
+struct csp_process *
+csp_sequential_composition(struct csp *csp, struct csp_process *p,
+                           struct csp_process *q)
 {
-    return csp_sequential_composition_new(csp, p, q)->id;
+    return csp_sequential_composition_new(csp, p, q);
 }

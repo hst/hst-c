@@ -31,7 +31,7 @@
 
 struct csp_recursive_process {
     struct csp_process process;
-    csp_id definition;
+    struct csp_process *definition;
 };
 
 static void
@@ -40,10 +40,8 @@ csp_recursive_process_initials(struct csp *csp, struct csp_process *process,
 {
     struct csp_recursive_process *recursive_process =
             container_of(process, struct csp_recursive_process, process);
-    struct csp_process *definition;
-    assert(recursive_process->definition != CSP_PROCESS_NONE);
-    definition = csp_require_process(csp, recursive_process->definition);
-    csp_process_visit_initials(csp, definition, visitor);
+    assert(recursive_process->definition != NULL);
+    csp_process_visit_initials(csp, recursive_process->definition, visitor);
 }
 
 static void
@@ -53,10 +51,9 @@ csp_recursive_process_afters(struct csp *csp, struct csp_process *process,
 {
     struct csp_recursive_process *recursive_process =
             container_of(process, struct csp_recursive_process, process);
-    struct csp_process *definition;
-    assert(recursive_process->definition != CSP_PROCESS_NONE);
-    definition = csp_require_process(csp, recursive_process->definition);
-    csp_process_visit_afters(csp, definition, initial, visitor);
+    assert(recursive_process->definition != NULL);
+    csp_process_visit_afters(csp, recursive_process->definition, initial,
+                             visitor);
 }
 
 static void
@@ -80,7 +77,7 @@ csp_recursive_process_new(struct csp *csp, csp_id id)
     assert(recursive_process != NULL);
     recursive_process->process.id = id;
     recursive_process->process.iface = &csp_recursive_process_iface;
-    recursive_process->definition = CSP_PROCESS_NONE;
+    recursive_process->definition = NULL;
     csp_register_process(csp, &recursive_process->process);
     return &recursive_process->process;
 }
@@ -159,14 +156,14 @@ csp_recursion_create_id(csp_id scope, const char *name, size_t name_length)
     return id;
 }
 
-csp_id
+struct csp_process *
 csp_recursion_scope_get(struct csp *csp, struct csp_recursion_scope *scope,
                         const char *name)
 {
     return csp_recursion_scope_get_sized(csp, scope, name, strlen(name));
 }
 
-csp_id
+struct csp_process *
 csp_recursion_scope_get_sized(struct csp *csp,
                               struct csp_recursion_scope *scope,
                               const char *name, size_t name_length)
@@ -178,12 +175,12 @@ csp_recursion_scope_get_sized(struct csp *csp,
         csp_recursive_process(csp, id, recursive_process);
         scope->unfilled_count++;
     }
-    return id;
+    return &(*recursive_process)->process;
 }
 
 bool
 csp_recursion_scope_fill(struct csp_recursion_scope *scope, const char *name,
-                         csp_id process)
+                         struct csp_process *process)
 {
     return csp_recursion_scope_fill_sized(scope, name, strlen(name), process);
 }
@@ -191,7 +188,7 @@ csp_recursion_scope_fill(struct csp_recursion_scope *scope, const char *name,
 bool
 csp_recursion_scope_fill_sized(struct csp_recursion_scope *scope,
                                const char *name, size_t name_length,
-                               csp_id process)
+                               struct csp_process *process)
 {
     struct csp_recursive_process *recursive_process;
     csp_id id = csp_recursion_create_id(scope->scope, name, name_length);
@@ -199,7 +196,7 @@ csp_recursion_scope_fill_sized(struct csp_recursion_scope *scope,
     if (unlikely(recursive_process == NULL)) {
         return false;
     } else {
-        if (likely(recursive_process->definition == CSP_PROCESS_NONE)) {
+        if (likely(recursive_process->definition == NULL)) {
             scope->unfilled_count--;
             recursive_process->definition = process;
             return true;

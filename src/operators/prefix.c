@@ -20,7 +20,7 @@
 struct csp_prefix {
     struct csp_process process;
     const struct csp_event *a;
-    csp_id p;
+    struct csp_process *p;
 };
 
 /* Operational semantics for a → P
@@ -64,17 +64,18 @@ static const struct csp_process_iface csp_prefix_iface = {
         csp_prefix_initials, csp_prefix_afters, csp_prefix_free};
 
 static csp_id
-csp_prefix_get_id(const struct csp_event *a, csp_id p)
+csp_prefix_get_id(const struct csp_event *a, struct csp_process *p)
 {
     static struct csp_id_scope prefix;
     csp_id id = csp_id_start(&prefix);
     id = csp_id_add_event(id, a);
-    id = csp_id_add_id(id, p);
+    id = csp_id_add_process(id, p);
     return id;
 }
 
 static struct csp_process *
-csp_prefix_new(struct csp *csp, const struct csp_event *a, csp_id p)
+csp_prefix_new(struct csp *csp, const struct csp_event *a,
+               struct csp_process *p)
 {
     csp_id id = csp_prefix_get_id(a, p);
     struct csp_prefix *prefix;
@@ -89,8 +90,8 @@ csp_prefix_new(struct csp *csp, const struct csp_event *a, csp_id p)
     return &prefix->process;
 }
 
-csp_id
-csp_prefix(struct csp *csp, const struct csp_event *a, csp_id p)
+struct csp_process *
+csp_prefix(struct csp *csp, const struct csp_event *a, struct csp_process *p)
 {
-    return csp_prefix_new(csp, a, p)->id;
+    return csp_prefix_new(csp, a, p);
 }

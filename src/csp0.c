@@ -190,18 +190,18 @@ parse_token(struct csp0_parse_state *state, const char *expected)
 }
 
 static int
-parse_process(struct csp0_parse_state *state, csp_id *dest);
+parse_process(struct csp0_parse_state *state, struct csp_process **dest);
 
 static int
-parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
+parse_process_set(struct csp0_parse_state *state, struct csp_process_set *set)
 {
-    csp_id process;
+    struct csp_process *process;
     DEBUG("ENTER  process set");
 
     require(parse_token(state, "{"));
     skip_whitespace(state);
     if (parse_process(state, &process) == 0) {
-        csp_id_set_add(set, process);
+        csp_process_set_add(set, process);
         skip_whitespace(state);
         while (parse_token(state, ",") == 0) {
             skip_whitespace(state);
@@ -210,7 +210,7 @@ parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
                 DEBUG("FAIL   process set");
                 return -1;
             }
-            csp_id_set_add(set, process);
+            csp_process_set_add(set, process);
             skip_whitespace(state);
         }
     }
@@ -243,7 +243,7 @@ parse_process_set(struct csp0_parse_state *state, struct csp_id_set *set)
  * entries in the precedence order list. */
 
 static int
-parse_process1(struct csp0_parse_state *state, csp_id *dest)
+parse_process1(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process1 = (process) | STOP | SKIP | [identifier]
     DEBUG("ENTER  process1");
@@ -278,7 +278,7 @@ parse_process1(struct csp0_parse_state *state, csp_id *dest)
 }
 
 static int
-parse_process2(struct csp0_parse_state *state, csp_id *dest)
+parse_process2(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process2 = process1 | identifier | event → process2
 
@@ -295,8 +295,10 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
     // identifier@scope
     if (parse_token(state, "@") == 0) {
         csp_id scope;
+        csp_id process_id;
         require(parse_numeric_identifier(state, &scope));
-        *dest = csp_recursion_create_id(scope, id.start, id.length);
+        process_id = csp_recursion_create_id(scope, id.start, id.length);
+        *dest = csp_require_process(state->csp, process_id);
         DEBUG("ACCEPT process2 %.*s@%lu = " CSP_ID_FMT, (int) id.length,
               id.start, (unsigned long) scope, *dest);
         return 0;
@@ -307,7 +309,7 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
     // prefix
     if (parse_token(state, "->") == 0 || parse_token(state, "→") == 0) {
         const struct csp_event *event;
-        csp_id after;
+        struct csp_process *after;
         skip_whitespace(state);
         require(parse_process2(state, &after));
         event = csp_event_get_sized(id.start, id.length);
@@ -331,12 +333,12 @@ parse_process2(struct csp0_parse_state *state, csp_id *dest)
 }
 
 static int
-parse_process3(struct csp0_parse_state *state, csp_id *dest)
+parse_process3(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process3 = process2 (; process3)?
 
-    csp_id lhs;
-    csp_id rhs;
+    struct csp_process *lhs;
+    struct csp_process *rhs;
     DEBUG("ENTER  process3");
 
     require(parse_process2(state, &lhs));
@@ -360,12 +362,12 @@ parse_process3(struct csp0_parse_state *state, csp_id *dest)
 #define parse_process5 parse_process3 /* NIY */
 
 static int
-parse_process6(struct csp0_parse_state *state, csp_id *dest)
+parse_process6(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process6 = process5 (□ process6)?
 
-    csp_id lhs;
-    csp_id rhs;
+    struct csp_process *lhs;
+    struct csp_process *rhs;
     DEBUG("ENTER  process6");
 
     require(parse_process5(state, &lhs));
@@ -387,12 +389,12 @@ parse_process6(struct csp0_parse_state *state, csp_id *dest)
 }
 
 static int
-parse_process7(struct csp0_parse_state *state, csp_id *dest)
+parse_process7(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process7 = process6 (⊓ process7)?
 
-    csp_id lhs;
-    csp_id rhs;
+    struct csp_process *lhs;
+    struct csp_process *rhs;
     DEBUG("ENTER  process7");
 
     require(parse_process6(state, &lhs));
@@ -416,24 +418,24 @@ parse_process7(struct csp0_parse_state *state, csp_id *dest)
 #define parse_process10 parse_process7 /* NIY */
 
 static int
-parse_process11(struct csp0_parse_state *state, csp_id *dest)
+parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process11 = process10 | □ {process} | ⊓ {process}
 
-    struct csp_id_set processes;
+    struct csp_process_set processes;
     DEBUG("ENTER  process11");
 
     // □ {process}
     if (parse_token(state, "[]") == 0 || parse_token(state, "□") == 0) {
         skip_whitespace(state);
-        csp_id_set_init(&processes);
+        csp_process_set_init(&processes);
         if (unlikely(parse_process_set(state, &processes) != 0)) {
-            csp_id_set_done(&processes);
+            csp_process_set_done(&processes);
             DEBUG("FAIL   process11");
             return -1;
         }
         *dest = csp_replicated_external_choice(state->csp, &processes);
-        csp_id_set_done(&processes);
+        csp_process_set_done(&processes);
         DEBUG("ACCEPT process11 " CSP_ID_FMT, *dest);
         return 0;
     }
@@ -441,14 +443,14 @@ parse_process11(struct csp0_parse_state *state, csp_id *dest)
     // ⊓ {process}
     if (parse_token(state, "|~|") == 0 || parse_token(state, "⊓") == 0) {
         skip_whitespace(state);
-        csp_id_set_init(&processes);
+        csp_process_set_init(&processes);
         if (unlikely(parse_process_set(state, &processes) != 0)) {
-            csp_id_set_done(&processes);
+            csp_process_set_done(&processes);
             DEBUG("FAIL   process11");
             return -1;
         }
         *dest = csp_replicated_internal_choice(state->csp, &processes);
-        csp_id_set_done(&processes);
+        csp_process_set_done(&processes);
         DEBUG("ACCEPT process11 " CSP_ID_FMT, *dest);
         return 0;
     }
@@ -467,7 +469,7 @@ static int
 parse_recursive_definition(struct csp0_parse_state *state)
 {
     struct csp0_identifier name;
-    csp_id process_id;
+    struct csp_process *process;
     struct csp_recursion_scope *scope = state->current_scope;
     assert(scope != NULL);
     DEBUG("ENTER  recursive_def");
@@ -477,9 +479,9 @@ parse_recursive_definition(struct csp0_parse_state *state)
     skip_whitespace(state);
     require(parse_token(state, "="));
     skip_whitespace(state);
-    require(parse_process(state, &process_id));
+    require(parse_process(state, &process));
     if (unlikely(!csp_recursion_scope_fill_sized(scope, name.start, name.length,
-                                                 process_id))) {
+                                                 process))) {
         /* Process redefined */
         DEBUG("FAIL   recursive_def");
         return -1;
@@ -490,7 +492,7 @@ parse_recursive_definition(struct csp0_parse_state *state)
 }
 
 static int
-parse_process12(struct csp0_parse_state *state, csp_id *dest)
+parse_process12(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process12 = process11 | let [id = process...] within [process]
 
@@ -554,14 +556,15 @@ parse_process12(struct csp0_parse_state *state, csp_id *dest)
 }
 
 static int
-parse_process(struct csp0_parse_state *state, csp_id *dest)
+parse_process(struct csp0_parse_state *state, struct csp_process **dest)
 {
     return parse_process12(state, dest);
 }
 
-int
-csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest)
+struct csp_process *
+csp_load_csp0_string(struct csp *csp, const char *str)
 {
+    struct csp_process *result;
     struct csp0_parse_state state;
     state.csp = csp;
     state.current_scope = NULL;
@@ -569,11 +572,13 @@ csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest)
     state.eof = strchr(str, '\0');
     XDEBUG("====== `%s`", str);
     skip_whitespace(&state);
-    require(parse_process(&state, dest));
+    if (unlikely(parse_process(&state, &result) != 0)) {
+        return NULL;
+    }
     skip_whitespace(&state);
     if (unlikely(state.p != state.eof)) {
         // Unexpected characters at end of stream
-        return -1;
+        return NULL;
     }
-    return 0;
+    return result;
 }

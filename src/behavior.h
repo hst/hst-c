@@ -11,6 +11,7 @@
 #include "basics.h"
 #include "environment.h"
 #include "event.h"
+#include "process.h"
 
 /*------------------------------------------------------------------------------
  * Process behavior
@@ -41,7 +42,7 @@ csp_behavior_refines(const struct csp_behavior *spec,
 /* Fill in `behavior` with the behavior of `process` in the given semantic
  * model.  You must have already initialized `behavior`. */
 void
-csp_process_get_behavior(struct csp *csp, csp_id process,
+csp_process_get_behavior(struct csp *csp, struct csp_process *process,
                          enum csp_semantic_model model,
                          struct csp_behavior *behavior);
 
@@ -49,7 +50,7 @@ csp_process_get_behavior(struct csp *csp, csp_id process,
  * semantic model.  You must have already initialized `behavior`. */
 void
 csp_process_set_get_behavior(struct csp *csp,
-                             const struct csp_id_set *processes,
+                             const struct csp_process_set *processes,
                              enum csp_semantic_model model,
                              struct csp_behavior *behavior);
 

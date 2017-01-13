@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -18,7 +18,7 @@
 /* Load in a CSP₀ process from an in-memory string, placing the ID of the new
  * process in `dest`.  Returns 0 on success.  If the CSP₀ process is invalid,
  * returns -1. */
-int
-csp_load_csp0_string(struct csp *csp, const char *str, csp_id *dest);
+struct csp_process *
+csp_load_csp0_string(struct csp *csp, const char *str);
 
 #endif /* HST_CSP0_H */

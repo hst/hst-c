@@ -48,10 +48,11 @@ csp_behavior_refines(const struct csp_behavior *spec,
 }
 
 static void
-csp_process_add_traces_behavior(struct csp *csp, csp_id process,
+csp_process_add_traces_behavior(struct csp *csp, struct csp_process *process,
                                 struct csp_behavior *behavior)
 {
-    csp_build_process_initials(csp, process, &behavior->initials);
+    struct csp_collect_events collect = csp_collect_events(&behavior->initials);
+    csp_process_visit_initials(csp, process, &collect.visitor);
 }
 
 static void
@@ -63,7 +64,7 @@ csp_behavior_finish_traces(struct csp *csp, struct csp_behavior *behavior)
 }
 
 static void
-csp_process_get_traces_behavior(struct csp *csp, csp_id process,
+csp_process_get_traces_behavior(struct csp *csp, struct csp_process *process,
                                 struct csp_behavior *behavior)
 {
     csp_event_set_clear(&behavior->initials);
@@ -72,7 +73,7 @@ csp_process_get_traces_behavior(struct csp *csp, csp_id process,
 }
 
 void
-csp_process_get_behavior(struct csp *csp, csp_id process,
+csp_process_get_behavior(struct csp *csp, struct csp_process *process,
                          enum csp_semantic_model model,
                          struct csp_behavior *behavior)
 {
@@ -87,21 +88,21 @@ csp_process_get_behavior(struct csp *csp, csp_id process,
 
 static void
 csp_process_set_get_traces_behavior(struct csp *csp,
-                                    const struct csp_id_set *processes,
+                                    const struct csp_process_set *processes,
                                     struct csp_behavior *behavior)
 {
-    struct csp_id_set_iterator iter;
+    struct csp_process_set_iterator iter;
     csp_event_set_clear(&behavior->initials);
-    csp_id_set_foreach (processes, &iter) {
-        csp_process_add_traces_behavior(csp, csp_id_set_iterator_get(&iter),
-                                        behavior);
+    csp_process_set_foreach (processes, &iter) {
+        struct csp_process *process = csp_process_set_iterator_get(&iter);
+        csp_process_add_traces_behavior(csp, process, behavior);
     }
     csp_behavior_finish_traces(csp, behavior);
 }
 
 void
 csp_process_set_get_behavior(struct csp *csp,
-                             const struct csp_id_set *processes,
+                             const struct csp_process_set *processes,
                              enum csp_semantic_model model,
                              struct csp_behavior *behavior)
 {

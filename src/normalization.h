@@ -12,7 +12,6 @@
 #include "environment.h"
 #include "equivalence.h"
 #include "event.h"
-#include "id-set.h"
 #include "process.h"
 
 /*------------------------------------------------------------------------------
@@ -42,10 +41,10 @@ csp_normalize_process(struct csp *csp, struct csp_process *prenormalized);
  * τ-closed. */
 struct csp_process *
 csp_prenormalized_process_new(struct csp *csp,
-                              const struct csp_id_set *processes);
+                              const struct csp_process_set *processes);
 
 /* Returns the set of processes that a prenormalized node represents. */
-const struct csp_id_set *
+const struct csp_process_set *
 csp_prenormalized_process_get_processes(struct csp_process *process);
 
 /* Finds the subprocess of a `normalized` process that corresponds to a
@@ -59,7 +58,7 @@ csp_normalized_subprocess(struct csp *csp, struct csp_process *normalized,
 void
 csp_normalized_process_get_processes(struct csp *csp,
                                      struct csp_process *process,
-                                     struct csp_id_set *set);
+                                     struct csp_process_set *set);
 
 /* Returns the single `after` process for a particular `initial`, or NULL if
  * there is none.  If `process` has multiple `afters` for `initial`, the result
@@ -79,7 +78,7 @@ csp_process_get_single_after(struct csp *csp, struct csp_process *process,
  * must always include the initial processes). */
 void
 csp_find_process_closure(struct csp *csp, const struct csp_event *event,
-                         struct csp_id_set *processes);
+                         struct csp_process_set *processes);
 
 /* Bisimulate all of the nodes in a prenormalized process, to find nodes that
  * have equivalent behavior.  Each prenormalized subprocess reachable from

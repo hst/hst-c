@@ -81,7 +81,9 @@ csp_perform_traces_refinement_check(struct csp *csp,
     struct csp_id_pair_set checking;
     struct csp_id_pair_set_builder pending;
     struct csp_event_set initials;
-    struct csp_id_set afters;
+    struct csp_collect_events collect_initials = csp_collect_events(&initials);
+    struct csp_process_set afters;
+    struct csp_collect_afters collect_afters = csp_collect_afters(&afters);
     struct csp_behavior spec_behavior;
     struct csp_behavior impl_behavior;
     struct csp_id_pair root = {normalized_spec->id, impl->id};
@@ -90,7 +92,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
     csp_id_pair_set_init(&checking);
     csp_id_pair_set_builder_init(&pending);
     csp_event_set_init(&initials);
-    csp_id_set_init(&afters);
+    csp_process_set_init(&afters);
     csp_behavior_init(&spec_behavior);
     csp_behavior_init(&impl_behavior);
     csp_id_pair_set_builder_add(&pending, root);
@@ -107,12 +109,13 @@ csp_perform_traces_refinement_check(struct csp *csp,
             csp_id spec_id = current->from;
             csp_id impl_id = current->to;
             struct csp_process *spec = csp_require_process(csp, spec_id);
+            struct csp_process *impl = csp_require_process(csp, impl_id);
 
             DEBUG("  check   " CSP_ID_FMT " ⊑T " CSP_ID_FMT, spec_id, impl_id);
-            csp_process_get_behavior(csp, spec_id, CSP_TRACES, &spec_behavior);
+            csp_process_get_behavior(csp, spec, CSP_TRACES, &spec_behavior);
             XDEBUG("    spec: ");
             DEBUG_EVENT_SET(&spec_behavior.initials);
-            csp_process_get_behavior(csp, impl_id, CSP_TRACES, &impl_behavior);
+            csp_process_get_behavior(csp, impl, CSP_TRACES, &impl_behavior);
             XDEBUG("    impl: ");
             DEBUG_EVENT_SET(&impl_behavior.initials);
 
@@ -123,12 +126,13 @@ csp_perform_traces_refinement_check(struct csp *csp,
             }
 
             csp_event_set_clear(&initials);
-            csp_build_process_initials(csp, impl_id, &initials);
+            csp_process_visit_initials(csp, impl, &collect_initials.visitor);
             csp_event_set_foreach (&initials, &j) {
-                struct csp_id_set_iterator k;
+                struct csp_process_set_iterator k;
                 const struct csp_event *initial =
                         csp_event_set_iterator_get(&j);
                 const struct csp_process *spec_after;
+
                 DEBUG("    impl -%s→ {...}", csp_event_name(initial));
                 if (initial == csp->tau) {
                     spec_after = spec;
@@ -144,16 +148,18 @@ csp_perform_traces_refinement_check(struct csp *csp,
                 DEBUG("    spec -%s→ " CSP_ID_FMT, csp_event_name(initial),
                       spec_after->id);
 
-                csp_id_set_clear(&afters);
-                csp_build_process_afters(csp, impl_id, initial, &afters);
-                csp_id_set_foreach (&afters, &k) {
-                    csp_id impl_after = csp_id_set_iterator_get(&k);
-                    struct csp_id_pair next = {spec_after->id, impl_after};
+                csp_process_set_clear(&afters);
+                csp_process_visit_afters(csp, impl, initial,
+                                         &collect_afters.visitor);
+                csp_process_set_foreach (&afters, &k) {
+                    struct csp_process *impl_after =
+                            csp_process_set_iterator_get(&k);
+                    struct csp_id_pair next = {spec_after->id, impl_after->id};
                     DEBUG("    impl -%s→ " CSP_ID_FMT, csp_event_name(initial),
-                          impl_after);
+                          impl_after->id);
                     if (!csp_id_pair_set_contains(&checked, next)) {
                         DEBUG("      enqueue (" CSP_ID_FMT "," CSP_ID_FMT ")",
-                              spec_after->id, impl_after);
+                              spec_after->id, impl_after->id);
                         csp_id_pair_set_builder_add(&pending, next);
                     }
                 }
@@ -167,7 +173,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
     csp_id_pair_set_done(&checking);
     csp_id_pair_set_builder_done(&pending);
     csp_event_set_done(&initials);
-    csp_id_set_done(&afters);
+    csp_process_set_done(&afters);
     csp_behavior_done(&spec_behavior);
     csp_behavior_done(&impl_behavior);
     return true;
@@ -177,7 +183,7 @@ failure:
     csp_id_pair_set_done(&checking);
     csp_id_pair_set_builder_done(&pending);
     csp_event_set_done(&initials);
-    csp_id_set_done(&afters);
+    csp_process_set_done(&afters);
     csp_behavior_done(&spec_behavior);
     csp_behavior_done(&impl_behavior);
     return false;
