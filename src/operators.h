@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -12,6 +12,7 @@
 
 #include "basics.h"
 #include "environment.h"
+#include "event.h"
 #include "map.h"
 
 /*------------------------------------------------------------------------------
@@ -28,7 +29,7 @@ csp_id
 csp_internal_choice(struct csp *csp, csp_id p, csp_id q);
 
 csp_id
-csp_prefix(struct csp *csp, csp_id a, csp_id p);
+csp_prefix(struct csp *csp, const struct csp_event *a, csp_id p);
 
 csp_id
 csp_replicated_external_choice(struct csp *csp, const struct csp_id_set *ps);

@@ -11,6 +11,7 @@
 #include "basics.h"
 #include "environment.h"
 #include "equivalence.h"
+#include "event.h"
 #include "id-set.h"
 #include "process.h"
 
@@ -66,7 +67,7 @@ csp_normalized_process_get_processes(struct csp *csp,
  * guaranteed to have zero or one `after` for each event.) */
 struct csp_process *
 csp_process_get_single_after(struct csp *csp, struct csp_process *process,
-                             csp_id initial);
+                             const struct csp_event *initial);
 
 /* Finds the closure of a set of processes for a particular event.  This is the
  * set of processes that can be reached from any of the initial processes by
@@ -77,7 +78,7 @@ csp_process_get_single_after(struct csp *csp, struct csp_process *process,
  * for; it will be updated to contain all of the processes in the closure (which
  * must always include the initial processes). */
 void
-csp_find_process_closure(struct csp *csp, csp_id event,
+csp_find_process_closure(struct csp *csp, const struct csp_event *event,
                          struct csp_id_set *processes);
 
 /* Bisimulate all of the nodes in a prenormalized process, to find nodes that

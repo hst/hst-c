@@ -19,12 +19,6 @@
  * things by hand.  Look in test-operators.c for test cases that verify that
  * each operator behaves as we expect it to. */
 
-static csp_id
-csp_get_event_id(const char *event_name)
-{
-    return csp_event_id(csp_event_get(event_name));
-}
-
 #define check_csp0_eq(str, expected)                         \
     do {                                                     \
         csp_id __actual;                                     \
@@ -130,13 +124,11 @@ TEST_CASE_GROUP("CSP₀ operators");
 TEST_CASE("parse: a → STOP □ SKIP")
 {
     struct csp *csp;
-    csp_id a;
     csp_id p0;
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    p0 = csp_prefix(csp, a, csp->stop);
+    p0 = csp_prefix(csp, csp_event_get("a"), csp->stop);
     root = csp_external_choice(csp, p0, csp->skip);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a->STOP[]SKIP", root);
@@ -164,9 +156,6 @@ TEST_CASE("parse: a → STOP □ SKIP")
 TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP")
 {
     struct csp *csp;
-    csp_id a;
-    csp_id b;
-    csp_id c;
     csp_id p1;
     csp_id p2;
     csp_id p3;
@@ -174,12 +163,9 @@ TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP")
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    b = csp_get_event_id("b");
-    c = csp_get_event_id("c");
-    p1 = csp_prefix(csp, a, csp->stop);
-    p2 = csp_prefix(csp, b, csp->stop);
-    p3 = csp_prefix(csp, c, csp->stop);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
+    p2 = csp_prefix(csp, csp_event_get("b"), csp->stop);
+    p3 = csp_prefix(csp, csp_event_get("c"), csp->stop);
     p4 = csp_external_choice(csp, p2, p3);
     root = csp_external_choice(csp, p1, p4);
     /* Verify that we can parse the process, with and without whitespace. */
@@ -192,13 +178,11 @@ TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP")
 TEST_CASE("parse: a → STOP ⊓ SKIP")
 {
     struct csp *csp;
-    csp_id a;
     csp_id p1;
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    p1 = csp_prefix(csp, a, csp->stop);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
     root = csp_internal_choice(csp, p1, csp->skip);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a->STOP|~|SKIP", root);
@@ -226,9 +210,6 @@ TEST_CASE("parse: a → STOP ⊓ SKIP")
 TEST_CASE("associativity: a → STOP ⊓ b → STOP ⊓ c → STOP")
 {
     struct csp *csp;
-    csp_id a;
-    csp_id b;
-    csp_id c;
     csp_id p1;
     csp_id p2;
     csp_id p3;
@@ -236,12 +217,9 @@ TEST_CASE("associativity: a → STOP ⊓ b → STOP ⊓ c → STOP")
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    b = csp_get_event_id("b");
-    c = csp_get_event_id("c");
-    p1 = csp_prefix(csp, a, csp->stop);
-    p2 = csp_prefix(csp, b, csp->stop);
-    p3 = csp_prefix(csp, c, csp->stop);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
+    p2 = csp_prefix(csp, csp_event_get("b"), csp->stop);
+    p3 = csp_prefix(csp, csp_event_get("c"), csp->stop);
     p4 = csp_internal_choice(csp, p2, p3);
     root = csp_internal_choice(csp, p1, p4);
     /* Verify that we can parse the process, with and without whitespace. */
@@ -271,12 +249,10 @@ TEST_CASE("parse: (STOP)")
 TEST_CASE("parse: a → STOP")
 {
     struct csp *csp;
-    csp_id a;
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    root = csp_prefix(csp, a, csp->stop);
+    root = csp_prefix(csp, csp_event_get("a"), csp->stop);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a->STOP", root);
     check_csp0_eq(" a->STOP", root);
@@ -302,16 +278,12 @@ TEST_CASE("parse: a → STOP")
 TEST_CASE("associativity: a → b → STOP")
 {
     struct csp *csp;
-    csp_id a;
-    csp_id b;
     csp_id p;
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    b = csp_get_event_id("b");
-    p = csp_prefix(csp, b, csp->stop);
-    root = csp_prefix(csp, a, p);
+    p = csp_prefix(csp, csp_event_get("b"), csp->stop);
+    root = csp_prefix(csp, csp_event_get("a"), p);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a -> b -> STOP", root);
     check_csp0_eq("a → b → STOP", root);
@@ -365,13 +337,11 @@ TEST_CASE("parse: let X = a → Y Y = b → X within X")
 TEST_CASE("parse: □ {a → STOP, SKIP}")
 {
     struct csp *csp;
-    csp_id a;
     csp_id p1;
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    p1 = csp_prefix(csp, a, csp->stop);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
     root = csp_external_choice(csp, p1, csp->skip);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("[]{a->STOP,SKIP}", root);
@@ -412,13 +382,11 @@ TEST_CASE("parse: □ {a → STOP, SKIP}")
 TEST_CASE("parse: ⊓ {a → STOP, SKIP}")
 {
     struct csp *csp;
-    csp_id a;
     csp_id p1;
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    p1 = csp_prefix(csp, a, csp->stop);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
     root = csp_internal_choice(csp, p1, csp->skip);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("|~|{a->STOP,SKIP}", root);
@@ -459,13 +427,11 @@ TEST_CASE("parse: ⊓ {a → STOP, SKIP}")
 TEST_CASE("parse: a → SKIP ; STOP")
 {
     struct csp *csp;
-    csp_id a;
     csp_id p1;
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    p1 = csp_prefix(csp, a, csp->skip);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->skip);
     root = csp_sequential_composition(csp, p1, csp->stop);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("a→SKIP;STOP", root);
@@ -490,9 +456,6 @@ TEST_CASE("parse: a → SKIP ; STOP")
 TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP")
 {
     struct csp *csp;
-    csp_id a;
-    csp_id b;
-    csp_id c;
     csp_id p1;
     csp_id p2;
     csp_id p3;
@@ -500,12 +463,9 @@ TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP")
     csp_id root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
-    a = csp_get_event_id("a");
-    b = csp_get_event_id("b");
-    c = csp_get_event_id("c");
-    p1 = csp_prefix(csp, a, csp->skip);
-    p2 = csp_prefix(csp, b, csp->skip);
-    p3 = csp_prefix(csp, c, csp->skip);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->skip);
+    p2 = csp_prefix(csp, csp_event_get("b"), csp->skip);
+    p3 = csp_prefix(csp, csp_event_get("c"), csp->skip);
     p4 = csp_sequential_composition(csp, p2, p3);
     root = csp_sequential_composition(csp, p1, p4);
     /* Verify that we can parse the process, with and without whitespace. */
@@ -517,9 +477,6 @@ TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP")
 TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP")
 {
     struct csp *csp;
-    csp_id a;
-    csp_id b;
-    csp_id c;
     csp_id p1;
     csp_id p2;
     csp_id p3;
@@ -530,12 +487,9 @@ TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP")
     /* Expected result is
      * (a → STOP □ b → STOP) ⊓ (c → STOP)
      */
-    a = csp_get_event_id("a");
-    b = csp_get_event_id("b");
-    c = csp_get_event_id("c");
-    p1 = csp_prefix(csp, a, csp->stop);
-    p2 = csp_prefix(csp, b, csp->stop);
-    p3 = csp_prefix(csp, c, csp->stop);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
+    p2 = csp_prefix(csp, csp_event_get("b"), csp->stop);
+    p3 = csp_prefix(csp, csp_event_get("c"), csp->stop);
     p4 = csp_external_choice(csp, p1, p2);
     root = csp_internal_choice(csp, p4, p3);
     /* Verify the precedence order of operations. */
@@ -547,9 +501,6 @@ TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP")
 TEST_CASE("precedence: a → STOP □ b → SKIP ; c → STOP")
 {
     struct csp *csp;
-    csp_id a;
-    csp_id b;
-    csp_id c;
     csp_id p1;
     csp_id p2;
     csp_id p3;
@@ -560,12 +511,9 @@ TEST_CASE("precedence: a → STOP □ b → SKIP ; c → STOP")
     /* Expected result is
      * a → STOP □ (b → SKIP ; c → STOP)
      */
-    a = csp_get_event_id("a");
-    b = csp_get_event_id("b");
-    c = csp_get_event_id("c");
-    p1 = csp_prefix(csp, a, csp->stop);
-    p2 = csp_prefix(csp, b, csp->skip);
-    p3 = csp_prefix(csp, c, csp->stop);
+    p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
+    p2 = csp_prefix(csp, csp_event_get("b"), csp->skip);
+    p3 = csp_prefix(csp, csp_event_get("c"), csp->stop);
     p4 = csp_sequential_composition(csp, p2, p3);
     root = csp_external_choice(csp, p1, p4);
     /* Verify the precedence order of operations. */

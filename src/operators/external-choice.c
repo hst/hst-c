@@ -13,6 +13,7 @@
 #include "ccan/container_of/container_of.h"
 #include "basics.h"
 #include "environment.h"
+#include "event.h"
 #include "macros.h"
 #include "process.h"
 
@@ -56,7 +57,8 @@ csp_external_choice_initials(struct csp *csp, struct csp_process *process,
 
 static void
 csp_external_choice_afters(struct csp *csp, struct csp_process *process,
-                           csp_id initial, struct csp_edge_visitor *visitor)
+                           const struct csp_event *initial,
+                           struct csp_edge_visitor *visitor)
 {
     /* afters(□ Ps, τ) = ⋃ { □ Ps ∖ {P} ∪ {P'} | P ∈ Ps, P' ∈ afters(P, τ) }
      *                                                                  [rule 1]

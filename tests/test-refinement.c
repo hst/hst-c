@@ -12,6 +12,7 @@
 #include "basics.h"
 #include "behavior.h"
 #include "environment.h"
+#include "event.h"
 #include "id-set.h"
 #include "normalization.h"
 #include "test-case-harness.h"
@@ -28,19 +29,19 @@
  * calculate the closure for. */
 static void
 check_closure_(const char *filename, unsigned int line, struct csp *csp,
-               struct csp_id_factory process, struct csp_id_factory event,
+               struct csp_id_factory process, struct csp_event_factory event_,
                struct csp_id_set_factory expected)
 {
     csp_id process_id;
-    csp_id event_id;
+    const struct csp_event *event;
     const struct csp_id_set *expected_set;
     struct csp_id_set actual;
     csp_id_set_init(&actual);
     process_id = csp_id_factory_create(csp, process);
-    event_id = csp_id_factory_create(csp, event);
+    event = csp_event_factory_create(csp, event_);
     expected_set = csp_id_set_factory_create(csp, expected);
     csp_id_set_add(&actual, process_id);
-    csp_find_process_closure(csp, event_id, &actual);
+    csp_find_process_closure(csp, event, &actual);
     check_set_eq_(filename, line, &actual, expected_set);
     csp_id_set_done(&actual);
 }
@@ -126,7 +127,7 @@ check_prenormalize(struct csp *csp, struct csp_id_factory process_,
 /* `from` and `to` must both be τ-closed */
 static void
 check_prenormalized_edge(struct csp *csp, struct csp_id_set_factory from_,
-                         struct csp_id_factory event_,
+                         struct csp_event_factory event_,
                          struct csp_id_set_factory to_)
 {
     const struct csp_id_set *from;
@@ -134,12 +135,12 @@ check_prenormalized_edge(struct csp *csp, struct csp_id_set_factory from_,
     const struct csp_id_set *to;
     struct csp_process *to_prenormalized;
     struct csp_process *actual;
-    csp_id event;
+    const struct csp_event *event;
     from = csp_id_set_factory_create(csp, from_);
     from_prenormalized = csp_prenormalized_process_new(csp, from);
     to = csp_id_set_factory_create(csp, to_);
     to_prenormalized = csp_prenormalized_process_new(csp, to);
-    event = csp_id_factory_create(csp, event_);
+    event = csp_event_factory_create(csp, event_);
     actual = csp_process_get_single_after(csp, from_prenormalized, event);
     check(actual == to_prenormalized);
 }
@@ -147,18 +148,18 @@ check_prenormalized_edge(struct csp *csp, struct csp_id_set_factory from_,
 static void
 check_prenormalized_node_traces_behavior(
         struct csp *csp, struct csp_id_set_factory processes_,
-        struct csp_id_set_factory expected_initials_)
+        struct csp_event_set_factory expected_initials_)
 {
     const struct csp_id_set *processes_set;
     struct csp_process *prenormalized;
     struct csp_behavior behavior;
-    const struct csp_id_set *expected_initials;
+    const struct csp_event_set *expected_initials;
     processes_set = csp_id_set_factory_create(csp, processes_);
     prenormalized = csp_prenormalized_process_new(csp, processes_set);
     csp_behavior_init(&behavior);
     csp_process_get_behavior(csp, prenormalized->id, CSP_TRACES, &behavior);
-    expected_initials = csp_id_set_factory_create(csp, expected_initials_);
-    check_set_eq(&behavior.initials, expected_initials);
+    expected_initials = csp_event_set_factory_create(csp, expected_initials_);
+    check(csp_event_set_eq(&behavior.initials, expected_initials));
     csp_behavior_done(&behavior);
 }
 
@@ -362,7 +363,7 @@ check_normalize(struct csp_id_factory process_,
 static void
 check_normalized_edge(struct csp_id_factory root_,
                       struct csp_id_set_factory from_,
-                      struct csp_id_factory event_,
+                      struct csp_event_factory event_,
                       struct csp_id_set_factory to_)
 {
     struct csp *csp;
@@ -377,7 +378,7 @@ check_normalized_edge(struct csp_id_factory root_,
     struct csp_process *to_prenormalized;
     struct csp_process *to_normalized;
     struct csp_process *actual;
-    csp_id event;
+    const struct csp_event *event;
     check_alloc(csp, csp_new());
     root_id = csp_id_factory_create(csp, root_);
     root = csp_require_process(csp, root_id);
@@ -391,7 +392,7 @@ check_normalized_edge(struct csp_id_factory root_,
     to_prenormalized = csp_prenormalized_process_new(csp, to);
     to_normalized =
             csp_normalized_subprocess(csp, normalized, to_prenormalized);
-    event = csp_id_factory_create(csp, event_);
+    event = csp_event_factory_create(csp, event_);
     actual = csp_process_get_single_after(csp, from_normalized, event);
     check(actual == to_normalized);
     csp_free(csp);

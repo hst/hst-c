@@ -10,6 +10,7 @@
 #include "ccan/container_of/container_of.h"
 #include "basics.h"
 #include "environment.h"
+#include "event.h"
 #include "id-set.h"
 #include "macros.h"
 
@@ -19,22 +20,22 @@
 
 void
 csp_event_visitor_call(struct csp *csp, struct csp_event_visitor *visitor,
-                       csp_id event)
+                       const struct csp_event *event)
 {
     visitor->visit(csp, visitor, event);
 }
 
 static void
 csp_collect_events_visit(struct csp *csp, struct csp_event_visitor *visitor,
-                         csp_id event)
+                         const struct csp_event *event)
 {
     struct csp_collect_events *self =
             container_of(visitor, struct csp_collect_events, visitor);
-    csp_id_set_add(self->set, event);
+    csp_event_set_add(self->set, event);
 }
 
 struct csp_collect_events
-csp_collect_events(struct csp_id_set *set)
+csp_collect_events(struct csp_event_set *set)
 {
     struct csp_collect_events self = {{csp_collect_events_visit}, set};
     return self;
@@ -42,7 +43,7 @@ csp_collect_events(struct csp_id_set *set)
 
 static void
 csp_ignore_event_visit(struct csp *csp, struct csp_event_visitor *visitor,
-                         csp_id event)
+                       const struct csp_event *event)
 {
     struct csp_ignore_event *self =
             container_of(visitor, struct csp_ignore_event, visitor);
@@ -52,7 +53,8 @@ csp_ignore_event_visit(struct csp *csp, struct csp_event_visitor *visitor,
 }
 
 struct csp_ignore_event
-csp_ignore_event(struct csp_event_visitor *wrapped, csp_id event)
+csp_ignore_event(struct csp_event_visitor *wrapped,
+                 const struct csp_event *event)
 {
     struct csp_ignore_event self = {{csp_ignore_event_visit}, wrapped, event};
     return self;
@@ -64,14 +66,14 @@ csp_ignore_event(struct csp_event_visitor *wrapped, csp_id event)
 
 void
 csp_edge_visitor_call(struct csp *csp, struct csp_edge_visitor *visitor,
-                      csp_id event, csp_id after)
+                      const struct csp_event *event, csp_id after)
 {
     visitor->visit(csp, visitor, event, after);
 }
 
 static void
 csp_collect_afters_visit(struct csp *csp, struct csp_edge_visitor *visitor,
-                         csp_id event, csp_id after)
+                         const struct csp_event *event, csp_id after)
 {
     struct csp_collect_afters *self =
             container_of(visitor, struct csp_collect_afters, visitor);
@@ -132,7 +134,8 @@ csp_process_visit_initials(struct csp *csp, struct csp_process *process,
 
 void
 csp_process_visit_afters(struct csp *csp, struct csp_process *process,
-                         csp_id initial, struct csp_edge_visitor *visitor)
+                         const struct csp_event *initial,
+                         struct csp_edge_visitor *visitor)
 {
     process->iface->afters(csp, process, initial, visitor);
 }
@@ -146,7 +149,7 @@ struct csp_process_visit_transitions {
 static void
 csp_process_visit_transitions_visit_initial(struct csp *csp,
                                             struct csp_event_visitor *visitor,
-                                            csp_id initial)
+                                            const struct csp_event *initial)
 {
     struct csp_process_visit_transitions *self = container_of(
             visitor, struct csp_process_visit_transitions, visit_initial);
@@ -184,7 +187,7 @@ csp_process_bfs_enqueue(struct csp *csp, struct csp_process_bfs *self,
 static void
 csp_process_bfs_visit_transition(struct csp *csp,
                                  struct csp_edge_visitor *visitor,
-                                 csp_id initial, csp_id after)
+                                 const struct csp_event *initial, csp_id after)
 {
     struct csp_process_bfs *self =
             container_of(visitor, struct csp_process_bfs, visit_transition);

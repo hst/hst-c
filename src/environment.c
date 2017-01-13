@@ -42,7 +42,8 @@ csp_stop_initials(struct csp *csp, struct csp_process *process,
 }
 
 static void
-csp_stop_afters(struct csp *csp, struct csp_process *process, csp_id initial,
+csp_stop_afters(struct csp *csp, struct csp_process *process,
+                const struct csp_event *initial,
                 struct csp_edge_visitor *visitor)
 {
 }
@@ -75,7 +76,8 @@ csp_skip_initials(struct csp *csp, struct csp_process *process,
 }
 
 static void
-csp_skip_afters(struct csp *csp, struct csp_process *process, csp_id initial,
+csp_skip_afters(struct csp *csp, struct csp_process *process,
+                const struct csp_event *initial,
                 struct csp_edge_visitor *visitor)
 {
     if (initial == csp->tick) {
@@ -165,8 +167,8 @@ csp_new(void)
     }
     csp_id_process_map_init(&csp->processes);
     csp->next_recursion_scope_id = 0;
-    csp->public.tau = csp_event_id(csp_tau());
-    csp->public.tick = csp_event_id(csp_tick());
+    csp->public.tau = csp_tau();
+    csp->public.tick = csp_tick();
     csp->stop = csp_stop();
     csp_register_process(&csp->public, csp->stop);
     csp->public.stop = csp->stop->id;
@@ -211,7 +213,7 @@ csp_require_process(struct csp *csp, csp_id id)
 
 void
 csp_build_process_initials(struct csp *csp, csp_id process_id,
-                           struct csp_id_set *set)
+                           struct csp_event_set *set)
 {
     struct csp_process *process = csp_require_process(csp, process_id);
     struct csp_collect_events collect = csp_collect_events(set);
@@ -219,7 +221,8 @@ csp_build_process_initials(struct csp *csp, csp_id process_id,
 }
 
 void
-csp_build_process_afters(struct csp *csp, csp_id process_id, csp_id initial,
+csp_build_process_afters(struct csp *csp, csp_id process_id,
+                         const struct csp_event *initial,
                          struct csp_id_set *set)
 {
     struct csp_process *process = csp_require_process(csp, process_id);
@@ -231,6 +234,12 @@ csp_id
 csp_id_start(struct csp_id_scope *scope)
 {
     return hash64_any(&scope, sizeof(struct csp_id_scope *), 0);
+}
+
+csp_id
+csp_id_add_event(csp_id id, const struct csp_event *event)
+{
+    return hash64_any(&event, sizeof(const struct csp_event *), id);
 }
 
 csp_id

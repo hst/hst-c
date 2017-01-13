@@ -14,6 +14,7 @@
 #include "behavior.h"
 #include "environment.h"
 #include "equivalence.h"
+#include "event.h"
 #include "id-set.h"
 #include "macros.h"
 #include "process.h"
@@ -58,7 +59,7 @@
  */
 
 void
-csp_find_process_closure(struct csp *csp, csp_id event,
+csp_find_process_closure(struct csp *csp, const struct csp_event *event,
                          struct csp_id_set *processes)
 {
     bool another_round_needed = true;
@@ -101,7 +102,8 @@ struct csp_process_get_single_after {
 static void
 csp_process_get_single_after_visit_edge(struct csp *csp,
                                         struct csp_edge_visitor *visitor,
-                                        csp_id initial, csp_id after)
+                                        const struct csp_event *initial,
+                                        csp_id after)
 {
     struct csp_process_get_single_after *self =
             container_of(visitor, struct csp_process_get_single_after, visitor);
@@ -111,7 +113,7 @@ csp_process_get_single_after_visit_edge(struct csp *csp,
 
 struct csp_process *
 csp_process_get_single_after(struct csp *csp, struct csp_process *process,
-                             csp_id initial)
+                             const struct csp_event *initial)
 {
     struct csp_process_get_single_after self = {
             {csp_process_get_single_after_visit_edge}, NULL};
@@ -152,7 +154,7 @@ csp_prenormalized_process_initials(struct csp *csp, struct csp_process *process,
 
 static void
 csp_prenormalized_process_afters(struct csp *csp, struct csp_process *process,
-                                 csp_id initial,
+                                 const struct csp_event *initial,
                                  struct csp_edge_visitor *visitor)
 {
     struct csp_prenormalized_process *self =
@@ -281,18 +283,19 @@ csp_equivalences_equiv(struct csp_equivalences *equiv, struct csp_process *p1,
 static void
 csp_processes_equiv_visit_edge(struct csp *csp,
                                struct csp_edge_visitor *visitor,
-                               csp_id event_id, csp_id after1_id)
+                               const struct csp_event *event, csp_id after1_id)
 {
     struct csp_processes_equiv *self = container_of(
             visitor, struct csp_processes_equiv, visitor);
     struct csp_process *after1 = csp_require_process(csp, after1_id);
-    struct csp_process *after2 = csp_process_get_single_after(csp, self->p2, event_id);
+    struct csp_process *after2 =
+            csp_process_get_single_after(csp, self->p2, event);
     assert(after2 != NULL);
-    DEBUG("    --- " CSP_ID_FMT, event_id);
-    DEBUG("    " CSP_ID_FMT " -" CSP_ID_FMT "→ " CSP_ID_FMT, self->p1->id,
-          event_id, after1->id);
-    DEBUG("    " CSP_ID_FMT " -" CSP_ID_FMT "→ " CSP_ID_FMT, self->p2->id,
-          event_id, after2->id);
+    DEBUG("    --- %s", csp_event_name(event));
+    DEBUG("    " CSP_ID_FMT " -%s→ " CSP_ID_FMT, self->p1->id,
+          csp_event_name(event), after1->id);
+    DEBUG("    " CSP_ID_FMT " -%s→ " CSP_ID_FMT, self->p2->id,
+          csp_event_name(event), after2->id);
     /* If after1 and after2 are not equivalent, then to1 and to2 should no
      * longer be equivalent. */
     if (!csp_equivalences_equiv(self->equiv, after1, after2)) {
@@ -484,7 +487,8 @@ csp_normalized_process_initials(struct csp *csp, struct csp_process *process,
 
 static void
 csp_normalized_process_afters(struct csp *csp, struct csp_process *process,
-                              csp_id initial, struct csp_edge_visitor *visitor)
+                              const struct csp_event *initial,
+                              struct csp_edge_visitor *visitor)
 {
     struct csp_normalized_process *self =
             container_of(process, struct csp_normalized_process, process);

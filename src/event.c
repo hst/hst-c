@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -81,12 +82,6 @@ csp_event_map_at(struct csp_event_map *map, csp_id id)
     return (const struct csp_event **) csp_map_at(&map->map, id);
 }
 
-static const struct csp_event *
-csp_event_map_get(struct csp_event_map *map, csp_id id)
-{
-    return csp_map_get(&map->map, id);
-}
-
 static struct csp_event_map events;
 
 static void
@@ -135,15 +130,6 @@ csp_event_get_sized(const char *name, size_t name_length)
     return *event;
 }
 
-const struct csp_event *
-csp_event_get_by_id(csp_id event_id)
-{
-    struct csp_event_map *map = get_event_map();
-    const struct csp_event *event = csp_event_map_get(map, event_id);
-    assert(event != NULL);
-    return event;
-}
-
 csp_id
 csp_event_id(const struct csp_event *event)
 {
@@ -184,6 +170,8 @@ csp_tick(void)
  * Event sets
  */
 
+#define CSP_EVENT_SET_INITIAL_HASH UINT64_C(0xbe70ef9046515956) /* random */
+
 void
 csp_event_set_init(struct csp_event_set *set)
 {
@@ -194,6 +182,12 @@ void
 csp_event_set_done(struct csp_event_set *set)
 {
     csp_set_done(&set->set, NULL, NULL);
+}
+
+uint64_t
+csp_event_set_hash(const struct csp_event_set *set)
+{
+    return csp_set_hash(&set->set, CSP_EVENT_SET_INITIAL_HASH);
 }
 
 bool
