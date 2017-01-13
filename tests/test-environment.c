@@ -7,6 +7,8 @@
 
 #include "environment.h"
 
+#include "event.h"
+#include "process.h"
 #include "test-case-harness.h"
 #include "test-cases.h"
 
@@ -16,26 +18,29 @@ TEST_CASE("predefined STOP process exists")
 {
     struct csp *csp;
     struct csp_event_set initials;
-    struct csp_id_set afters;
+    struct csp_collect_events collect_initials = csp_collect_events(&initials);
+    struct csp_process_set afters;
+    struct csp_collect_afters collect_afters = csp_collect_afters(&afters);
     /* Create the CSP environment. */
     csp_event_set_init(&initials);
-    csp_id_set_init(&afters);
+    csp_process_set_init(&afters);
     check_alloc(csp, csp_new());
     /* Verify the initials set of the STOP process. */
     csp_event_set_clear(&initials);
-    csp_build_process_initials(csp, csp->stop, &initials);
+    csp_process_visit_initials(csp, csp->stop, &collect_initials.visitor);
     check(csp_event_set_eq(&initials, event_set()));
     /* Verify the afters of τ. */
-    csp_id_set_clear(&afters);
-    csp_build_process_afters(csp, csp->stop, csp->tau, &afters);
-    check_set_eq(&afters, id_set());
+    csp_process_set_clear(&afters);
+    csp_process_visit_afters(csp, csp->stop, csp->tau, &collect_afters.visitor);
+    check(csp_process_set_eq(&afters, process_set()));
     /* Verify the afters of ✔. */
-    csp_id_set_clear(&afters);
-    csp_build_process_afters(csp, csp->stop, csp->tick, &afters);
-    check_set_eq(&afters, id_set());
+    csp_process_set_clear(&afters);
+    csp_process_visit_afters(csp, csp->stop, csp->tick,
+                             &collect_afters.visitor);
+    check(csp_process_set_eq(&afters, process_set()));
     /* Clean up. */
     csp_event_set_done(&initials);
-    csp_id_set_done(&afters);
+    csp_process_set_done(&afters);
     csp_free(csp);
 }
 
@@ -43,26 +48,29 @@ TEST_CASE("predefined SKIP process exists")
 {
     struct csp *csp;
     struct csp_event_set initials;
-    struct csp_id_set afters;
+    struct csp_collect_events collect = csp_collect_events(&initials);
+    struct csp_process_set afters;
+    struct csp_collect_afters collect_afters = csp_collect_afters(&afters);
     /* Create the CSP environment. */
     csp_event_set_init(&initials);
-    csp_id_set_init(&afters);
+    csp_process_set_init(&afters);
     check_alloc(csp, csp_new());
     /* Verify the initials set of the SKIP process. */
     csp_event_set_clear(&initials);
-    csp_build_process_initials(csp, csp->skip, &initials);
+    csp_process_visit_initials(csp, csp->skip, &collect.visitor);
     check(csp_event_set_eq(&initials, event_set("✔")));
     /* Verify the afters of τ. */
-    csp_id_set_clear(&afters);
-    csp_build_process_afters(csp, csp->skip, csp->tau, &afters);
-    check_set_eq(&afters, id_set());
+    csp_process_set_clear(&afters);
+    csp_process_visit_afters(csp, csp->skip, csp->tau, &collect_afters.visitor);
+    check(csp_process_set_eq(&afters, process_set()));
     /* Verify the afters of ✔. */
-    csp_id_set_clear(&afters);
-    csp_build_process_afters(csp, csp->skip, csp->tick, &afters);
-    check_set_eq(&afters, id_set(csp->stop));
+    csp_process_set_clear(&afters);
+    csp_process_visit_afters(csp, csp->skip, csp->tick,
+                             &collect_afters.visitor);
+    check(csp_process_set_eq(&afters, process_set(csp->stop)));
     /* Clean up. */
     csp_event_set_done(&initials);
-    csp_id_set_done(&afters);
+    csp_process_set_done(&afters);
     csp_free(csp);
 }
 

@@ -9,8 +9,10 @@
 
 #include <string.h>
 
+#include "environment.h"
 #include "event.h"
 #include "operators.h"
+#include "process.h"
 #include "test-case-harness.h"
 #include "test-cases.h"
 
@@ -19,23 +21,21 @@
  * things by hand.  Look in test-operators.c for test cases that verify that
  * each operator behaves as we expect it to. */
 
-#define check_csp0_eq(str, expected)                         \
-    do {                                                     \
-        csp_id __actual;                                     \
-        check0(csp_load_csp0_string(csp, (str), &__actual)); \
-        check_id_eq(__actual, (expected));                   \
+#define check_csp0_eq(str, expected)                                \
+    do {                                                            \
+        struct csp_process *__actual;                               \
+        check_nonnull(__actual = csp_load_csp0_string(csp, (str))); \
+        check(__actual == (expected));                              \
     } while (0)
 
-#define check_csp0_valid(str)                                \
-    do {                                                     \
-        csp_id __actual;                                     \
-        check0(csp_load_csp0_string(csp, (str), &__actual)); \
+#define check_csp0_valid(str)                            \
+    do {                                                 \
+        check_nonnull(csp_load_csp0_string(csp, (str))); \
     } while (0)
 
-#define check_csp0_invalid(str)                               \
-    do {                                                      \
-        csp_id __actual;                                      \
-        checkx0(csp_load_csp0_string(csp, (str), &__actual)); \
+#define check_csp0_invalid(str)                          \
+    do {                                                 \
+        check(csp_load_csp0_string(csp, (str)) == NULL); \
     } while (0)
 
 TEST_CASE_GROUP("CSP₀ syntax");
@@ -78,13 +78,11 @@ TEST_CASE("can parse debug recursion identifiers")
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Parse a bunch of valid identifiers. */
-    check_csp0_valid("a → X@0");
-    check_csp0_valid("a → X@1");
-    check_csp0_valid("a → X@10");
-    check_csp0_valid("a → X@010");
+    check_csp0_valid("let X = a → STOP within X@0");
+    check_csp0_valid("let X = let Y = a → STOP within X@1 within STOP");
     /* Fail to parse a bunch of invalid identifiers. */
-    check_csp0_invalid("a → X@");
-    check_csp0_invalid("a → X@X");
+    check_csp0_invalid("let X = a → STOP within X@");
+    check_csp0_invalid("let X = a → STOP within X@X");
     /* Clean up. */
     csp_free(csp);
 }
@@ -124,8 +122,8 @@ TEST_CASE_GROUP("CSP₀ operators");
 TEST_CASE("parse: a → STOP □ SKIP")
 {
     struct csp *csp;
-    csp_id p0;
-    csp_id root;
+    struct csp_process *p0;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p0 = csp_prefix(csp, csp_event_get("a"), csp->stop);
@@ -156,11 +154,11 @@ TEST_CASE("parse: a → STOP □ SKIP")
 TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id p2;
-    csp_id p3;
-    csp_id p4;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *p2;
+    struct csp_process *p3;
+    struct csp_process *p4;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
@@ -178,8 +176,8 @@ TEST_CASE("associativity: a → STOP □ b → STOP □ c → STOP")
 TEST_CASE("parse: a → STOP ⊓ SKIP")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
@@ -210,11 +208,11 @@ TEST_CASE("parse: a → STOP ⊓ SKIP")
 TEST_CASE("associativity: a → STOP ⊓ b → STOP ⊓ c → STOP")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id p2;
-    csp_id p3;
-    csp_id p4;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *p2;
+    struct csp_process *p3;
+    struct csp_process *p4;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
@@ -249,7 +247,7 @@ TEST_CASE("parse: (STOP)")
 TEST_CASE("parse: a → STOP")
 {
     struct csp *csp;
-    csp_id root;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     root = csp_prefix(csp, csp_event_get("a"), csp->stop);
@@ -278,8 +276,8 @@ TEST_CASE("parse: a → STOP")
 TEST_CASE("associativity: a → b → STOP")
 {
     struct csp *csp;
-    csp_id p;
-    csp_id root;
+    struct csp_process *p;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p = csp_prefix(csp, csp_event_get("b"), csp->stop);
@@ -337,8 +335,8 @@ TEST_CASE("parse: let X = a → Y Y = b → X within X")
 TEST_CASE("parse: □ {a → STOP, SKIP}")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
@@ -382,8 +380,8 @@ TEST_CASE("parse: □ {a → STOP, SKIP}")
 TEST_CASE("parse: ⊓ {a → STOP, SKIP}")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
@@ -427,8 +425,8 @@ TEST_CASE("parse: ⊓ {a → STOP, SKIP}")
 TEST_CASE("parse: a → SKIP ; STOP")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p1 = csp_prefix(csp, csp_event_get("a"), csp->skip);
@@ -456,11 +454,11 @@ TEST_CASE("parse: a → SKIP ; STOP")
 TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id p2;
-    csp_id p3;
-    csp_id p4;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *p2;
+    struct csp_process *p3;
+    struct csp_process *p4;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p1 = csp_prefix(csp, csp_event_get("a"), csp->skip);
@@ -477,11 +475,11 @@ TEST_CASE("associativity: a → SKIP ; b → SKIP ; c → SKIP")
 TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id p2;
-    csp_id p3;
-    csp_id p4;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *p2;
+    struct csp_process *p3;
+    struct csp_process *p4;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Expected result is
@@ -501,11 +499,11 @@ TEST_CASE("precedence: a → STOP □ b → STOP ⊓ c → STOP")
 TEST_CASE("precedence: a → STOP □ b → SKIP ; c → STOP")
 {
     struct csp *csp;
-    csp_id p1;
-    csp_id p2;
-    csp_id p3;
-    csp_id p4;
-    csp_id root;
+    struct csp_process *p1;
+    struct csp_process *p2;
+    struct csp_process *p3;
+    struct csp_process *p4;
+    struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     /* Expected result is

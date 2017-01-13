@@ -10,7 +10,6 @@
 
 #include "basics.h"
 #include "event.h"
-#include "id-set.h"
 
 struct csp;
 struct csp_process;
@@ -52,20 +51,20 @@ csp_ignore_event(struct csp_event_visitor *wrapped,
 
 struct csp_edge_visitor {
     void (*visit)(struct csp *csp, struct csp_edge_visitor *visitor,
-                  const struct csp_event *event, csp_id after);
+                  const struct csp_event *event, struct csp_process *after);
 };
 
 void
 csp_edge_visitor_call(struct csp *csp, struct csp_edge_visitor *visitor,
-                      const struct csp_event *event, csp_id after);
+                      const struct csp_event *event, struct csp_process *after);
 
 struct csp_collect_afters {
     struct csp_edge_visitor visitor;
-    struct csp_id_set *set;
+    struct csp_process_set *set;
 };
 
 struct csp_collect_afters
-csp_collect_afters(struct csp_id_set *set);
+csp_collect_afters(struct csp_process_set *set);
 
 /*------------------------------------------------------------------------------
  * Process visitors
@@ -82,11 +81,11 @@ csp_process_visitor_call(struct csp *csp, struct csp_process_visitor *visitor,
 
 struct csp_collect_processes {
     struct csp_process_visitor visitor;
-    struct csp_id_set *set;
+    struct csp_process_set *set;
 };
 
 struct csp_collect_processes
-csp_collect_processes(struct csp_id_set *set);
+csp_collect_processes(struct csp_process_set *set);
 
 /*------------------------------------------------------------------------------
  * Processes

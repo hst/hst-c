@@ -11,7 +11,6 @@
 #include "basics.h"
 #include "environment.h"
 #include "event.h"
-#include "id-set.h"
 #include "macros.h"
 
 /*------------------------------------------------------------------------------
@@ -66,22 +65,23 @@ csp_ignore_event(struct csp_event_visitor *wrapped,
 
 void
 csp_edge_visitor_call(struct csp *csp, struct csp_edge_visitor *visitor,
-                      const struct csp_event *event, csp_id after)
+                      const struct csp_event *event, struct csp_process *after)
 {
     visitor->visit(csp, visitor, event, after);
 }
 
 static void
 csp_collect_afters_visit(struct csp *csp, struct csp_edge_visitor *visitor,
-                         const struct csp_event *event, csp_id after)
+                         const struct csp_event *event,
+                         struct csp_process *after)
 {
     struct csp_collect_afters *self =
             container_of(visitor, struct csp_collect_afters, visitor);
-    csp_id_set_add(self->set, after);
+    csp_process_set_add(self->set, after);
 }
 
 struct csp_collect_afters
-csp_collect_afters(struct csp_id_set *set)
+csp_collect_afters(struct csp_process_set *set)
 {
     struct csp_collect_afters self = {{csp_collect_afters_visit}, set};
     return self;
@@ -105,11 +105,11 @@ csp_collect_processes_visit(struct csp *csp,
 {
     struct csp_collect_processes *self =
             container_of(visitor, struct csp_collect_processes, visitor);
-    csp_id_set_add(self->set, process->id);
+    csp_process_set_add(self->set, process);
 }
 
 struct csp_collect_processes
-csp_collect_processes(struct csp_id_set *set)
+csp_collect_processes(struct csp_process_set *set)
 {
     struct csp_collect_processes self = {{csp_collect_processes_visit}, set};
     return self;
@@ -166,28 +166,29 @@ csp_process_visit_transitions(struct csp *csp, struct csp_process *process,
 }
 
 struct csp_process_bfs {
-    struct csp_id_set seen;
-    struct csp_id_set queue1;
-    struct csp_id_set queue2;
-    struct csp_id_set *current_queue;
-    struct csp_id_set *next_queue;
+    struct csp_process_set seen;
+    struct csp_process_set queue1;
+    struct csp_process_set queue2;
+    struct csp_process_set *current_queue;
+    struct csp_process_set *next_queue;
     struct csp_process_visitor *wrapped;
     struct csp_edge_visitor visit_transition;
 };
 
 static void
 csp_process_bfs_enqueue(struct csp *csp, struct csp_process_bfs *self,
-                        csp_id process_id)
+                        struct csp_process* process)
 {
-    if (csp_id_set_add(&self->seen, process_id)) {
-        csp_id_set_add(self->next_queue, process_id);
+    if (csp_process_set_add(&self->seen, process)) {
+        csp_process_set_add(self->next_queue, process);
     }
 }
 
 static void
 csp_process_bfs_visit_transition(struct csp *csp,
                                  struct csp_edge_visitor *visitor,
-                                 const struct csp_event *initial, csp_id after)
+                                 const struct csp_event *initial,
+                                 struct csp_process *after)
 {
     struct csp_process_bfs *self =
             container_of(visitor, struct csp_process_bfs, visit_transition);
@@ -206,9 +207,9 @@ static void
 csp_process_bfs_init(struct csp_process_bfs *self,
                      struct csp_process_visitor *wrapped)
 {
-    csp_id_set_init(&self->seen);
-    csp_id_set_init(&self->queue1);
-    csp_id_set_init(&self->queue2);
+    csp_process_set_init(&self->seen);
+    csp_process_set_init(&self->queue1);
+    csp_process_set_init(&self->queue2);
     self->current_queue = &self->queue1;
     self->next_queue = &self->queue2;
     self->wrapped = wrapped;
@@ -218,9 +219,9 @@ csp_process_bfs_init(struct csp_process_bfs *self,
 static void
 csp_process_bfs_done(struct csp_process_bfs *self)
 {
-    csp_id_set_done(&self->seen);
-    csp_id_set_done(&self->queue1);
-    csp_id_set_done(&self->queue2);
+    csp_process_set_done(&self->seen);
+    csp_process_set_done(&self->queue1);
+    csp_process_set_done(&self->queue2);
 }
 
 void
@@ -229,14 +230,13 @@ csp_process_bfs(struct csp *csp, struct csp_process *root,
 {
     struct csp_process_bfs self;
     csp_process_bfs_init(&self, visitor);
-    csp_process_bfs_enqueue(csp, &self, root->id);
-    while (!csp_id_set_empty(self.next_queue)) {
-        struct csp_id_set_iterator iter;
+    csp_process_bfs_enqueue(csp, &self, root);
+    while (!csp_process_set_empty(self.next_queue)) {
+        struct csp_process_set_iterator iter;
         swap(self.current_queue, self.next_queue);
-        csp_id_set_clear(self.next_queue);
-        csp_id_set_foreach (self.current_queue, &iter) {
-            csp_id process_id = csp_id_set_iterator_get(&iter);
-            struct csp_process *process = csp_require_process(csp, process_id);
+        csp_process_set_clear(self.next_queue);
+        csp_process_set_foreach (self.current_queue, &iter) {
+            struct csp_process *process = csp_process_set_iterator_get(&iter);
             csp_process_bfs_visit_process(csp, &self, process);
         }
     }

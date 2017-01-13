@@ -22,23 +22,28 @@
 /* In all of the below:  `p` and `q` are processes.  `ps` is a set of processes.
  * `a` is an event. */
 
-csp_id
-csp_external_choice(struct csp *csp, csp_id p, csp_id q);
+struct csp_process *
+csp_external_choice(struct csp *csp, struct csp_process *p,
+                    struct csp_process *q);
 
-csp_id
-csp_internal_choice(struct csp *csp, csp_id p, csp_id q);
+struct csp_process *
+csp_internal_choice(struct csp *csp, struct csp_process *p,
+                    struct csp_process *q);
 
-csp_id
-csp_prefix(struct csp *csp, const struct csp_event *a, csp_id p);
+struct csp_process *
+csp_prefix(struct csp *csp, const struct csp_event *a, struct csp_process *p);
 
-csp_id
-csp_replicated_external_choice(struct csp *csp, const struct csp_id_set *ps);
+struct csp_process *
+csp_replicated_external_choice(struct csp *csp,
+                               const struct csp_process_set *ps);
 
-csp_id
-csp_replicated_internal_choice(struct csp *csp, const struct csp_id_set *ps);
+struct csp_process *
+csp_replicated_internal_choice(struct csp *csp,
+                               const struct csp_process_set *ps);
 
-csp_id
-csp_sequential_composition(struct csp *csp, csp_id p, csp_id q);
+struct csp_process *
+csp_sequential_composition(struct csp *csp, struct csp_process *p,
+                           struct csp_process *q);
 
 /*------------------------------------------------------------------------------
  * Recursion
@@ -72,16 +77,16 @@ csp_recursion_scope_init(struct csp *csp, struct csp_recursion_scope *scope);
 void
 csp_recursion_scope_done(struct csp_recursion_scope *scope);
 
-/* Return the process ID of the recursion target with the given name, creating
- * it if necessary.  The recursion target will initially be empty; you must
- * "fill" it by calling csp_recursion_scope_fill before destroying the scope. */
-csp_id
+/* Return the recursion target process with the given name, creating it if
+ * necessary.  The recursion target will initially be empty; you must "fill" it
+ * by calling csp_recursion_scope_fill before destroying the scope. */
+struct csp_process *
 csp_recursion_scope_get(struct csp *csp, struct csp_recursion_scope *scope,
                         const char *name);
 
 /* Same as csp_recursion_scope_add, but providing an explicit length for `name`.
  * `name` does not need to be NUL-terminated, but it cannot contain any NULs. */
-csp_id
+struct csp_process *
 csp_recursion_scope_get_sized(struct csp *csp,
                               struct csp_recursion_scope *scope,
                               const char *name, size_t name_length);
@@ -92,7 +97,7 @@ csp_recursion_scope_get_sized(struct csp *csp,
  * recursion target will behave exactly like `process`. */
 bool
 csp_recursion_scope_fill(struct csp_recursion_scope *scope, const char *name,
-                         csp_id process);
+                         struct csp_process *process);
 
 /* Same as csp_recursion_scope_fill, but providing an explicit length for
  * `name`.  `name` does not need to be NUL-terminated, but it cannot contain any
@@ -100,6 +105,6 @@ csp_recursion_scope_fill(struct csp_recursion_scope *scope, const char *name,
 bool
 csp_recursion_scope_fill_sized(struct csp_recursion_scope *scope,
                                const char *name, size_t name_length,
-                               csp_id process);
+                               struct csp_process *process);
 
 #endif /* HST_OPERATORS_H */
