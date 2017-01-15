@@ -139,6 +139,16 @@ csp_prenormalized_process_new(struct csp *csp,
                               const struct csp_process_set *ps);
 
 static void
+csp_prenormalized_process_name(struct csp *csp, struct csp_process *process,
+                               struct csp_name_visitor *visitor)
+{
+    struct csp_prenormalized_process *self =
+            container_of(process, struct csp_prenormalized_process, process);
+    csp_name_visitor_call(csp, visitor, "prenormalized ");
+    csp_process_set_name(csp, &self->ps, visitor);
+}
+
+static void
 csp_prenormalized_process_initials(struct csp *csp, struct csp_process *process,
                                    struct csp_event_visitor *visitor)
 {
@@ -197,8 +207,8 @@ csp_prenormalized_process_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_prenormalized_process_iface = {
-        csp_prenormalized_process_initials, csp_prenormalized_process_afters,
-        csp_prenormalized_process_free};
+        0, csp_prenormalized_process_name, csp_prenormalized_process_initials,
+        csp_prenormalized_process_afters, csp_prenormalized_process_free};
 
 static csp_id
 csp_prenormalized_process_get_id(const struct csp_process_set *ps)
@@ -473,6 +483,23 @@ csp_normalized_process_new(struct csp *csp,
                            csp_id equivalence_class, bool equiv_owned);
 
 static void
+csp_normalized_process_name(struct csp *csp, struct csp_process *process,
+                            struct csp_name_visitor *visitor)
+{
+    struct csp_normalized_process *self =
+            container_of(process, struct csp_normalized_process, process);
+    struct csp_process_set merged;
+    csp_name_visitor_call(csp, visitor, "normalized ");
+    csp_process_set_init(&merged);
+    csp_normalized_process_get_processes(csp, process, &merged);
+    csp_process_set_name(csp, &merged, visitor);
+    csp_process_set_done(&merged);
+    csp_name_visitor_call(csp, visitor, " within ");
+    csp_process_set_name(csp, csp_prenormalized_process_get_processes(
+                                      self->prenormalized_root), visitor);
+}
+
+static void
 csp_normalized_process_initials(struct csp *csp, struct csp_process *process,
                                 struct csp_event_visitor *visitor)
 {
@@ -546,8 +573,8 @@ csp_normalized_process_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_normalized_process_iface = {
-        csp_normalized_process_initials, csp_normalized_process_afters,
-        csp_normalized_process_free};
+        0, csp_normalized_process_name, csp_normalized_process_initials,
+        csp_normalized_process_afters, csp_normalized_process_free};
 
 static csp_id
 csp_normalized_process_get_id(struct csp_process *prenormalized_root,

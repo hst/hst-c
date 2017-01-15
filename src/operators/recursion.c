@@ -35,6 +35,13 @@ struct csp_recursive_process {
 };
 
 static void
+csp_recursive_process_name(struct csp *csp, struct csp_process *process,
+                           struct csp_name_visitor *visitor)
+{
+    csp_name_visitor_call(csp, visitor, "sad face");
+}
+
+static void
 csp_recursive_process_initials(struct csp *csp, struct csp_process *process,
                                struct csp_event_visitor *visitor)
 {
@@ -65,8 +72,8 @@ csp_recursive_process_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_recursive_process_iface = {
-        csp_recursive_process_initials, csp_recursive_process_afters,
-        csp_recursive_process_free};
+        0, csp_recursive_process_name, csp_recursive_process_initials,
+        csp_recursive_process_afters, csp_recursive_process_free};
 
 static struct csp_process *
 csp_recursive_process_new(struct csp *csp, csp_id id)

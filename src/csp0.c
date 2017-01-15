@@ -17,21 +17,38 @@
 
 #if defined(CSP0_DEBUG)
 #include <stdio.h>
-#define XDEBUG(...)                   \
-    do {                              \
-        fprintf(stderr, __VA_ARGS__); \
-        fprintf(stderr, "\n");        \
+#define XDEBUG(level, ...)                \
+    do {                                  \
+        if ((level) <= CSP0_DEBUG) {      \
+            fprintf(stderr, __VA_ARGS__); \
+            fprintf(stderr, "\n");        \
+        }                                 \
     } while (0)
-#define DEBUG(...)                                         \
-    do {                                                   \
-        fprintf(stderr, "[0x%02x] ",                       \
-                (unsigned int) (unsigned char) *state->p); \
-        fprintf(stderr, __VA_ARGS__);                      \
-        fprintf(stderr, "\n");                             \
+#define DEBUG(level, ...)                                      \
+    do {                                                       \
+        if ((level) <= CSP0_DEBUG) {                           \
+            fprintf(stderr, "[0x%02x] ",                       \
+                    (unsigned int) (unsigned char) *state->p); \
+            fprintf(stderr, __VA_ARGS__);                      \
+            fprintf(stderr, "\n");                             \
+        }                                                      \
+    } while (0)
+#define DEBUG_PROCESS(process, ...)                                    \
+    do {                                                               \
+        if (0 >= CSP0_DEBUG) {                                         \
+            struct csp_print_name __print = csp_print_name(stderr);    \
+            fprintf(stderr, "[0x%02x] ACCEPT ",                        \
+                    (unsigned int) (unsigned char) *state->p);         \
+            fprintf(stderr, __VA_ARGS__);                              \
+            fprintf(stderr, " = [%zu] ", (process)->index);            \
+            csp_process_name(state->csp, (process), &__print.visitor); \
+            fprintf(stderr, "\n");                                     \
+        }                                                              \
     } while (0)
 #else
-#define XDEBUG(...) /* do nothing */
-#define DEBUG(...)  /* do nothing */
+#define XDEBUG(...)        /* do nothing */
+#define DEBUG(...)         /* do nothing */
+#define DEBUG_PROCESS(...) /* do nothing */
 #endif
 
 #define require(call)              \
@@ -85,7 +102,7 @@ skip_whitespace(struct csp0_parse_state *state)
 {
     const char *p = state->p;
     const char *eof = state->eof;
-    DEBUG("skip whitespace");
+    DEBUG(2, "skip whitespace");
     while (likely(p < eof) && is_space(*p)) {
         p++;
     }
@@ -98,15 +115,15 @@ parse_numeric_identifier(struct csp0_parse_state *state, csp_id *dest)
     const char *p = state->p;
     const char *eof = state->eof;
     csp_id result;
-    DEBUG("ENTER  numeric");
+    DEBUG(2, "ENTER  numeric");
     if (unlikely(p == eof)) {
         // Unexpected end of input
-        DEBUG("FAIL   numeric");
+        DEBUG(1, "FAIL   numeric");
         return -1;
     }
     if (!is_digit(*p)) {
         // Expected a digit
-        DEBUG("FAIL   numeric");
+        DEBUG(1, "FAIL   numeric");
         return -1;
     }
     result = (*p++ - '0');
@@ -114,7 +131,7 @@ parse_numeric_identifier(struct csp0_parse_state *state, csp_id *dest)
         result *= 10;
         result += (*p++ - '0');
     }
-    DEBUG("ACCEPT numeric " CSP_ID_FMT, result);
+    DEBUG(1, "ACCEPT numeric " CSP_ID_FMT, result);
     *dest = result;
     state->p = p;
     return 0;
@@ -125,21 +142,21 @@ parse_identifier(struct csp0_parse_state *state, struct csp0_identifier *dest)
 {
     const char *p = state->p;
     const char *eof = state->eof;
-    DEBUG("ENTER  identifier");
+    DEBUG(2, "ENTER  identifier");
     if (unlikely(p == eof)) {
         // Unexpected end of input
         return -1;
     }
     if (*p == '$') {
         const char *start = p++;
-        DEBUG("ENTER  dollar identifier");
+        DEBUG(2, "ENTER  dollar identifier");
         if (unlikely(p == eof)) {
             // Unexpected end of input
-            DEBUG("FAIL   dollar identifier");
+            DEBUG(1, "FAIL   dollar identifier");
             return -1;
         } else if (unlikely(!is_idchar(*p))) {
             // Identifier must contain one character after $
-            DEBUG("FAIL   dollar identifier");
+            DEBUG(1, "FAIL   dollar identifier");
             return -1;
         }
         while (likely(p < eof) && is_idchar(*p)) {
@@ -148,11 +165,11 @@ parse_identifier(struct csp0_parse_state *state, struct csp0_identifier *dest)
         dest->start = start;
         dest->length = (p - start);
         state->p = p;
-        DEBUG("ACCEPT dollar identifier `%.*s`", (int) dest->length, start);
+        DEBUG(1, "ACCEPT dollar identifier `%.*s`", (int) dest->length, start);
         return 0;
     } else if (unlikely(!is_idstart(*p))) {
         // Expected identifier
-        DEBUG("FAIL   identifier");
+        DEBUG(1, "FAIL   identifier");
         return -1;
     } else {
         const char *start = p++;
@@ -162,7 +179,7 @@ parse_identifier(struct csp0_parse_state *state, struct csp0_identifier *dest)
         dest->start = start;
         dest->length = (p - start);
         state->p = p;
-        DEBUG("ACCEPT identifier `%.*s`", (int) dest->length, start);
+        DEBUG(1, "ACCEPT identifier `%.*s`", (int) dest->length, start);
         return 0;
     }
 }
@@ -173,18 +190,18 @@ parse_token(struct csp0_parse_state *state, const char *expected)
     const char *p = state->p;
     const char *eof = state->eof;
     size_t expected_length = strlen(expected);
-    DEBUG("ENTER  token `%s`", expected);
+    DEBUG(2, "ENTER  token `%s`", expected);
     if (unlikely((p + expected_length) > eof)) {
         // Unexpected end of input
-        DEBUG("FAIL   token `%s`", expected);
+        DEBUG(1, "FAIL   token `%s`", expected);
         return -1;
     } else if (likely(memcmp(p, expected, expected_length) == 0)) {
         state->p += expected_length;
-        DEBUG("ACCEPT token `%s`", expected);
+        DEBUG(1, "ACCEPT token `%s`", expected);
         return 0;
     } else {
         // Expected something else
-        DEBUG("FAIL   token `%s`", expected);
+        DEBUG(1, "FAIL   token `%s`", expected);
         return -1;
     }
 }
@@ -196,7 +213,7 @@ static int
 parse_process_set(struct csp0_parse_state *state, struct csp_process_set *set)
 {
     struct csp_process *process;
-    DEBUG("ENTER  process set");
+    DEBUG(2, "ENTER  process set");
 
     require(parse_token(state, "{"));
     skip_whitespace(state);
@@ -207,7 +224,7 @@ parse_process_set(struct csp0_parse_state *state, struct csp_process_set *set)
             skip_whitespace(state);
             if (unlikely(parse_process(state, &process) != 0)) {
                 // Expected process after `,`
-                DEBUG("FAIL   process set");
+                DEBUG(1, "FAIL   process set");
                 return -1;
             }
             csp_process_set_add(set, process);
@@ -216,10 +233,10 @@ parse_process_set(struct csp0_parse_state *state, struct csp_process_set *set)
     }
     if (unlikely(parse_token(state, "}") != 0)) {
         // Expected process `}`
-        DEBUG("FAIL   process set");
+        DEBUG(1, "FAIL   process set");
         return -1;
     }
-    DEBUG("ACCEPT process set (size=%u)", (unsigned int) set->count);
+    DEBUG(1, "ACCEPT process set");
     return 0;
 }
 
@@ -246,7 +263,7 @@ static int
 parse_process1(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process1 = (process) | STOP | SKIP | [identifier]
-    DEBUG("ENTER  process1");
+    DEBUG(2, "ENTER  process1");
 
     // (P)
     if (parse_token(state, "(") == 0) {
@@ -254,26 +271,26 @@ parse_process1(struct csp0_parse_state *state, struct csp_process **dest)
         require(parse_process(state, dest));
         skip_whitespace(state);
         require(parse_token(state, ")"));
-        DEBUG("ACCEPT (P) " CSP_ID_FMT, *dest);
+        DEBUG_PROCESS(*dest, "(P)");
         return 0;
     }
 
     // STOP
     if (parse_token(state, "STOP") == 0) {
         *dest = state->csp->stop;
-        DEBUG("ACCEPT STOP " CSP_ID_FMT, state->csp->stop);
+        DEBUG_PROCESS(*dest, "STOP");
         return 0;
     }
 
     // SKIP
     if (parse_token(state, "SKIP") == 0) {
         *dest = state->csp->skip;
-        DEBUG("ACCEPT SKIP " CSP_ID_FMT, state->csp->skip);
+        DEBUG_PROCESS(*dest, "SKIP");
         return 0;
     }
 
     // Unexpected token
-    DEBUG("FAIL   process1");
+    DEBUG(1, "FAIL   process1");
     return -1;
 }
 
@@ -283,10 +300,10 @@ parse_process2(struct csp0_parse_state *state, struct csp_process **dest)
     // process2 = process1 | identifier | event → process2
 
     struct csp0_identifier id;
-    DEBUG("ENTER  process2");
+    DEBUG(2, "ENTER  process2");
 
     if (parse_process1(state, dest) == 0) {
-        DEBUG("PASS   process2");
+        DEBUG(2, "PASS   process2");
         return 0;
     }
 
@@ -299,8 +316,8 @@ parse_process2(struct csp0_parse_state *state, struct csp_process **dest)
         require(parse_numeric_identifier(state, &scope));
         process_id = csp_recursion_create_id(scope, id.start, id.length);
         *dest = csp_require_process(state->csp, process_id);
-        DEBUG("ACCEPT process2 %.*s@%lu = " CSP_ID_FMT, (int) id.length,
-              id.start, (unsigned long) scope, *dest);
+        DEBUG_PROCESS(*dest, "process2 %.*s@%lu", (int) id.length, id.start,
+                      (unsigned long) scope);
         return 0;
     }
 
@@ -314,21 +331,20 @@ parse_process2(struct csp0_parse_state *state, struct csp_process **dest)
         require(parse_process2(state, &after));
         event = csp_event_get_sized(id.start, id.length);
         *dest = csp_prefix(state->csp, event, after);
-        DEBUG("ACCEPT process2 → " CSP_ID_FMT, *dest);
+        DEBUG_PROCESS(*dest, "process2 →");
         return 0;
     }
 
     // identifier
     if (state->current_scope == NULL) {
         // Undefined identifier (not in a let)
-        DEBUG("FAIL   process2");
+        DEBUG(1, "FAIL   process2");
         return -1;
     }
 
     *dest = csp_recursion_scope_get_sized(state->csp, state->current_scope,
                                           id.start, id.length);
-    DEBUG("ACCEPT process2 %.*s = " CSP_ID_FMT, (int) id.length, id.start,
-          *dest);
+    DEBUG_PROCESS(*dest, "process2 %.*s", (int) id.length, id.start);
     return 0;
 }
 
@@ -339,23 +355,23 @@ parse_process3(struct csp0_parse_state *state, struct csp_process **dest)
 
     struct csp_process *lhs;
     struct csp_process *rhs;
-    DEBUG("ENTER  process3");
+    DEBUG(2, "ENTER  process3");
 
     require(parse_process2(state, &lhs));
     skip_whitespace(state);
     if (parse_token(state, ";") != 0) {
         *dest = lhs;
-        DEBUG("PASS   process3");
+        DEBUG(2, "PASS   process3");
         return 0;
     }
     skip_whitespace(state);
     if (parse_process3(state, &rhs) != 0) {
         // Expected process after ;
-        DEBUG("FAIL   process3");
+        DEBUG(1, "FAIL   process3");
         return -1;
     }
     *dest = csp_sequential_composition(state->csp, lhs, rhs);
-    DEBUG("ACCEPT process3 ; " CSP_ID_FMT, *dest);
+    DEBUG_PROCESS(*dest, "process3 ;");
     return 0;
 }
 
@@ -368,23 +384,23 @@ parse_process6(struct csp0_parse_state *state, struct csp_process **dest)
 
     struct csp_process *lhs;
     struct csp_process *rhs;
-    DEBUG("ENTER  process6");
+    DEBUG(2, "ENTER  process6");
 
     require(parse_process5(state, &lhs));
     skip_whitespace(state);
     if (parse_token(state, "[]") != 0 && parse_token(state, "□") != 0) {
         *dest = lhs;
-        DEBUG("PASS   process6");
+        DEBUG(2, "PASS   process6");
         return 0;
     }
     skip_whitespace(state);
     if (parse_process6(state, &rhs) != 0) {
         // Expected process after □
-        DEBUG("FAIL   process6");
+        DEBUG(1, "FAIL   process6");
         return -1;
     }
     *dest = csp_external_choice(state->csp, lhs, rhs);
-    DEBUG("ACCEPT process6 □ " CSP_ID_FMT, *dest);
+    DEBUG_PROCESS(*dest, "process6 □");
     return 0;
 }
 
@@ -395,23 +411,23 @@ parse_process7(struct csp0_parse_state *state, struct csp_process **dest)
 
     struct csp_process *lhs;
     struct csp_process *rhs;
-    DEBUG("ENTER  process7");
+    DEBUG(2, "ENTER  process7");
 
     require(parse_process6(state, &lhs));
     skip_whitespace(state);
     if (parse_token(state, "|~|") != 0 && parse_token(state, "⊓") != 0) {
         *dest = lhs;
-        DEBUG("PASS   process7");
+        DEBUG(2, "PASS   process7");
         return 0;
     }
     skip_whitespace(state);
     if (parse_process7(state, &rhs) != 0) {
         // Expected process after ⊓
-        DEBUG("FAIL   process7");
+        DEBUG(1, "FAIL   process7");
         return -1;
     }
     *dest = csp_internal_choice(state->csp, lhs, rhs);
-    DEBUG("ACCEPT process7 ⊓ " CSP_ID_FMT, *dest);
+    DEBUG_PROCESS(*dest, "process7 ⊓");
     return 0;
 }
 
@@ -423,7 +439,7 @@ parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
     // process11 = process10 | □ {process} | ⊓ {process}
 
     struct csp_process_set processes;
-    DEBUG("ENTER  process11");
+    DEBUG(2, "ENTER  process11");
 
     // □ {process}
     if (parse_token(state, "[]") == 0 || parse_token(state, "□") == 0) {
@@ -431,12 +447,12 @@ parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
         csp_process_set_init(&processes);
         if (unlikely(parse_process_set(state, &processes) != 0)) {
             csp_process_set_done(&processes);
-            DEBUG("FAIL   process11");
+            DEBUG(1, "FAIL   process11");
             return -1;
         }
         *dest = csp_replicated_external_choice(state->csp, &processes);
         csp_process_set_done(&processes);
-        DEBUG("ACCEPT process11 " CSP_ID_FMT, *dest);
+        DEBUG_PROCESS(*dest, "process11 □");
         return 0;
     }
 
@@ -446,21 +462,21 @@ parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
         csp_process_set_init(&processes);
         if (unlikely(parse_process_set(state, &processes) != 0)) {
             csp_process_set_done(&processes);
-            DEBUG("FAIL   process11");
+            DEBUG(1, "FAIL   process11");
             return -1;
         }
         *dest = csp_replicated_internal_choice(state->csp, &processes);
         csp_process_set_done(&processes);
-        DEBUG("ACCEPT process11 " CSP_ID_FMT, *dest);
+        DEBUG_PROCESS(*dest, "process11 ⊓");
         return 0;
     }
 
     // process10
     if (likely(parse_process10(state, dest) == 0)) {
-        DEBUG("PASS   process11");
+        DEBUG(2, "PASS   process11");
         return 0;
     } else {
-        DEBUG("FAIL   process11");
+        DEBUG(1, "FAIL   process11");
         return -1;
     }
 }
@@ -472,7 +488,7 @@ parse_recursive_definition(struct csp0_parse_state *state)
     struct csp_process *process;
     struct csp_recursion_scope *scope = state->current_scope;
     assert(scope != NULL);
-    DEBUG("ENTER  recursive_def");
+    DEBUG(2, "ENTER  recursive_def");
 
     require(parse_identifier(state, &name));
     csp_recursion_scope_get_sized(state->csp, scope, name.start, name.length);
@@ -483,11 +499,12 @@ parse_recursive_definition(struct csp0_parse_state *state)
     if (unlikely(!csp_recursion_scope_fill_sized(scope, name.start, name.length,
                                                  process))) {
         /* Process redefined */
-        DEBUG("FAIL   recursive_def");
+        DEBUG(1, "FAIL   recursive_def");
         return -1;
     }
 
-    DEBUG("ACCEPT recursive_def");
+    DEBUG_PROCESS(process, "process12 %.*s@%lu", (int) name.length, name.start,
+                  (unsigned long) scope->scope);
     return 0;
 }
 
@@ -496,7 +513,7 @@ parse_process12(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process12 = process11 | let [id = process...] within [process]
 
-    DEBUG("ENTER  process12");
+    DEBUG(2, "ENTER  process12");
 
     // let
     if (parse_token(state, "let") == 0) {
@@ -526,19 +543,19 @@ parse_process12(struct csp0_parse_state *state, struct csp_process **dest)
          * definition with having to forward-declare it.) */
         if (scope.unfilled_count > 0) {
             // TODO: Detect which particular processes were undefined.
-            DEBUG("FAIL   process12");
+            DEBUG(1, "FAIL   process12");
             state->current_scope = old_scope;
             csp_recursion_scope_done(&scope);
             return -1;
         }
         skip_whitespace(state);
         if (likely(parse_process(state, dest) == 0)) {
-            DEBUG("PASS   process12");
+            DEBUG_PROCESS(*dest, "process12 within");
             state->current_scope = old_scope;
             csp_recursion_scope_done(&scope);
             return 0;
         } else {
-            DEBUG("FAIL   process12");
+            DEBUG(1, "FAIL   process12");
             state->current_scope = old_scope;
             csp_recursion_scope_done(&scope);
             return -1;
@@ -547,10 +564,10 @@ parse_process12(struct csp0_parse_state *state, struct csp_process **dest)
 
     // process11
     if (likely(parse_process11(state, dest) == 0)) {
-        DEBUG("PASS   process12");
+        DEBUG(2, "PASS   process12");
         return 0;
     } else {
-        DEBUG("FAIL   process12");
+        DEBUG(1, "FAIL   process12");
         return -1;
     }
 }
@@ -570,7 +587,7 @@ csp_load_csp0_string(struct csp *csp, const char *str)
     state.current_scope = NULL;
     state.p = str;
     state.eof = strchr(str, '\0');
-    XDEBUG("====== `%s`", str);
+    XDEBUG(2, "====== `%s`", str);
     skip_whitespace(&state);
     if (unlikely(parse_process(&state, &result) != 0)) {
         return NULL;

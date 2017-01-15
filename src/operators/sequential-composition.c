@@ -67,6 +67,17 @@ struct csp_sequential_composition {
  */
 
 static void
+csp_sequential_composition_name(struct csp *csp, struct csp_process *process,
+                                struct csp_name_visitor *visitor)
+{
+    struct csp_sequential_composition *seq =
+            container_of(process, struct csp_sequential_composition, process);
+    csp_process_nested_name(csp, process, seq->p, visitor);
+    csp_name_visitor_call(csp, visitor, " ; ");
+    csp_process_nested_name(csp, process, seq->q, visitor);
+}
+
+static void
 csp_sequential_composition_initials(struct csp *csp,
                                     struct csp_process *process,
                                     struct csp_event_visitor *visitor)
@@ -143,8 +154,8 @@ csp_sequential_composition_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_sequential_composition_iface = {
-        csp_sequential_composition_initials, csp_sequential_composition_afters,
-        csp_sequential_composition_free};
+        3, csp_sequential_composition_name, csp_sequential_composition_initials,
+        csp_sequential_composition_afters, csp_sequential_composition_free};
 
 static csp_id
 csp_sequential_composition_get_id(struct csp_process *p, struct csp_process *q)

@@ -7,6 +7,9 @@
 
 #include "operators.h"
 
+#include <assert.h>
+
+#include "ccan/container_of/container_of.h"
 #include "basics.h"
 #include "behavior.h"
 #include "environment.h"
@@ -24,6 +27,51 @@
  * In particular, you can assume that the CSP₀ parser works as expected; that
  * will have been checked in test-csp0.c.
  */
+
+#define MAX_NAME_LENGTH 4096
+
+struct csp_collect_name {
+    struct csp_name_visitor visitor;
+    char name[MAX_NAME_LENGTH];
+    char *cursor;
+    size_t bytes_remaining;
+};
+
+static void
+csp_collect_name_visit(struct csp *csp, struct csp_name_visitor *visitor,
+                       const char *str, size_t length)
+{
+    struct csp_collect_name *self =
+            container_of(visitor, struct csp_collect_name, visitor);
+    assert(length < self->bytes_remaining);
+    memcpy(self->cursor, str, length);
+    self->cursor += length;
+    self->bytes_remaining -= length;
+    *self->cursor = '\0';
+}
+
+static void
+csp_collect_name_init(struct csp_collect_name *self)
+{
+    self->visitor.visit = csp_collect_name_visit;
+    self->cursor = self->name;
+    self->bytes_remaining = MAX_NAME_LENGTH;
+}
+
+/* Verify the name of the given CSP₀ process. */
+static void
+check_process_name(struct csp_process_factory process_, const char *expected)
+{
+    struct csp *csp;
+    struct csp_process *process;
+    struct csp_collect_name collect;
+    check_alloc(csp, csp_new());
+    process = csp_process_factory_create(csp, process_);
+    csp_collect_name_init(&collect);
+    csp_process_name(csp, process, &collect.visitor);
+    check_streq(collect.name, expected);
+    csp_free(csp);
+}
 
 /* Verify the `initials` of the given CSP₀ process. */
 static void
@@ -181,6 +229,7 @@ TEST_CASE_GROUP("external choice");
 
 TEST_CASE("STOP □ STOP")
 {
+    check_process_name(csp0("STOP □ STOP"), "□ {STOP}");
     check_process_initials(csp0("STOP □ STOP"), events());
     check_process_afters(csp0("STOP □ STOP"), event("a"), csp0s());
     check_process_reachable(csp0("STOP □ STOP"), csp0s("STOP □ STOP"));
@@ -189,6 +238,8 @@ TEST_CASE("STOP □ STOP")
 
 TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)")
 {
+    check_process_name(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
+                       "a → STOP □ (b → STOP ⊓ c → STOP)");
     check_process_initials(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
                            events("a", "τ"));
     check_process_afters(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"), event("a"),
@@ -207,6 +258,7 @@ TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)")
 
 TEST_CASE("(a → STOP) □ (b → STOP)")
 {
+    check_process_name(csp0("(a → STOP) □ (b → STOP)"), "a → STOP □ b → STOP");
     check_process_initials(csp0("(a → STOP) □ (b → STOP)"), events("a", "b"));
     check_process_afters(csp0("(a → STOP) □ (b → STOP)"), event("a"),
                          csp0s("STOP"));
@@ -221,6 +273,8 @@ TEST_CASE("(a → STOP) □ (b → STOP)")
 
 TEST_CASE("□ {a → STOP, b → STOP, c → STOP}")
 {
+    check_process_name(csp0("□ {a → STOP, b → STOP, c → STOP}"),
+                       "□ {a → STOP, b → STOP, c → STOP}");
     check_process_initials(csp0("□ {a → STOP, b → STOP, c → STOP}"),
                            events("a", "b", "c"));
     check_process_afters(csp0("□ {a → STOP, b → STOP, c → STOP}"), event("a"),
@@ -241,6 +295,7 @@ TEST_CASE_GROUP("internal choice");
 
 TEST_CASE("STOP ⊓ STOP")
 {
+    check_process_name(csp0("STOP ⊓ STOP"), "⊓ {STOP}");
     check_process_initials(csp0("STOP ⊓ STOP"), events("τ"));
     check_process_afters(csp0("STOP ⊓ STOP"), event("τ"), csp0s("STOP"));
     check_process_afters(csp0("STOP ⊓ STOP"), event("a"), csp0s());
@@ -250,6 +305,7 @@ TEST_CASE("STOP ⊓ STOP")
 
 TEST_CASE("(a → STOP) ⊓ (b → STOP)")
 {
+    check_process_name(csp0("(a → STOP) ⊓ (b → STOP)"), "a → STOP ⊓ b → STOP");
     check_process_initials(csp0("(a → STOP) ⊓ (b → STOP)"), events("τ"));
     check_process_afters(csp0("(a → STOP) ⊓ (b → STOP)"), event("τ"),
                          csp0s("a → STOP", "b → STOP"));
@@ -262,6 +318,8 @@ TEST_CASE("(a → STOP) ⊓ (b → STOP)")
 
 TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}")
 {
+    check_process_name(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
+                       "⊓ {a → STOP, b → STOP, c → STOP}");
     check_process_initials(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
                            events("τ"));
     check_process_afters(csp0("⊓ {a → STOP, b → STOP, c → STOP}"), event("τ"),
@@ -279,6 +337,7 @@ TEST_CASE_GROUP("prefix");
 
 TEST_CASE("a → STOP")
 {
+    check_process_name(csp0("a → STOP"), "a → STOP");
     check_process_initials(csp0("a → STOP"), events("a"));
     check_process_afters(csp0("a → STOP"), event("a"), csp0s("STOP"));
     check_process_afters(csp0("a → STOP"), event("b"), csp0s());
@@ -288,6 +347,7 @@ TEST_CASE("a → STOP")
 
 TEST_CASE("a → b → STOP")
 {
+    check_process_name(csp0("a → b → STOP"), "a → b → STOP");
     check_process_initials(csp0("a → b → STOP"), events("a"));
     check_process_afters(csp0("a → b → STOP"), event("a"), csp0s("b → STOP"));
     check_process_afters(csp0("a → b → STOP"), event("b"), csp0s());
@@ -329,6 +389,7 @@ TEST_CASE_GROUP("sequential composition");
 
 TEST_CASE("SKIP ; STOP")
 {
+    check_process_name(csp0("SKIP ; STOP"), "SKIP ; STOP");
     check_process_initials(csp0("SKIP ; STOP"), events("τ"));
     check_process_afters(csp0("SKIP ; STOP"), event("a"), csp0s());
     check_process_afters(csp0("SKIP ; STOP"), event("b"), csp0s());
@@ -340,6 +401,7 @@ TEST_CASE("SKIP ; STOP")
 
 TEST_CASE("a → SKIP ; STOP")
 {
+    check_process_name(csp0("a → SKIP ; STOP"), "a → SKIP ; STOP");
     check_process_initials(csp0("a → SKIP ; STOP"), events("a"));
     check_process_afters(csp0("a → SKIP ; STOP"), event("a"),
                          csp0s("SKIP ; STOP"));
@@ -353,6 +415,8 @@ TEST_CASE("a → SKIP ; STOP")
 
 TEST_CASE("(a → b → STOP □ SKIP) ; STOP")
 {
+    check_process_name(csp0("(a → b → STOP □ SKIP) ; STOP"),
+                       "(SKIP □ a → b → STOP) ; STOP");
     check_process_initials(csp0("(a → b → STOP □ SKIP) ; STOP"),
                            events("a", "τ"));
     check_process_afters(csp0("(a → b → STOP □ SKIP) ; STOP"), event("a"),
@@ -372,6 +436,8 @@ TEST_CASE("(a → b → STOP □ SKIP) ; STOP")
 
 TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
 {
+    check_process_name(csp0("(a → b → STOP ⊓ SKIP) ; STOP"),
+                       "(SKIP ⊓ a → b → STOP) ; STOP");
     check_process_initials(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), events("τ"));
     check_process_afters(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), event("a"),
                          csp0s());

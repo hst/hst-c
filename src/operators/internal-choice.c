@@ -29,6 +29,15 @@ struct csp_internal_choice {
  */
 
 static void
+csp_internal_choice_name(struct csp *csp, struct csp_process *process,
+                         struct csp_name_visitor *visitor)
+{
+    struct csp_internal_choice *choice =
+            container_of(process, struct csp_internal_choice, process);
+    csp_process_set_nested_name(csp, process, &choice->ps, "⊓", visitor);
+}
+
+static void
 csp_internal_choice_initials(struct csp *csp, struct csp_process *process,
                              struct csp_event_visitor *visitor)
 {
@@ -63,8 +72,8 @@ csp_internal_choice_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_internal_choice_iface = {
-        csp_internal_choice_initials, csp_internal_choice_afters,
-        csp_internal_choice_free};
+        7, csp_internal_choice_name, csp_internal_choice_initials,
+        csp_internal_choice_afters, csp_internal_choice_free};
 
 static csp_id
 csp_internal_choice_get_id(const struct csp_process_set *ps)
