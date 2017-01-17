@@ -358,27 +358,31 @@ compare_process_index(const void *p1, const void *p2)
 }
 
 void
-csp_process_set_name(struct csp *csp, const struct csp_process_set *set,
-                     struct csp_name_visitor *visitor)
+csp_process_set_sort_by_index(const struct csp_process_set *set,
+                              size_t *count_out,
+                              struct csp_process ***sorted_out)
 {
+    size_t count = csp_process_set_size(set);
+    struct csp_process **sorted = calloc(count, sizeof(struct csp_process *));
+    size_t i = 0;
     struct csp_process_set_iterator iter;
-    size_t count;
-    struct csp_process **sorted;
-    size_t i;
-
-    /* Sort the set of processes in a stable way (i.e., that doesn't depend on
-     * the hash values, which can change from run to run).  Instead, use each
-     * process's index as its sort key. */
-    count = csp_process_set_size(set);
-    sorted = calloc(count, sizeof(struct csp_process *));
-    i = 0;
     csp_process_set_foreach (set, &iter) {
         struct csp_process *process = csp_process_set_iterator_get(&iter);
         sorted[i++] = process;
     }
     qsort(sorted, count, sizeof(struct csp_process *), compare_process_index);
+    *count_out = count;
+    *sorted_out = sorted;
+}
 
-    /* Then render the name of each process in the set. */
+void
+csp_process_set_name(struct csp *csp, const struct csp_process_set *set,
+                     struct csp_name_visitor *visitor)
+{
+    size_t count = 0;
+    struct csp_process **sorted = NULL;
+    size_t i;
+    csp_process_set_sort_by_index(set, &count, &sorted);
     csp_name_visitor_call(csp, visitor, "{");
     for (i = 0; i < count; i++) {
         if (i > 0) {

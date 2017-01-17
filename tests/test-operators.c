@@ -360,6 +360,8 @@ TEST_CASE_GROUP("recursion");
 
 TEST_CASE("let X=a → STOP within X")
 {
+    check_process_name(csp0("let X=a → STOP within X"),
+                       "let X=a → STOP within X");
     check_process_initials(csp0("let X=a → STOP within X"), events("a"));
     check_process_afters(csp0("let X=a → STOP within X"), event("a"),
                          csp0s("STOP"));
@@ -370,6 +372,8 @@ TEST_CASE("let X=a → STOP within X")
 
 TEST_CASE("let X=a → Y Y=b → X within X")
 {
+    check_process_name(csp0("let X=a → Y Y=b → X within X"),
+                       "let X=a → Y Y=b → X within X");
     check_process_initials(csp0("let X=a → Y Y=b → X within X"), events("a"));
     check_process_afters(csp0("let X=a → Y Y=b → X within X"), event("a"),
                          csp0s("Y@0"));

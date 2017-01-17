@@ -200,6 +200,13 @@ csp_process_set_eq(const struct csp_process_set *set1,
 void
 csp_process_set_clear(struct csp_process_set *set);
 
+/* Fills in `count` with the number of processes in `set`, and `processes` with
+ * an array of those processes, sorted by their `index` values.  You must free
+ * `processes` when you're done with it (using `free(3)`). */
+void
+csp_process_set_sort_by_index(const struct csp_process_set *set, size_t *count,
+                              struct csp_process ***processes);
+
 /* Renders the name of each process in a set, in some braces to show that it's a
  * set. */
 void
