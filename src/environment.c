@@ -36,6 +36,13 @@ hash_name(const char *name)
  */
 
 static void
+csp_stop_name(struct csp *csp, struct csp_process *process,
+              struct csp_name_visitor *visitor)
+{
+    csp_name_visitor_call(csp, visitor, "STOP");
+}
+
+static void
 csp_stop_initials(struct csp *csp, struct csp_process *process,
                   struct csp_event_visitor *visitor)
 {
@@ -54,7 +61,7 @@ csp_stop_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_stop_iface = {
-        csp_stop_initials, csp_stop_afters, csp_stop_free};
+        1, csp_stop_name, csp_stop_initials, csp_stop_afters, csp_stop_free};
 
 static struct csp_process *
 csp_stop(void)
@@ -66,6 +73,13 @@ csp_stop(void)
         stop.iface = &csp_stop_iface;
     }
     return &stop;
+}
+
+static void
+csp_skip_name(struct csp *csp, struct csp_process *process,
+              struct csp_name_visitor *visitor)
+{
+    csp_name_visitor_call(csp, visitor, "SKIP");
 }
 
 static void
@@ -91,7 +105,7 @@ csp_skip_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_skip_iface = {
-        csp_skip_initials, csp_skip_afters, csp_skip_free};
+        1, csp_skip_name, csp_skip_initials, csp_skip_afters, csp_skip_free};
 
 static struct csp_process *
 csp_skip(void)
@@ -153,6 +167,7 @@ csp_id_process_map_at(struct csp_id_process_map *map, csp_id id)
 struct csp_priv {
     struct csp public;
     csp_id next_recursion_scope_id;
+    size_t process_count;
     struct csp_id_process_map processes;
 };
 
@@ -164,6 +179,7 @@ csp_new(void)
         return NULL;
     }
     csp_id_process_map_init(&csp->processes);
+    csp->process_count = 0;
     csp->next_recursion_scope_id = 0;
     csp->public.tau = csp_tau();
     csp->public.tick = csp_tick();
@@ -190,6 +206,7 @@ csp_register_process(struct csp *pcsp, struct csp_process *process)
             csp_id_process_map_at(&csp->processes, process->id);
     assert(*entry == NULL);
     *entry = process;
+    process->index = csp->process_count++;
 }
 
 struct csp_process *

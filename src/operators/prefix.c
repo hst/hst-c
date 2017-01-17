@@ -30,6 +30,17 @@ struct csp_prefix {
  */
 
 static void
+csp_prefix_name(struct csp *csp, struct csp_process *process,
+                struct csp_name_visitor *visitor)
+{
+    struct csp_prefix *prefix =
+            container_of(process, struct csp_prefix, process);
+    csp_name_visitor_call(csp, visitor, csp_event_name(prefix->a));
+    csp_name_visitor_call(csp, visitor, " → ");
+    csp_process_nested_name(csp, process, prefix->p, visitor);
+}
+
+static void
 csp_prefix_initials(struct csp *csp, struct csp_process *process,
                     struct csp_event_visitor *visitor)
 {
@@ -61,7 +72,8 @@ csp_prefix_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_prefix_iface = {
-        csp_prefix_initials, csp_prefix_afters, csp_prefix_free};
+        1, csp_prefix_name, csp_prefix_initials, csp_prefix_afters,
+        csp_prefix_free};
 
 static csp_id
 csp_prefix_get_id(const struct csp_event *a, struct csp_process *p)

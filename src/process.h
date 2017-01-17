@@ -8,6 +8,9 @@
 #ifndef HST_PROCESS_H
 #define HST_PROCESS_H
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "basics.h"
 #include "event.h"
 
@@ -88,10 +91,40 @@ struct csp_collect_processes
 csp_collect_processes(struct csp_process_set *set);
 
 /*------------------------------------------------------------------------------
+ * Name visitor
+ */
+
+struct csp_name_visitor {
+    void (*visit)(struct csp *csp, struct csp_name_visitor *visitor,
+                  const char *str, size_t length);
+};
+
+void
+csp_name_visitor_call(struct csp *csp, struct csp_name_visitor *visitor,
+                      const char *str);
+
+void
+csp_name_visitor_call_sized(struct csp *csp, struct csp_name_visitor *visitor,
+                            const char *str, size_t length);
+
+struct csp_print_name {
+    struct csp_name_visitor visitor;
+    FILE *out;
+};
+
+struct csp_print_name
+csp_print_name(FILE *out);
+
+/*------------------------------------------------------------------------------
  * Processes
  */
 
 struct csp_process_iface {
+    unsigned int precedence;
+
+    void (*name)(struct csp *csp, struct csp_process *process,
+                 struct csp_name_visitor *visitor);
+
     void (*initials)(struct csp *csp, struct csp_process *process,
                      struct csp_event_visitor *visitor);
 
@@ -105,10 +138,23 @@ struct csp_process_iface {
 struct csp_process {
     csp_id id;
     const struct csp_process_iface *iface;
+    size_t index;
 };
 
 void
 csp_process_free(struct csp *csp, struct csp_process *process);
+
+void
+csp_process_name(struct csp *csp, struct csp_process *process,
+                 struct csp_name_visitor *visitor);
+
+/* Renders the name of `subprocess` as part of the name of `process`.  The
+ * precedence values of the two processes will determine whether we need to wrap
+ * `subprocess` in parentheses or not. */
+void
+csp_process_nested_name(struct csp *csp, struct csp_process *process,
+                        struct csp_process *subprocess,
+                        struct csp_name_visitor *visitor);
 
 void
 csp_process_visit_initials(struct csp *csp, struct csp_process *process,
@@ -153,6 +199,27 @@ csp_process_set_eq(const struct csp_process_set *set1,
 
 void
 csp_process_set_clear(struct csp_process_set *set);
+
+/* Fills in `count` with the number of processes in `set`, and `processes` with
+ * an array of those processes, sorted by their `index` values.  You must free
+ * `processes` when you're done with it (using `free(3)`). */
+void
+csp_process_set_sort_by_index(const struct csp_process_set *set, size_t *count,
+                              struct csp_process ***processes);
+
+/* Renders the name of each process in a set, in some braces to show that it's a
+ * set. */
+void
+csp_process_set_name(struct csp *csp, const struct csp_process_set *set,
+                     struct csp_name_visitor *visitor);
+
+/* Renders a process whose operator can appear infix between two subprocesses,
+ * or prefix before a set of subprocesses.  Chooses which version to render
+ * based on the size of `subprocesses`. */
+void
+csp_process_set_nested_name(struct csp *csp, struct csp_process *process,
+                            struct csp_process_set *subprocesses,
+                            const char *op, struct csp_name_visitor *visitor);
 
 /* Add a single process to a set.  Return whether the process is new (i.e., it
  * wasn't already in `set`.) */

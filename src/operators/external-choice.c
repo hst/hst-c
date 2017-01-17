@@ -34,6 +34,15 @@ struct csp_external_choice {
  */
 
 static void
+csp_external_choice_name(struct csp *csp, struct csp_process *process,
+                         struct csp_name_visitor *visitor)
+{
+    struct csp_external_choice *choice =
+            container_of(process, struct csp_external_choice, process);
+    csp_process_set_nested_name(csp, process, &choice->ps, "□", visitor);
+}
+
+static void
 csp_external_choice_initials(struct csp *csp, struct csp_process *process,
                              struct csp_event_visitor *visitor)
 {
@@ -127,8 +136,8 @@ csp_external_choice_free(struct csp *csp, struct csp_process *process)
 }
 
 static const struct csp_process_iface csp_external_choice_iface = {
-        csp_external_choice_initials, csp_external_choice_afters,
-        csp_external_choice_free};
+        6, csp_external_choice_name, csp_external_choice_initials,
+        csp_external_choice_afters, csp_external_choice_free};
 
 static csp_id
 csp_external_choice_get_id(const struct csp_process_set *ps)

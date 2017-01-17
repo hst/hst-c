@@ -7,6 +7,10 @@
 
 #include "process.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "ccan/container_of/container_of.h"
 #include "basics.h"
 #include "environment.h"
@@ -116,6 +120,40 @@ csp_collect_processes(struct csp_process_set *set)
 }
 
 /*------------------------------------------------------------------------------
+ * Name visitor
+ */
+
+void
+csp_name_visitor_call(struct csp *csp, struct csp_name_visitor *visitor,
+                      const char *str)
+{
+    visitor->visit(csp, visitor, str, strlen(str));
+}
+
+void
+csp_name_visitor_call_sized(struct csp *csp, struct csp_name_visitor *visitor,
+                            const char *str, size_t length)
+{
+    visitor->visit(csp, visitor, str, length);
+}
+
+static void
+csp_print_name_visit(struct csp *csp, struct csp_name_visitor *visitor,
+                     const char *str, size_t length)
+{
+    struct csp_print_name *self =
+            container_of(visitor, struct csp_print_name, visitor);
+    fwrite(str, length, 1, self->out);
+}
+
+struct csp_print_name
+csp_print_name(FILE *out)
+{
+    struct csp_print_name self = {{csp_print_name_visit}, out};
+    return self;
+}
+
+/*------------------------------------------------------------------------------
  * Processes
  */
 
@@ -123,6 +161,27 @@ void
 csp_process_free(struct csp *csp, struct csp_process *process)
 {
     process->iface->free(csp, process);
+}
+
+void
+csp_process_name(struct csp *csp, struct csp_process *process,
+                 struct csp_name_visitor *visitor)
+{
+    process->iface->name(csp, process, visitor);
+}
+
+void
+csp_process_nested_name(struct csp *csp, struct csp_process *process,
+                        struct csp_process *subprocess,
+                        struct csp_name_visitor *visitor)
+{
+    if (process->iface->precedence < subprocess->iface->precedence) {
+        csp_name_visitor_call(csp, visitor, "(");
+        subprocess->iface->name(csp, subprocess, visitor);
+        csp_name_visitor_call(csp, visitor, ")");
+    } else {
+        subprocess->iface->name(csp, subprocess, visitor);
+    }
 }
 
 void
@@ -282,6 +341,94 @@ void
 csp_process_set_clear(struct csp_process_set *set)
 {
     csp_set_clear(&set->set, NULL, NULL);
+}
+
+static int
+compare_process_index(const void *p1, const void *p2)
+{
+    struct csp_process *process1 = *((struct csp_process * const *) p1);
+    struct csp_process *process2 = *((struct csp_process * const *) p2);
+    if (process1->index < process2->index) {
+        return -1;
+    } else if (process1->index > process2->index) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+void
+csp_process_set_sort_by_index(const struct csp_process_set *set,
+                              size_t *count_out,
+                              struct csp_process ***sorted_out)
+{
+    size_t count = csp_process_set_size(set);
+    struct csp_process **sorted = calloc(count, sizeof(struct csp_process *));
+    size_t i = 0;
+    struct csp_process_set_iterator iter;
+    csp_process_set_foreach (set, &iter) {
+        struct csp_process *process = csp_process_set_iterator_get(&iter);
+        sorted[i++] = process;
+    }
+    qsort(sorted, count, sizeof(struct csp_process *), compare_process_index);
+    *count_out = count;
+    *sorted_out = sorted;
+}
+
+void
+csp_process_set_name(struct csp *csp, const struct csp_process_set *set,
+                     struct csp_name_visitor *visitor)
+{
+    size_t count = 0;
+    struct csp_process **sorted = NULL;
+    size_t i;
+    csp_process_set_sort_by_index(set, &count, &sorted);
+    csp_name_visitor_call(csp, visitor, "{");
+    for (i = 0; i < count; i++) {
+        if (i > 0) {
+            csp_name_visitor_call(csp, visitor, ", ");
+        }
+        csp_process_name(csp, sorted[i], visitor);
+    }
+    csp_name_visitor_call(csp, visitor, "}");
+    free(sorted);
+}
+
+void
+csp_process_set_nested_name(struct csp *csp, struct csp_process *process,
+                            struct csp_process_set *subprocesses,
+                            const char *op, struct csp_name_visitor *visitor)
+{
+    struct csp_process_set_iterator iter;
+    size_t i;
+    struct csp_process *lhs = NULL;
+    struct csp_process *rhs = NULL;
+
+    /* If there aren't exactly two operands, use the replicated syntax. */
+    if (csp_process_set_size(subprocesses) != 2) {
+        csp_name_visitor_call(csp, visitor, op);
+        csp_name_visitor_call(csp, visitor, " ");
+        csp_process_set_name(csp, subprocesses, visitor);
+        return;
+    }
+
+    i = 0;
+    csp_process_set_foreach (subprocesses, &iter) {
+        if (i++ == 0) {
+            lhs = csp_process_set_iterator_get(&iter);
+        } else {
+            rhs = csp_process_set_iterator_get(&iter);
+        }
+    }
+    if (lhs->index > rhs->index) {
+        swap(lhs, rhs);
+    }
+
+    csp_process_nested_name(csp, process, lhs, visitor);
+    csp_name_visitor_call(csp, visitor, " ");
+    csp_name_visitor_call(csp, visitor, op);
+    csp_name_visitor_call(csp, visitor, " ");
+    csp_process_nested_name(csp, process, rhs, visitor);
 }
 
 bool

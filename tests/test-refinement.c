@@ -406,12 +406,9 @@ TEST_CASE("a→a→STOP ~ a→a→STOP (separate branches)") {
             "within root";
     /* Normalize the process and verify we get all of the nodes and edges we
      * expect. */
-    printf("# === a\n");
     check_normalize(csp0(process), csp0s("root@0"));
-    printf("# === b\n");
     check_normalized_edge(csp0(process), csp0s("A@0", "D@0"), event("a"),
                           csp0s("B@0", "E@0"));
-    printf("# === c\n");
     check_normalized_edge(csp0(process), csp0s("B@0", "E@0"), event("a"),
                           csp0s("C@0", "F@0"));
 }
