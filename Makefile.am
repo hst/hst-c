@@ -70,6 +70,7 @@ libhst_la_SOURCES = \
 	src/set.c \
 	src/operators.h \
 	src/operators/external-choice.c \
+	src/operators/interleave.c \
 	src/operators/internal-choice.c \
 	src/operators/prefix.c \
 	src/operators/recursion.c \

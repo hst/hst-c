@@ -102,10 +102,7 @@ csp_external_choice_afters(struct csp *csp, struct csp_process *process,
                 /* ps_prime currently contains Ps.  Add P' and remove P to
                  * produce (Ps ∖ {P} ∪ {P'}) */
                 csp_process_set_add(&ps_prime, p_prime);
-                /* Create □ (Ps ∖ {P} ∪ {P'}) as a result.  Since we'll probably
-                 * have to build another similar P' set soon, use the
-                 * build_and_keep variant so that we don't throw away all our
-                 * work. */
+                /* Create □ (Ps ∖ {P} ∪ {P'}) as a result. */
                 csp_edge_visitor_call(
                         csp, visitor, initial,
                         csp_replicated_external_choice(csp, &ps_prime));

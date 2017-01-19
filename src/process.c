@@ -18,52 +18,6 @@
 #include "macros.h"
 
 /*------------------------------------------------------------------------------
- * Event visitors
- */
-
-void
-csp_event_visitor_call(struct csp *csp, struct csp_event_visitor *visitor,
-                       const struct csp_event *event)
-{
-    visitor->visit(csp, visitor, event);
-}
-
-static void
-csp_collect_events_visit(struct csp *csp, struct csp_event_visitor *visitor,
-                         const struct csp_event *event)
-{
-    struct csp_collect_events *self =
-            container_of(visitor, struct csp_collect_events, visitor);
-    csp_event_set_add(self->set, event);
-}
-
-struct csp_collect_events
-csp_collect_events(struct csp_event_set *set)
-{
-    struct csp_collect_events self = {{csp_collect_events_visit}, set};
-    return self;
-}
-
-static void
-csp_ignore_event_visit(struct csp *csp, struct csp_event_visitor *visitor,
-                       const struct csp_event *event)
-{
-    struct csp_ignore_event *self =
-            container_of(visitor, struct csp_ignore_event, visitor);
-    if (event != self->event) {
-        csp_event_visitor_call(csp, self->wrapped, event);
-    }
-}
-
-struct csp_ignore_event
-csp_ignore_event(struct csp_event_visitor *wrapped,
-                 const struct csp_event *event)
-{
-    struct csp_ignore_event self = {{csp_ignore_event_visit}, wrapped, event};
-    return self;
-}
-
-/*------------------------------------------------------------------------------
  * Edge visitors
  */
 

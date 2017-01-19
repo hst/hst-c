@@ -18,37 +18,6 @@ struct csp;
 struct csp_process;
 
 /*------------------------------------------------------------------------------
- * Event visitors
- */
-
-struct csp_event_visitor {
-    void (*visit)(struct csp *csp, struct csp_event_visitor *visitor,
-                  const struct csp_event *event);
-};
-
-void
-csp_event_visitor_call(struct csp *csp, struct csp_event_visitor *visitor,
-                       const struct csp_event *event);
-
-struct csp_collect_events {
-    struct csp_event_visitor visitor;
-    struct csp_event_set *set;
-};
-
-struct csp_collect_events
-csp_collect_events(struct csp_event_set *set);
-
-struct csp_ignore_event {
-    struct csp_event_visitor visitor;
-    struct csp_event_visitor *wrapped;
-    const struct csp_event *event;
-};
-
-struct csp_ignore_event
-csp_ignore_event(struct csp_event_visitor *wrapped,
-                 const struct csp_event *event);
-
-/*------------------------------------------------------------------------------
  * Edge visitors
  */
 

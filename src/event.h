@@ -14,6 +14,9 @@
 #include "basics.h"
 #include "set.h"
 
+struct csp;
+struct csp_event_visitor;
+
 /*------------------------------------------------------------------------------
  * Events
  */
@@ -98,6 +101,10 @@ bool
 csp_event_set_union(struct csp_event_set *set,
                     const struct csp_event_set *other);
 
+void
+csp_event_set_visit(struct csp *csp, const struct csp_event_set *set,
+                    struct csp_event_visitor *visitor);
+
 struct csp_event_set_iterator {
     struct csp_set_iterator iter;
 };
@@ -119,5 +126,53 @@ csp_event_set_iterator_advance(struct csp_event_set_iterator *iter);
     for (csp_event_set_get_iterator((set), (iter)); \
          !csp_event_set_iterator_done((iter));      \
          csp_event_set_iterator_advance((iter)))
+
+/*------------------------------------------------------------------------------
+ * Event visitors
+ */
+
+struct csp_event_visitor {
+    void (*visit)(struct csp *csp, struct csp_event_visitor *visitor,
+                  const struct csp_event *event);
+};
+
+void
+csp_event_visitor_call(struct csp *csp, struct csp_event_visitor *visitor,
+                       const struct csp_event *event);
+
+struct csp_any_events {
+    struct csp_event_visitor visitor;
+    bool has_events;
+};
+
+struct csp_any_events
+csp_any_events(void);
+
+struct csp_contains_event {
+    struct csp_event_visitor visitor;
+    const struct csp_event *event;
+    bool is_present;
+};
+
+struct csp_contains_event
+csp_contains_event(const struct csp_event *event);
+
+struct csp_collect_events {
+    struct csp_event_visitor visitor;
+    struct csp_event_set *set;
+};
+
+struct csp_collect_events
+csp_collect_events(struct csp_event_set *set);
+
+struct csp_ignore_event {
+    struct csp_event_visitor visitor;
+    struct csp_event_visitor *wrapped;
+    const struct csp_event *event;
+};
+
+struct csp_ignore_event
+csp_ignore_event(struct csp_event_visitor *wrapped,
+                 const struct csp_event *event);
 
 #endif /* HST_EVENT_H */
