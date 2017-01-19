@@ -1,0 +1,100 @@
+/* -*- coding: utf-8 -*-
+ * -----------------------------------------------------------------------------
+ * Copyright © 2017, HST Project.
+ * Please see the COPYING file in this distribution for license details.
+ * -----------------------------------------------------------------------------
+ */
+
+#include <assert.h>
+#include <getopt.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include "ccan/container_of/container_of.h"
+#include "csp0.h"
+#include "environment.h"
+#include "process.h"
+
+struct reachable {
+    struct csp_process_visitor visitor;
+    size_t count;
+    bool verbose;
+};
+
+static void
+reachable_visit(struct csp *csp, struct csp_process_visitor *visitor,
+                struct csp_process *process)
+{
+    struct reachable *self = container_of(visitor, struct reachable, visitor);
+    self->count++;
+    if (self->verbose) {
+        struct csp_print_name print = csp_print_name(stdout);
+        csp_process_name(csp, process, &print.visitor);
+        printf("\n");
+    }
+}
+
+struct reachable
+reachable_init(bool verbose)
+{
+    struct reachable self = {{reachable_visit}, 0, verbose};
+    return self;
+}
+
+static void
+reachable(int argc, char **argv)
+{
+    const char *csp0;
+    bool verbose = false;
+    struct csp *csp;
+    struct csp_process *process;
+    struct reachable reachable;
+
+    static struct option options[] = {{"verbose", no_argument, 0, 'v'},
+                                      {0, 0, 0, 0}};
+
+    while (true) {
+        int option_index = 0;
+        int c = getopt_long(argc, argv, "v", options, &option_index);
+        if (c == -1) {
+            break;
+        }
+
+        switch (c) {
+            case 'v':
+                verbose = true;
+                break;
+
+            default:
+                fprintf(stderr, "Unknown option %c\n", c);
+                exit(EXIT_FAILURE);
+        }
+    }
+    argc -= optind, argv += optind;
+
+    if (argc != 1) {
+        fprintf(stderr, "Usage: hst reachable [-v] <process>\n");
+        exit(EXIT_FAILURE);
+    }
+
+    csp = csp_new();
+    assert(csp != NULL);
+
+    csp0 = (argc--, *argv++);
+    process = csp_load_csp0_string(csp, csp0);
+    if (process == NULL) {
+        csp_free(csp);
+        fprintf(stderr, "Invalid CSP₀ process \"%s\"\n", csp0);
+        exit(EXIT_FAILURE);
+    }
+
+    reachable = reachable_init(verbose);
+    csp_process_bfs(csp, process, &reachable.visitor);
+    if (verbose) {
+        printf("Reachable processes: ");
+    }
+    printf("%zu\n", reachable.count);
+
+    csp_free(csp);
+}
