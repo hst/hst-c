@@ -394,6 +394,86 @@ check_streq_(const char *filename, unsigned int line, const char *actual,
 
 UNNEEDED
 static void
+check_event_set_eq_(const char *filename, unsigned int line,
+                    const struct csp_event_set *actual,
+                    const struct csp_event_set *expected)
+{
+    if (unlikely(!csp_event_set_eq(actual, expected))) {
+        struct csp_event_set_iterator i;
+        struct csp_event_set diff;
+        fail_at(filename, line, "Expected sets to be equal");
+        csp_event_set_init(&diff);
+
+        printf("# Elements only in actual:\n");
+        csp_event_set_union(&diff, expected);
+        csp_event_set_foreach (actual, &i) {
+            const struct csp_event *curr = csp_event_set_iterator_get(&i);
+            if (!csp_event_set_remove(&diff, curr)) {
+                printf("#   %s\n", csp_event_name(curr));
+            }
+        }
+        csp_event_set_clear(&diff);
+
+        printf("# Elements only in expected:\n");
+        csp_event_set_union(&diff, actual);
+        csp_event_set_foreach (expected, &i) {
+            const struct csp_event *curr = csp_event_set_iterator_get(&i);
+            if (!csp_event_set_remove(&diff, curr)) {
+                printf("#   %s\n", csp_event_name(curr));
+            }
+        }
+
+        csp_event_set_done(&diff);
+        abort_test();
+    }
+}
+#define check_event_set_eq ADD_FILE_AND_LINE(check_event_set_eq_)
+
+UNNEEDED
+static void
+check_process_set_eq_(const char *filename, unsigned int line, struct csp *csp,
+                      const struct csp_process_set *actual,
+                      const struct csp_process_set *expected)
+{
+    if (unlikely(!csp_process_set_eq(actual, expected))) {
+        struct csp_process_set_iterator i;
+        struct csp_process_set diff;
+        fail_at(filename, line, "Expected sets to be equal");
+        csp_process_set_init(&diff);
+
+        printf("# Elements only in actual:\n");
+        csp_process_set_union(&diff, expected);
+        csp_process_set_foreach (actual, &i) {
+            struct csp_process *curr = csp_process_set_iterator_get(&i);
+            if (!csp_process_set_remove(&diff, curr)) {
+                struct csp_print_name print = csp_print_name(stdout);
+                printf("#   ");
+                csp_process_name(csp, curr, &print.visitor);
+                printf("\n");
+            }
+        }
+        csp_process_set_clear(&diff);
+
+        printf("# Elements only in expected:\n");
+        csp_process_set_union(&diff, actual);
+        csp_process_set_foreach (expected, &i) {
+            struct csp_process *curr = csp_process_set_iterator_get(&i);
+            if (!csp_process_set_remove(&diff, curr)) {
+                struct csp_print_name print = csp_print_name(stdout);
+                printf("#   ");
+                csp_process_name(csp, curr, &print.visitor);
+                printf("\n");
+            }
+        }
+
+        csp_process_set_done(&diff);
+        abort_test();
+    }
+}
+#define check_process_set_eq ADD_FILE_AND_LINE(check_process_set_eq_)
+
+UNNEEDED
+static void
 check_set_eq_(const char *filename, unsigned int line,
               const struct csp_id_set *actual,
               const struct csp_id_set *expected)
@@ -981,7 +1061,8 @@ csp0_factory(struct csp *csp, void *vcsp0)
 {
     const char *csp0 = vcsp0;
     struct csp_process *process;
-    check_nonnull(process = csp_load_csp0_string(csp, csp0));
+    check_nonnull_with_msg(process = csp_load_csp0_string(csp, csp0),
+                           "Could not parse %s", csp0);
     return process;
 }
 

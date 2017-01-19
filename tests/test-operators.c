@@ -60,7 +60,8 @@ csp_collect_name_init(struct csp_collect_name *self)
 
 /* Verify the name of the given CSP₀ process. */
 static void
-check_process_name(struct csp_process_factory process_, const char *expected)
+check_process_name_(const char *filename, unsigned int line,
+                    struct csp_process_factory process_, const char *expected)
 {
     struct csp *csp;
     struct csp_process *process;
@@ -69,14 +70,16 @@ check_process_name(struct csp_process_factory process_, const char *expected)
     process = csp_process_factory_create(csp, process_);
     csp_collect_name_init(&collect);
     csp_process_name(csp, process, &collect.visitor);
-    check_streq(collect.name, expected);
+    check_streq_(filename, line, collect.name, expected);
     csp_free(csp);
 }
+#define check_process_name ADD_FILE_AND_LINE(check_process_name_)
 
 /* Verify the `initials` of the given CSP₀ process. */
 static void
-check_process_initials(struct csp_process_factory process_,
-                       struct csp_event_set_factory expected_initials_)
+check_process_initials_(const char *filename, unsigned int line,
+                        struct csp_process_factory process_,
+                        struct csp_event_set_factory expected_initials_)
 {
     struct csp *csp;
     struct csp_process *process;
@@ -86,17 +89,19 @@ check_process_initials(struct csp_process_factory process_,
     csp_event_set_init(&actual);
     process = csp_process_factory_create(csp, process_);
     csp_process_visit_initials(csp, process, &collect.visitor);
-    check(csp_event_set_eq(
-            &actual, csp_event_set_factory_create(csp, expected_initials_)));
+    check_event_set_eq_(filename, line, &actual,
+                        csp_event_set_factory_create(csp, expected_initials_));
     csp_event_set_done(&actual);
     csp_free(csp);
 }
+#define check_process_initials ADD_FILE_AND_LINE(check_process_initials_)
 
 /* Verify the `afters` of the given CSP₀ process after performing `initial`. */
 static void
-check_process_afters(struct csp_process_factory process_,
-                     struct csp_event_factory initial_,
-                     struct csp_process_set_factory expected_afters_)
+check_process_afters_(const char *filename, unsigned int line,
+                      struct csp_process_factory process_,
+                      struct csp_event_factory initial_,
+                      struct csp_process_set_factory expected_afters_)
 {
     struct csp *csp;
     struct csp_process *process;
@@ -108,16 +113,19 @@ check_process_afters(struct csp_process_factory process_,
     process = csp_process_factory_create(csp, process_);
     initial = csp_event_factory_create(csp, initial_);
     csp_process_visit_afters(csp, process, initial, &collect.visitor);
-    check(csp_process_set_eq(
-            &actual, csp_process_set_factory_create(csp, expected_afters_)));
+    check_process_set_eq_(
+            filename, line, csp, &actual,
+            csp_process_set_factory_create(csp, expected_afters_));
     csp_process_set_done(&actual);
     csp_free(csp);
 }
+#define check_process_afters ADD_FILE_AND_LINE(check_process_afters_)
 
 /* Verify all of the subprocesses that are reachable from `process`. */
 static void
-check_process_reachable(struct csp_process_factory process_,
-                        struct csp_process_set_factory expected_reachable_)
+check_process_reachable_(const char *filename, unsigned int line,
+                         struct csp_process_factory process_,
+                         struct csp_process_set_factory expected_reachable_)
 {
     struct csp *csp;
     struct csp_process *process;
@@ -127,16 +135,19 @@ check_process_reachable(struct csp_process_factory process_,
     process = csp_process_factory_create(csp, process_);
     csp_process_set_init(&actual);
     csp_process_bfs(csp, process, &collect.visitor);
-    check(csp_process_set_eq(
-            &actual, csp_process_set_factory_create(csp, expected_reachable_)));
+    check_process_set_eq_(
+            filename, line, csp, &actual,
+            csp_process_set_factory_create(csp, expected_reachable_));
     csp_process_set_done(&actual);
     csp_free(csp);
 }
+#define check_process_reachable ADD_FILE_AND_LINE(check_process_reachable_)
 
 /* Verify the traces behavior of the given CSP₀ process. */
 static void
-check_process_traces_behavior(struct csp_process_factory process_,
-                              struct csp_event_set_factory expected_initials_)
+check_process_traces_behavior_(const char *filename, unsigned int line,
+                               struct csp_process_factory process_,
+                               struct csp_event_set_factory expected_initials_)
 {
     struct csp *csp;
     struct csp_process *process;
@@ -147,17 +158,20 @@ check_process_traces_behavior(struct csp_process_factory process_,
     process = csp_process_factory_create(csp, process_);
     expected_initials = csp_event_set_factory_create(csp, expected_initials_);
     csp_process_get_behavior(csp, process, CSP_TRACES, &behavior);
-    check(csp_event_set_eq(&behavior.initials, expected_initials));
+    check_event_set_eq_(filename, line, &behavior.initials, expected_initials);
     csp_behavior_done(&behavior);
     csp_free(csp);
 }
+#define check_process_traces_behavior \
+    ADD_FILE_AND_LINE(check_process_traces_behavior_)
 
 /* Verify the `initials` of a subprocess.  `subprocess` should be a process that
  * has been defined as part of `process`. */
 static void
-check_process_sub_initials(struct csp_process_factory process_,
-                           struct csp_process_factory subprocess_,
-                           struct csp_event_set_factory expected_initials_)
+check_process_sub_initials_(const char *filename, unsigned int line,
+                            struct csp_process_factory process_,
+                            struct csp_process_factory subprocess_,
+                            struct csp_event_set_factory expected_initials_)
 {
     struct csp *csp;
     UNNEEDED struct csp_process *process;
@@ -169,19 +183,22 @@ check_process_sub_initials(struct csp_process_factory process_,
     process = csp_process_factory_create(csp, process_);
     subprocess = csp_process_factory_create(csp, subprocess_);
     csp_process_visit_initials(csp, subprocess, &collect.visitor);
-    check(csp_event_set_eq(
-            &actual, csp_event_set_factory_create(csp, expected_initials_)));
+    check_event_set_eq_(filename, line, &actual,
+                        csp_event_set_factory_create(csp, expected_initials_));
     csp_event_set_done(&actual);
     csp_free(csp);
 }
+#define check_process_sub_initials \
+    ADD_FILE_AND_LINE(check_process_sub_initials_)
 
 /* Verify the `afters` of a subprocess after performing `initial`.  `subprocess`
  * should be a process that has been defined as part of `process`. */
 static void
-check_process_sub_afters(struct csp_process_factory process_,
-                         struct csp_process_factory subprocess_,
-                         struct csp_event_factory initial_,
-                         struct csp_process_set_factory expected_afters_)
+check_process_sub_afters_(const char *filename, unsigned int line,
+                          struct csp_process_factory process_,
+                          struct csp_process_factory subprocess_,
+                          struct csp_event_factory initial_,
+                          struct csp_process_set_factory expected_afters_)
 {
     struct csp *csp;
     UNNEEDED struct csp_process *process;
@@ -195,16 +212,19 @@ check_process_sub_afters(struct csp_process_factory process_,
     subprocess = csp_process_factory_create(csp, subprocess_);
     initial = csp_event_factory_create(csp, initial_);
     csp_process_visit_afters(csp, subprocess, initial, &collect.visitor);
-    check(csp_process_set_eq(
-            &actual, csp_process_set_factory_create(csp, expected_afters_)));
+    check_process_set_eq_(
+            filename, line, csp, &actual,
+            csp_process_set_factory_create(csp, expected_afters_));
     csp_process_set_done(&actual);
     csp_free(csp);
 }
+#define check_process_sub_afters ADD_FILE_AND_LINE(check_process_sub_afters_)
 
 /* Verify the traces behavior of the given CSP₀ process.  `subprocess` should be
  * a process that has been defined as part of `process`. */
 static void
-check_process_sub_traces_behavior(
+check_process_sub_traces_behavior_(
+        const char *filename, unsigned int line,
         struct csp_process_factory process_,
         struct csp_process_factory subprocess_,
         struct csp_event_set_factory expected_initials_)
@@ -220,10 +240,12 @@ check_process_sub_traces_behavior(
     subprocess = csp_process_factory_create(csp, subprocess_);
     expected_initials = csp_event_set_factory_create(csp, expected_initials_);
     csp_process_get_behavior(csp, subprocess, CSP_TRACES, &behavior);
-    check(csp_event_set_eq(&behavior.initials, expected_initials));
+    check_event_set_eq_(filename, line, &behavior.initials, expected_initials);
     csp_behavior_done(&behavior);
     csp_free(csp);
 }
+#define check_process_sub_traces_behavior \
+    ADD_FILE_AND_LINE(check_process_sub_traces_behavior_)
 
 TEST_CASE_GROUP("external choice");
 
@@ -288,6 +310,126 @@ TEST_CASE("□ {a → STOP, b → STOP, c → STOP}")
     check_process_reachable(csp0("□ {a → STOP, b → STOP, c → STOP}"),
                             csp0s("□ {a → STOP, b → STOP, c → STOP}", "STOP"));
     check_process_traces_behavior(csp0("□ {a → STOP, b → STOP, c → STOP}"),
+                                  events("a", "b", "c"));
+}
+
+TEST_CASE_GROUP("interleaving");
+
+TEST_CASE("STOP ⫴ STOP")
+{
+    check_process_name(csp0("STOP ⫴ STOP"), "⫴ {STOP}");
+    check_process_initials(csp0("STOP ⫴ STOP"), events("✔"));
+    check_process_afters(csp0("STOP ⫴ STOP"), event("✔"), csp0s("STOP"));
+    check_process_afters(csp0("STOP ⫴ STOP"), event("a"), csp0s());
+    check_process_afters(csp0("STOP ⫴ STOP"), event("τ"), csp0s());
+    check_process_reachable(csp0("STOP ⫴ STOP"), csp0s("STOP ⫴ STOP", "STOP"));
+    check_process_traces_behavior(csp0("STOP ⫴ STOP"), events("✔"));
+}
+
+TEST_CASE("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)")
+{
+    check_process_name(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
+                       "a → STOP ⫴ b → STOP ⊓ c → STOP");
+    check_process_initials(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
+                           events("a", "τ"));
+    check_process_afters(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"), event("a"),
+                         csp0s("STOP ⫴ (b → STOP ⊓ c → STOP)"));
+    check_process_afters(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"), event("b"),
+                         csp0s());
+    check_process_afters(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"), event("τ"),
+                         csp0s("a → STOP ⫴ b → STOP", "a → STOP ⫴ c → STOP"));
+    check_process_reachable(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
+                            csp0s("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)",
+                                  "STOP ⫴ (b → STOP ⊓ c → STOP)",
+                                  "STOP ⫴ b → STOP", "STOP ⫴ c → STOP",
+                                  "a → STOP ⫴ b → STOP", "a → STOP ⫴ c → STOP",
+                                  "a → STOP ⫴ STOP", "STOP ⫴ STOP", "STOP"));
+    check_process_traces_behavior(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
+                                  events("a"));
+}
+
+TEST_CASE("a → STOP ⫴ b → STOP")
+{
+    check_process_name(csp0("a → STOP ⫴ b → STOP"), "a → STOP ⫴ b → STOP");
+    check_process_initials(csp0("a → STOP ⫴ b → STOP"), events("a", "b"));
+    check_process_afters(csp0("a → STOP ⫴ b → STOP"), event("a"),
+                         csp0s("STOP ⫴ b → STOP"));
+    check_process_afters(csp0("a → STOP ⫴ b → STOP"), event("b"),
+                         csp0s("a → STOP ⫴ STOP"));
+    check_process_afters(csp0("a → STOP ⫴ b → STOP"), event("τ"), csp0s());
+    check_process_reachable(csp0("a → STOP ⫴ b → STOP"),
+                            csp0s("a → STOP ⫴ b → STOP", "a → STOP ⫴ STOP",
+                                  "STOP ⫴ b → STOP", "STOP ⫴ STOP", "STOP"));
+    check_process_traces_behavior(csp0("a → STOP ⫴ b → STOP"),
+                                  events("a", "b"));
+}
+
+TEST_CASE("a → SKIP ⫴ b → SKIP")
+{
+    check_process_name(csp0("a → SKIP ⫴ b → SKIP"), "a → SKIP ⫴ b → SKIP");
+    check_process_initials(csp0("a → SKIP ⫴ b → SKIP"), events("a", "b"));
+    check_process_afters(csp0("a → SKIP ⫴ b → SKIP"), event("a"),
+                         csp0s("SKIP ⫴ b → SKIP"));
+    check_process_afters(csp0("a → SKIP ⫴ b → SKIP"), event("b"),
+                         csp0s("a → SKIP ⫴ SKIP"));
+    check_process_afters(csp0("a → SKIP ⫴ b → SKIP"), event("τ"), csp0s());
+    check_process_afters(csp0("a → SKIP ⫴ b → SKIP"), event("✔"), csp0s());
+    check_process_reachable(
+            csp0("a → SKIP ⫴ b → SKIP"),
+            csp0s("a → SKIP ⫴ b → SKIP", "a → SKIP ⫴ SKIP", "a → SKIP ⫴ STOP",
+                  "SKIP ⫴ b → SKIP", "STOP ⫴ b → SKIP", "STOP ⫴ SKIP",
+                  "STOP ⫴ STOP", "SKIP ⫴ SKIP", "STOP"));
+    check_process_traces_behavior(csp0("a → SKIP ⫴ b → SKIP"),
+                                  events("a", "b"));
+}
+
+TEST_CASE("(a → SKIP ⫴ b → SKIP) ; c → STOP")
+{
+    check_process_name(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"),
+                       "(a → SKIP ⫴ b → SKIP) ; c → STOP");
+    check_process_initials(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"),
+                           events("a", "b"));
+    check_process_afters(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"), event("a"),
+                         csp0s("(SKIP ⫴ b → SKIP) ; c → STOP"));
+    check_process_afters(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"), event("b"),
+                         csp0s("(a → SKIP ⫴ SKIP) ; c → STOP"));
+    check_process_afters(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"), event("τ"),
+                         csp0s());
+    check_process_reachable(
+            csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"),
+            csp0s("(a → SKIP ⫴ b → SKIP) ; c → STOP",
+                  "(a → SKIP ⫴ SKIP) ; c → STOP",
+                  "(a → SKIP ⫴ STOP) ; c → STOP",
+                  "(SKIP ⫴ b → SKIP) ; c → STOP",
+                  "(STOP ⫴ b → SKIP) ; c → STOP", "(STOP ⫴ SKIP) ; c → STOP",
+                  "(STOP ⫴ STOP) ; c → STOP", "(SKIP ⫴ SKIP) ; c → STOP",
+                  "c → STOP", "STOP"));
+    check_process_traces_behavior(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"),
+                                  events("a", "b"));
+}
+
+TEST_CASE("⫴ {a → STOP, b → STOP, c → STOP}")
+{
+    check_process_name(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
+                       "⫴ {a → STOP, b → STOP, c → STOP}");
+    check_process_initials(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
+                           events("a", "b", "c"));
+    check_process_afters(csp0("⫴ {a → STOP, b → STOP, c → STOP}"), event("a"),
+                         csp0s("⫴ {STOP, b → STOP, c → STOP}"));
+    check_process_afters(csp0("⫴ {a → STOP, b → STOP, c → STOP}"), event("b"),
+                         csp0s("⫴ {a → STOP, STOP, c → STOP}"));
+    check_process_afters(csp0("⫴ {a → STOP, b → STOP, c → STOP}"), event("c"),
+                         csp0s("⫴ {a → STOP, b → STOP, STOP}"));
+    check_process_afters(csp0("⫴ {a → STOP, b → STOP, c → STOP}"), event("τ"),
+                         csp0s());
+    check_process_reachable(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
+                            csp0s("⫴ {a → STOP, b → STOP, c → STOP}",
+                                  "⫴ {STOP, b → STOP, c → STOP}",
+                                  "⫴ {a → STOP, STOP, c → STOP}",
+                                  "⫴ {a → STOP, b → STOP, STOP}",
+                                  "⫴ {a → STOP, STOP}", "⫴ {b → STOP, STOP}",
+                                  "⫴ {c → STOP, STOP}", "⫴ {STOP}", "STOP"));
+    check_process_traces_behavior(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
                                   events("a", "b", "c"));
 }
 

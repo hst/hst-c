@@ -250,7 +250,7 @@ parse_process_set(struct csp0_parse_state *state, struct csp_process_set *set)
  *  6. □ (infix)
  *  7. ⊓ (infix)
  *  8. ||
- *  9. |||
+ *  9. ⫴ (infix)
  * 10. \
  * 11. replicated operators (prefix)
  * 12. let
@@ -431,7 +431,41 @@ parse_process7(struct csp0_parse_state *state, struct csp_process **dest)
     return 0;
 }
 
-#define parse_process10 parse_process7 /* NIY */
+#define parse_process8 parse_process7 /* NIY */
+
+static int
+parse_process9(struct csp0_parse_state *state, struct csp_process **dest)
+{
+    // process9 = process8 (⫴ process9)?
+
+    struct csp_process *lhs;
+    struct csp_process *rhs;
+    struct csp_process_set ps;
+    DEBUG(2, "ENTER  process9");
+
+    require(parse_process8(state, &lhs));
+    skip_whitespace(state);
+    if (parse_token(state, "|||") != 0 && parse_token(state, "⫴") != 0) {
+        *dest = lhs;
+        DEBUG(2, "PASS   process9");
+        return 0;
+    }
+    skip_whitespace(state);
+    if (parse_process9(state, &rhs) != 0) {
+        // Expected process after ⫴
+        DEBUG(1, "FAIL   process9");
+        return -1;
+    }
+    csp_process_set_init(&ps);
+    csp_process_set_add(&ps, lhs);
+    csp_process_set_add(&ps, rhs);
+    *dest = csp_interleave(state->csp, &ps);
+    csp_process_set_done(&ps);
+    DEBUG_PROCESS(*dest, "process9 ⫴");
+    return 0;
+}
+
+#define parse_process10 parse_process9 /* NIY */
 
 static int
 parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
@@ -468,6 +502,21 @@ parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
         *dest = csp_replicated_internal_choice(state->csp, &processes);
         csp_process_set_done(&processes);
         DEBUG_PROCESS(*dest, "process11 ⊓");
+        return 0;
+    }
+
+    // ⫴ {process}
+    if (parse_token(state, "|||") == 0 || parse_token(state, "⫴") == 0) {
+        skip_whitespace(state);
+        csp_process_set_init(&processes);
+        if (unlikely(parse_process_set(state, &processes) != 0)) {
+            csp_process_set_done(&processes);
+            DEBUG(1, "FAIL   process11");
+            return -1;
+        }
+        *dest = csp_interleave(state->csp, &processes);
+        csp_process_set_done(&processes);
+        DEBUG_PROCESS(*dest, "process11 ⫴");
         return 0;
     }
 

@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "ccan/container_of/container_of.h"
 #include "ccan/hash/hash.h"
 #include "ccan/likely/likely.h"
 #include "basics.h"
@@ -242,6 +243,17 @@ csp_event_set_union(struct csp_event_set *set,
 }
 
 void
+csp_event_set_visit(struct csp *csp, const struct csp_event_set *set,
+                    struct csp_event_visitor *visitor)
+{
+    struct csp_event_set_iterator iter;
+    csp_event_set_foreach (set, &iter) {
+        const struct csp_event *event = csp_event_set_iterator_get(&iter);
+        csp_event_visitor_call(csp, visitor, event);
+    }
+}
+
+void
 csp_event_set_get_iterator(const struct csp_event_set *set,
                            struct csp_event_set_iterator *iter)
 {
@@ -264,4 +276,84 @@ void
 csp_event_set_iterator_advance(struct csp_event_set_iterator *iter)
 {
     csp_set_iterator_advance(&iter->iter);
+}
+
+/*------------------------------------------------------------------------------
+ * Event visitors
+ */
+
+void
+csp_event_visitor_call(struct csp *csp, struct csp_event_visitor *visitor,
+                       const struct csp_event *event)
+{
+    visitor->visit(csp, visitor, event);
+}
+
+static void
+csp_any_events_visit(struct csp *csp, struct csp_event_visitor *visitor,
+                     const struct csp_event *event)
+{
+    struct csp_any_events *self =
+            container_of(visitor, struct csp_any_events, visitor);
+    self->has_events = true;
+}
+
+struct csp_any_events
+csp_any_events(void)
+{
+    struct csp_any_events self = {{csp_any_events_visit}, false};
+    return self;
+}
+
+static void
+csp_contains_event_visit(struct csp *csp, struct csp_event_visitor *visitor,
+                         const struct csp_event *event)
+{
+    struct csp_contains_event *self =
+            container_of(visitor, struct csp_contains_event, visitor);
+    if (event == self->event) {
+        self->is_present = true;
+    }
+}
+
+struct csp_contains_event
+csp_contains_event(const struct csp_event *event)
+{
+    struct csp_contains_event self = {{csp_contains_event_visit}, event, false};
+    return self;
+}
+
+static void
+csp_collect_events_visit(struct csp *csp, struct csp_event_visitor *visitor,
+                         const struct csp_event *event)
+{
+    struct csp_collect_events *self =
+            container_of(visitor, struct csp_collect_events, visitor);
+    csp_event_set_add(self->set, event);
+}
+
+struct csp_collect_events
+csp_collect_events(struct csp_event_set *set)
+{
+    struct csp_collect_events self = {{csp_collect_events_visit}, set};
+    return self;
+}
+
+static void
+csp_ignore_event_visit(struct csp *csp, struct csp_event_visitor *visitor,
+                       const struct csp_event *event)
+{
+    struct csp_ignore_event *self =
+            container_of(visitor, struct csp_ignore_event, visitor);
+    if (event != self->event) {
+        csp_event_visitor_call(csp, self->wrapped, event);
+    }
+}
+
+struct csp_ignore_event
+csp_ignore_event(struct csp_event_visitor *wrapped,
+                 const struct csp_event *event)
+{
+    struct csp_ignore_event self = {{csp_ignore_event_visit}, wrapped, event};
+    return self;
 }
