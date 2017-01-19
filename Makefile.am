@@ -91,7 +91,8 @@ libtests_la_SOURCES = \
 	third_party/ccan/likely/likely.h
 
 hst_SOURCES = \
-	src/hst/hst.c
+	src/hst/hst.c \
+	src/hst/reachable.c.in
 hst_LDADD = libhst.la
 
 LDADD = libhst.la libtests.la
