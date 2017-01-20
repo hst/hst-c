@@ -1191,30 +1191,21 @@ process_sets_(size_t count, ...)
  * The trace will be automatically freed for you at the end of the test case. */
 #define trace(...) trace_(strings(__VA_ARGS__))
 
-static void
-csp_trace_free_(void *vtrace)
-{
-    struct csp_trace *trace = vtrace;
-    csp_trace_done(trace);
-    free(trace);
-}
-
 static struct csp_trace *
 trace_factory(struct csp *csp, void *vnames)
 {
     struct string_array *names = vnames;
     size_t i;
-    struct csp_trace *trace = malloc(sizeof(struct csp_trace));
-    assert(trace != NULL);
-    csp_trace_init(trace);
-    test_case_cleanup_register(csp_trace_free_, trace);
-    csp_trace_ensure_size(trace, names->count);
+    struct csp_trace *prev = NULL;
     for (i = 0; i < names->count; i++) {
         const char *event_name = names->strings[i];
         const struct csp_event *event = csp_event_get(event_name);
-        trace->events[i] = csp_event_id(event);
+        struct csp_trace *trace = csp_trace_new(event, NULL, prev);
+        test_case_cleanup_register((test_case_cleanup_f *) csp_trace_free,
+                                   trace);
+        prev = trace;
     }
-    return trace;
+    return prev;
 }
 
 UNNEEDED

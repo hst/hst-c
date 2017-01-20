@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -11,65 +11,59 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ccan/likely/likely.h"
-
 /*------------------------------------------------------------------------------
  * Traces
  */
 
-void
-csp_trace_init(struct csp_trace *trace)
+struct csp_trace *
+csp_trace_new(const struct csp_event *event, struct csp_process *process,
+              struct csp_trace *prev)
 {
-    trace->events = trace->internal;
-    trace->allocated_count = CSP_TRACE_INTERNAL_SIZE;
-    trace->count = 0;
+    struct csp_trace *trace = malloc(sizeof(struct csp_trace));
+    assert(trace != NULL);
+    trace->event = event;
+    trace->process = process;
+    trace->length = 1 + ((prev == NULL) ? 0 : prev->length);
+    trace->prev = prev;
+    return trace;
 }
 
 void
-csp_trace_done(struct csp_trace *trace)
+csp_trace_free(struct csp_trace *trace)
 {
-    if (trace->events != trace->internal) {
-        free(trace->events);
-    }
-}
-
-#define CSP_TRACE_FIRST_ALLOCATION_COUNT 32
-
-void
-csp_trace_ensure_size(struct csp_trace *trace, size_t count)
-{
-    trace->count = count;
-    if (unlikely(count > trace->allocated_count)) {
-        if (trace->events == trace->internal) {
-            size_t new_count = CSP_TRACE_FIRST_ALLOCATION_COUNT;
-            while (count > new_count) {
-                new_count *= 2;
-            }
-            trace->events = malloc(new_count * sizeof(csp_id));
-            assert(trace->events != NULL);
-            trace->allocated_count = new_count;
-        } else {
-            /* Whenever we reallocate, at least double the size of the existing
-             * trace. */
-            csp_id *new_events;
-            size_t new_count = trace->allocated_count;
-            do {
-                new_count *= 2;
-            } while (count > new_count);
-            new_events = realloc(trace->events, new_count * sizeof(csp_id));
-            assert(new_events != NULL);
-            trace->events = new_events;
-            trace->allocated_count = new_count;
-        }
-    }
+    free(trace);
 }
 
 bool
 csp_trace_eq(const struct csp_trace *trace1, const struct csp_trace *trace2)
 {
-    if (trace1->count != trace2->count) {
+    if (trace1 == NULL || trace2 == NULL) {
+        return trace1 == trace2;
+    }
+    if (trace1->event != trace2->event) {
         return false;
     }
-    return memcmp(trace1->events, trace2->events,
-                  trace1->count * sizeof(csp_id)) == 0;
+    return csp_trace_eq(trace1->prev, trace2->prev);
+}
+
+static void
+csp_trace_print_one(struct csp *csp, const struct csp_trace *trace,
+                    struct csp_name_visitor *visitor)
+{
+    if (trace != NULL) {
+        csp_trace_print_one(csp, trace->prev, visitor);
+        if (trace->prev != NULL) {
+            csp_name_visitor_call(csp, visitor, ",");
+        }
+        csp_name_visitor_call(csp, visitor, csp_event_name(trace->event));
+    }
+}
+
+void
+csp_trace_print(struct csp *csp, const struct csp_trace *trace,
+                struct csp_name_visitor *visitor)
+{
+    csp_name_visitor_call(csp, visitor, "⟨");
+    csp_trace_print_one(csp, trace, visitor);
+    csp_name_visitor_call(csp, visitor, "⟩");
 }
