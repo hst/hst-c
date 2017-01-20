@@ -18,6 +18,18 @@
  * Normalized processes
  */
 
+/* Finds the closure of a set of processes for a particular event.  This is the
+ * set of processes that can be reached from any of the initial processes by
+ * only following (any number of occurrences of) that event.  The event will
+ * usually be τ.
+ *
+ * `processes` should contain the initial processes to calculate the closure
+ * for; it will be updated to contain all of the processes in the closure (which
+ * must always include the initial processes). */
+void
+csp_find_process_closure(struct csp *csp, const struct csp_event *event,
+                         struct csp_process_set *processes);
+
 /* Creates the "prenormalization" of `process`.  A prenormalized process is one
  * that is guaranteed to have at most one outgoing transition for each event,
  * and to have no τ transitions at all. */
@@ -67,18 +79,6 @@ csp_normalized_process_get_processes(struct csp *csp,
 struct csp_process *
 csp_process_get_single_after(struct csp *csp, struct csp_process *process,
                              const struct csp_event *initial);
-
-/* Finds the closure of a set of processes for a particular event.  This is the
- * set of processes that can be reached from any of the initial processes by
- * only following (any number of occurrences of) that event.  The event will
- * usually be τ.
- *
- * `processes` should contain the initial processes to calculate the closure
- * for; it will be updated to contain all of the processes in the closure (which
- * must always include the initial processes). */
-void
-csp_find_process_closure(struct csp *csp, const struct csp_event *event,
-                         struct csp_process_set *processes);
 
 /* Bisimulate all of the nodes in a prenormalized process, to find nodes that
  * have equivalent behavior.  Each prenormalized subprocess reachable from

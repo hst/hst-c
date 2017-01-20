@@ -7,97 +7,93 @@
 
 #include "denotational.h"
 
+#include "ccan/container_of/container_of.h"
 #include "csp0.h"
 #include "event.h"
 #include "environment.h"
 #include "test-case-harness.h"
 
-static csp_id
-csp_get_event_id(const char *event_name)
+#define MAX_NAME_LENGTH 4096
+
+struct csp_collect_string {
+    struct csp_name_visitor visitor;
+    char str[MAX_NAME_LENGTH];
+    char *cursor;
+    size_t bytes_remaining;
+};
+
+static void
+csp_collect_string_visit(struct csp *csp, struct csp_name_visitor *visitor,
+                         const char *str, size_t length)
 {
-    return csp_event_id(csp_event_get(event_name));
+    struct csp_collect_string *self =
+            container_of(visitor, struct csp_collect_string, visitor);
+    assert(length < self->bytes_remaining);
+    memcpy(self->cursor, str, length);
+    self->cursor += length;
+    self->bytes_remaining -= length;
+    *self->cursor = '\0';
 }
 
-#define CSP_TRACE_FIRST_ALLOCATION_COUNT 32
+static void
+csp_collect_string_init(struct csp_collect_string *self)
+{
+    self->visitor.visit = csp_collect_string_visit;
+    self->cursor = self->str;
+    self->bytes_remaining = MAX_NAME_LENGTH;
+}
+
+static void
+check_trace_length_(const char *filename, unsigned int line,
+                    struct csp_trace_factory trace_, size_t expected_length)
+{
+    struct csp *csp;
+    struct csp_trace *trace;
+    check_alloc(csp, csp_new());
+    trace = csp_trace_factory_create(csp, trace_);
+    if (expected_length == 0) {
+        check_(filename, line, trace == NULL);
+    } else {
+        check_with_msg_(filename, line, trace->length == expected_length,
+                        "Unexpected trace length: got %zu, expected %zu",
+                        trace->length, expected_length);
+    }
+    csp_free(csp);
+}
+#define check_trace_length ADD_FILE_AND_LINE(check_trace_length_)
+
+static void
+check_trace_print_(const char *filename, unsigned int line,
+                   struct csp_trace_factory trace_, const char *expected_print)
+{
+    struct csp *csp;
+    struct csp_trace *trace;
+    struct csp_collect_string collect;
+    check_alloc(csp, csp_new());
+    trace = csp_trace_factory_create(csp, trace_);
+    csp_collect_string_init(&collect);
+    csp_trace_print(csp, trace, &collect.visitor);
+    check_streq_(filename, line, collect.str, expected_print);
+    csp_free(csp);
+}
+#define check_trace_print ADD_FILE_AND_LINE(check_trace_print_)
 
 TEST_CASE_GROUP("traces");
 
 TEST_CASE("can create empty trace via factory")
 {
-    struct csp *csp;
-    struct csp_trace *trace;
-    check_alloc(csp, csp_new());
-    trace = csp_trace_factory_create(csp, trace());
-    check(trace->count == 0);
-    csp_free(csp);
+    check_trace_length(trace(), 0);
+    check_trace_print(trace(), "⟨⟩");
 }
 
 TEST_CASE("can create 1-element trace via factory")
 {
-    struct csp *csp;
-    struct csp_trace *trace;
-    check_alloc(csp, csp_new());
-    trace = csp_trace_factory_create(csp, trace("a"));
-    check(trace->count == 1);
-    check_id_eq(trace->events[0], csp_get_event_id("a"));
-    csp_free(csp);
+    check_trace_length(trace("a"), 1);
+    check_trace_print(trace("a"), "⟨a⟩");
 }
 
 TEST_CASE("can create 5-element trace via factory")
 {
-    struct csp *csp;
-    struct csp_trace *trace;
-    check_alloc(csp, csp_new());
-    trace = csp_trace_factory_create(csp, trace("a", "b", "c", "d", "e"));
-    check(trace->count == 5);
-    check_id_eq(trace->events[0], csp_get_event_id("a"));
-    check_id_eq(trace->events[1], csp_get_event_id("b"));
-    check_id_eq(trace->events[2], csp_get_event_id("c"));
-    check_id_eq(trace->events[3], csp_get_event_id("d"));
-    check_id_eq(trace->events[4], csp_get_event_id("e"));
-    csp_free(csp);
-}
-
-TEST_CASE("can spill over into allocated storage")
-{
-    struct csp_trace trace;
-    csp_trace_init(&trace);
-    /* Resize the trace with too many elements to fit into the preallocated
-     * internal storage, but few enough to fit into the default-sized
-     * heap-allocated buffer. */
-    csp_trace_ensure_size(&trace, CSP_TRACE_INTERNAL_SIZE + 1);
-    /* Verify that we're not using the internal storage anymore. */
-    check(trace.events != trace.internal);
-    check(trace.allocated_count == CSP_TRACE_FIRST_ALLOCATION_COUNT);
-    csp_trace_done(&trace);
-}
-
-TEST_CASE("can spill over into large allocated storage")
-{
-    struct csp_trace trace;
-    csp_trace_init(&trace);
-    /* Resize the trace with too many elements to fit into the preallocated
-     * internal storage, and too many too fit into the default-sized
-     * heap-allocated buffer. */
-    csp_trace_ensure_size(&trace, CSP_TRACE_FIRST_ALLOCATION_COUNT + 1);
-    /* Verify that we're not using the internal storage anymore. */
-    check(trace.events != trace.internal);
-    check(trace.allocated_count == CSP_TRACE_FIRST_ALLOCATION_COUNT * 2);
-    csp_trace_done(&trace);
-}
-
-TEST_CASE("can reallocate allocated storage")
-{
-    struct csp_trace trace;
-    csp_trace_init(&trace);
-    /* Resize the trace with one too many elements to fit into the preallocated
-     * internal storage, causing an initial allocation. */
-    csp_trace_ensure_size(&trace, CSP_TRACE_INTERNAL_SIZE + 1);
-    /* Then resize the trace again, to cause us to reallocate the heap-allocated
-     * storage. */
-    csp_trace_ensure_size(&trace, CSP_TRACE_FIRST_ALLOCATION_COUNT + 1);
-    /* Verify that we're not using the internal storage anymore. */
-    check(trace.events != trace.internal);
-    check(trace.allocated_count == CSP_TRACE_FIRST_ALLOCATION_COUNT * 2);
-    csp_trace_done(&trace);
+    check_trace_length(trace("a", "b", "c", "d", "e"), 5);
+    check_trace_print(trace("a", "b", "c", "d", "e"), "⟨a,b,c,d,e⟩");
 }
