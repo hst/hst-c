@@ -1,0 +1,56 @@
+/* -*- coding: utf-8 -*-
+ * -----------------------------------------------------------------------------
+ * Copyright © 2017, HST Project.
+ * Please see the COPYING file in this distribution for license details.
+ * -----------------------------------------------------------------------------
+ */
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "csp0.h"
+#include "denotational.h"
+#include "environment.h"
+#include "process.h"
+
+static void
+has_trace(int argc, char **argv)
+{
+    const char *str;
+    struct csp *csp;
+    struct csp_process *process;
+    struct csp_trace *trace;
+    bool result;
+
+    argc--, argv++; /* Command name */
+
+    if (argc != 2) {
+        fprintf(stderr, "Usage: hst has-trace <process> <trace>\n");
+        exit(EXIT_FAILURE);
+    }
+
+    csp = csp_new();
+    assert(csp != NULL);
+
+    str = (argc--, *argv++);
+    process = csp_load_csp0_string(csp, str);
+    if (process == NULL) {
+        csp_free(csp);
+        fprintf(stderr, "Invalid CSP₀ process \"%s\"\n", str);
+        exit(EXIT_FAILURE);
+    }
+
+    str = (argc--, *argv++);
+    if (csp_load_trace_string(csp, str, &trace) != 0) {
+        csp_free(csp);
+        fprintf(stderr, "Invalid CSP₀ trace \"%s\"\n", str);
+        exit(EXIT_FAILURE);
+    }
+
+    result = csp_process_has_trace(csp, process, trace);
+    printf("%s\n", result ? "yes" : "no");
+
+    csp_trace_free_deep(trace);
+    csp_free(csp);
+}
