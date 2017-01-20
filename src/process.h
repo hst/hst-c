@@ -13,6 +13,8 @@
 
 #include "basics.h"
 #include "event.h"
+#include "map.h"
+#include "set.h"
 
 struct csp;
 struct csp_process;
@@ -228,5 +230,93 @@ csp_process_set_iterator_advance(struct csp_process_set_iterator *iter);
     for (csp_process_set_get_iterator((set), (iter)); \
          !csp_process_set_iterator_done((iter));      \
          csp_process_set_iterator_advance((iter)))
+
+/*------------------------------------------------------------------------------
+ * Process bags
+ */
+
+struct csp_process_bag {
+    struct csp_map map;
+    size_t count;
+};
+
+void
+csp_process_bag_init(struct csp_process_bag *bag);
+
+void
+csp_process_bag_done(struct csp_process_bag *bag);
+
+bool
+csp_process_bag_empty(const struct csp_process_bag *bag);
+
+size_t
+csp_process_bag_size(const struct csp_process_bag *bag);
+
+bool
+csp_process_bag_eq(const struct csp_process_bag *bag1,
+                   const struct csp_process_bag *bag2);
+
+void
+csp_process_bag_clear(struct csp_process_bag *bag);
+
+/* Fills in `count` with the number of processes in `bag`, and `processes` with
+ * an array of those processes, sorted by their `index` values.  You must free
+ * `processes` when you're done with it (using `free(3)`). */
+void
+csp_process_bag_sort_by_index(const struct csp_process_bag *bag, size_t *count,
+                              struct csp_process ***processes);
+
+/* Renders the name of each process in a bag, in some braces to show that it's a
+ * bag. */
+void
+csp_process_bag_name(struct csp *csp, const struct csp_process_bag *bag,
+                     struct csp_name_visitor *visitor);
+
+/* Renders a process whose operator can appear infix between two subprocesses,
+ * or prefix before a bag of subprocesses.  Chooses which version to render
+ * based on the size of `subprocesses`. */
+void
+csp_process_bag_nested_name(struct csp *csp, struct csp_process *process,
+                            struct csp_process_bag *subprocesses,
+                            const char *op, struct csp_name_visitor *visitor);
+
+/* Add a single process to a bag. */
+void
+csp_process_bag_add(struct csp_process_bag *bag, struct csp_process *process);
+
+/* Remove a single process from a bag.  `process` must be in the bag. */
+void
+csp_process_bag_remove(struct csp_process_bag *bag,
+                       struct csp_process *process);
+
+/* Add the contents of an existing bag to a bag. */
+void
+csp_process_bag_union(struct csp_process_bag *bag,
+                      const struct csp_process_bag *other);
+
+struct csp_process_bag_iterator {
+    struct csp_map_iterator iter;
+};
+
+void
+csp_process_bag_get_iterator(const struct csp_process_bag *bag,
+                             struct csp_process_bag_iterator *iter);
+
+struct csp_process *
+csp_process_bag_iterator_get(const struct csp_process_bag_iterator *iter);
+
+size_t
+csp_process_bag_iterator_get_count(const struct csp_process_bag_iterator *iter);
+
+bool
+csp_process_bag_iterator_done(struct csp_process_bag_iterator *iter);
+
+void
+csp_process_bag_iterator_advance(struct csp_process_bag_iterator *iter);
+
+#define csp_process_bag_foreach(bag, iter)            \
+    for (csp_process_bag_get_iterator((bag), (iter)); \
+         !csp_process_bag_iterator_done((iter));      \
+         csp_process_bag_iterator_advance((iter)))
 
 #endif /* HST_PROCESS_H */

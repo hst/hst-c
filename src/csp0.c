@@ -210,6 +210,37 @@ static int
 parse_process(struct csp0_parse_state *state, struct csp_process **dest);
 
 static int
+parse_process_bag(struct csp0_parse_state *state, struct csp_process_bag *bag)
+{
+    struct csp_process *process;
+    DEBUG(2, "ENTER  process bag");
+
+    require(parse_token(state, "{"));
+    skip_whitespace(state);
+    if (parse_process(state, &process) == 0) {
+        csp_process_bag_add(bag, process);
+        skip_whitespace(state);
+        while (parse_token(state, ",") == 0) {
+            skip_whitespace(state);
+            if (unlikely(parse_process(state, &process) != 0)) {
+                // Expected process after `,`
+                DEBUG(1, "FAIL   process bag");
+                return -1;
+            }
+            csp_process_bag_add(bag, process);
+            skip_whitespace(state);
+        }
+    }
+    if (unlikely(parse_token(state, "}") != 0)) {
+        // Expected process `}`
+        DEBUG(1, "FAIL   process bag");
+        return -1;
+    }
+    DEBUG(1, "ACCEPT process bag");
+    return 0;
+}
+
+static int
 parse_process_set(struct csp0_parse_state *state, struct csp_process_set *set)
 {
     struct csp_process *process;
@@ -440,7 +471,7 @@ parse_process9(struct csp0_parse_state *state, struct csp_process **dest)
 
     struct csp_process *lhs;
     struct csp_process *rhs;
-    struct csp_process_set ps;
+    struct csp_process_bag ps;
     DEBUG(2, "ENTER  process9");
 
     require(parse_process8(state, &lhs));
@@ -456,11 +487,11 @@ parse_process9(struct csp0_parse_state *state, struct csp_process **dest)
         DEBUG(1, "FAIL   process9");
         return -1;
     }
-    csp_process_set_init(&ps);
-    csp_process_set_add(&ps, lhs);
-    csp_process_set_add(&ps, rhs);
+    csp_process_bag_init(&ps);
+    csp_process_bag_add(&ps, lhs);
+    csp_process_bag_add(&ps, rhs);
     *dest = csp_interleave(state->csp, &ps);
-    csp_process_set_done(&ps);
+    csp_process_bag_done(&ps);
     DEBUG_PROCESS(*dest, "process9 ⫴");
     return 0;
 }
@@ -472,11 +503,11 @@ parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
 {
     // process11 = process10 | □ {process} | ⊓ {process}
 
-    struct csp_process_set processes;
     DEBUG(2, "ENTER  process11");
 
     // □ {process}
     if (parse_token(state, "[]") == 0 || parse_token(state, "□") == 0) {
+        struct csp_process_set processes;
         skip_whitespace(state);
         csp_process_set_init(&processes);
         if (unlikely(parse_process_set(state, &processes) != 0)) {
@@ -492,6 +523,7 @@ parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
 
     // ⊓ {process}
     if (parse_token(state, "|~|") == 0 || parse_token(state, "⊓") == 0) {
+        struct csp_process_set processes;
         skip_whitespace(state);
         csp_process_set_init(&processes);
         if (unlikely(parse_process_set(state, &processes) != 0)) {
@@ -507,15 +539,16 @@ parse_process11(struct csp0_parse_state *state, struct csp_process **dest)
 
     // ⫴ {process}
     if (parse_token(state, "|||") == 0 || parse_token(state, "⫴") == 0) {
+        struct csp_process_bag processes;
         skip_whitespace(state);
-        csp_process_set_init(&processes);
-        if (unlikely(parse_process_set(state, &processes) != 0)) {
-            csp_process_set_done(&processes);
+        csp_process_bag_init(&processes);
+        if (unlikely(parse_process_bag(state, &processes) != 0)) {
+            csp_process_bag_done(&processes);
             DEBUG(1, "FAIL   process11");
             return -1;
         }
         *dest = csp_interleave(state->csp, &processes);
-        csp_process_set_done(&processes);
+        csp_process_bag_done(&processes);
         DEBUG_PROCESS(*dest, "process11 ⫴");
         return 0;
     }

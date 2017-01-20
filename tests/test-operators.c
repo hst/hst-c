@@ -317,7 +317,7 @@ TEST_CASE_GROUP("interleaving");
 
 TEST_CASE("STOP ⫴ STOP")
 {
-    check_process_name(csp0("STOP ⫴ STOP"), "⫴ {STOP}");
+    check_process_name(csp0("STOP ⫴ STOP"), "STOP ⫴ STOP");
     check_process_initials(csp0("STOP ⫴ STOP"), events("✔"));
     check_process_afters(csp0("STOP ⫴ STOP"), event("✔"), csp0s("STOP"));
     check_process_afters(csp0("STOP ⫴ STOP"), event("a"), csp0s());
@@ -346,6 +346,20 @@ TEST_CASE("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)")
                                   "a → STOP ⫴ STOP", "STOP ⫴ STOP", "STOP"));
     check_process_traces_behavior(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
                                   events("a"));
+}
+
+TEST_CASE("a → STOP ⫴ a → STOP")
+{
+    check_process_name(csp0("a → STOP ⫴ a → STOP"), "a → STOP ⫴ a → STOP");
+    check_process_initials(csp0("a → STOP ⫴ a → STOP"), events("a"));
+    check_process_afters(csp0("a → STOP ⫴ a → STOP"), event("a"),
+                         csp0s("STOP ⫴ a → STOP"));
+    check_process_afters(csp0("a → STOP ⫴ a → STOP"), event("b"), csp0s());
+    check_process_afters(csp0("a → STOP ⫴ a → STOP"), event("τ"), csp0s());
+    check_process_reachable(csp0("a → STOP ⫴ a → STOP"),
+                            csp0s("a → STOP ⫴ a → STOP", "a → STOP ⫴ STOP",
+                                  "STOP ⫴ STOP", "STOP"));
+    check_process_traces_behavior(csp0("a → STOP ⫴ a → STOP"), events("a"));
 }
 
 TEST_CASE("a → STOP ⫴ b → STOP")
@@ -422,13 +436,14 @@ TEST_CASE("⫴ {a → STOP, b → STOP, c → STOP}")
                          csp0s("⫴ {a → STOP, b → STOP, STOP}"));
     check_process_afters(csp0("⫴ {a → STOP, b → STOP, c → STOP}"), event("τ"),
                          csp0s());
-    check_process_reachable(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
-                            csp0s("⫴ {a → STOP, b → STOP, c → STOP}",
-                                  "⫴ {STOP, b → STOP, c → STOP}",
-                                  "⫴ {a → STOP, STOP, c → STOP}",
-                                  "⫴ {a → STOP, b → STOP, STOP}",
-                                  "⫴ {a → STOP, STOP}", "⫴ {b → STOP, STOP}",
-                                  "⫴ {c → STOP, STOP}", "⫴ {STOP}", "STOP"));
+    check_process_reachable(
+            csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
+            csp0s("⫴ {a → STOP, b → STOP, c → STOP}",
+                  "⫴ {STOP, a → STOP, b → STOP}",
+                  "⫴ {STOP, a → STOP, c → STOP}",
+                  "⫴ {STOP, b → STOP, c → STOP}", "⫴ {STOP, STOP, a → STOP}",
+                  "⫴ {STOP, STOP, b → STOP}", "⫴ {STOP, STOP, c → STOP}",
+                  "⫴ {STOP, STOP, STOP}", "STOP"));
     check_process_traces_behavior(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
                                   events("a", "b", "c"));
 }

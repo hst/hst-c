@@ -335,17 +335,17 @@ TEST_CASE("parse: let X = a → Y Y = b → X within X")
 TEST_CASE("parse: ⫴ {a → STOP, SKIP}")
 {
     struct csp *csp;
-    struct csp_process_set ps;
+    struct csp_process_bag ps;
     struct csp_process *p1;
     struct csp_process *root;
     /* Create the CSP environment. */
     check_alloc(csp, csp_new());
     p1 = csp_prefix(csp, csp_event_get("a"), csp->stop);
-    csp_process_set_init(&ps);
-    csp_process_set_add(&ps, p1);
-    csp_process_set_add(&ps, csp->skip);
+    csp_process_bag_init(&ps);
+    csp_process_bag_add(&ps, p1);
+    csp_process_bag_add(&ps, csp->skip);
     root = csp_interleave(csp, &ps);
-    csp_process_set_done(&ps);
+    csp_process_bag_done(&ps);
     /* Verify that we can parse the process, with and without whitespace. */
     check_csp0_eq("|||{a->STOP,SKIP}", root);
     check_csp0_eq(" |||{a->STOP,SKIP}", root);

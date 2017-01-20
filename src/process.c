@@ -7,6 +7,7 @@
 
 #include "process.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -427,4 +428,208 @@ void
 csp_process_set_iterator_advance(struct csp_process_set_iterator *iter)
 {
     csp_set_iterator_advance(&iter->iter);
+}
+
+/*------------------------------------------------------------------------------
+ * Process bags
+ */
+
+void
+csp_process_bag_init(struct csp_process_bag *bag)
+{
+    csp_map_init(&bag->map);
+    bag->count = 0;
+}
+
+void
+csp_process_bag_done(struct csp_process_bag *bag)
+{
+    csp_map_done(&bag->map, NULL, NULL);
+}
+
+bool
+csp_process_bag_empty(const struct csp_process_bag *bag)
+{
+    return bag->count == 0;
+}
+
+size_t
+csp_process_bag_size(const struct csp_process_bag *bag)
+{
+    return bag->count;
+}
+
+static bool
+csp_process_bag_entry_eq(void *ud, const void *vcount1, const void *vcount2)
+{
+    uintptr_t count1 = (uintptr_t) vcount1;
+    uintptr_t count2 = (uintptr_t) vcount2;
+    return count1 == count2;
+}
+
+bool
+csp_process_bag_eq(const struct csp_process_bag *bag1,
+                   const struct csp_process_bag *bag2)
+{
+    return csp_map_eq(&bag1->map, &bag2->map, csp_process_bag_entry_eq, NULL);
+}
+
+void
+csp_process_bag_clear(struct csp_process_bag *bag)
+{
+    csp_map_done(&bag->map, NULL, NULL);
+    csp_map_init(&bag->map);
+    bag->count = 0;
+}
+
+void
+csp_process_bag_sort_by_index(const struct csp_process_bag *bag,
+                              size_t *count_out,
+                              struct csp_process ***sorted_out)
+{
+    size_t count = csp_process_bag_size(bag);
+    struct csp_process **sorted = calloc(count, sizeof(struct csp_process *));
+    size_t i = 0;
+    struct csp_process_bag_iterator iter;
+    csp_process_bag_foreach (bag, &iter) {
+        struct csp_process *process = csp_process_bag_iterator_get(&iter);
+        size_t count = csp_process_bag_iterator_get_count(&iter);
+        size_t j;
+        for (j = 0; j < count; j++) {
+            sorted[i++] = process;
+        }
+    }
+    qsort(sorted, count, sizeof(struct csp_process *), compare_process_index);
+    *count_out = count;
+    *sorted_out = sorted;
+}
+
+void
+csp_process_bag_name(struct csp *csp, const struct csp_process_bag *bag,
+                     struct csp_name_visitor *visitor)
+{
+    size_t count = 0;
+    struct csp_process **sorted = NULL;
+    size_t i;
+    csp_process_bag_sort_by_index(bag, &count, &sorted);
+    csp_name_visitor_call(csp, visitor, "{");
+    for (i = 0; i < count; i++) {
+        if (i > 0) {
+            csp_name_visitor_call(csp, visitor, ", ");
+        }
+        csp_process_name(csp, sorted[i], visitor);
+    }
+    csp_name_visitor_call(csp, visitor, "}");
+    free(sorted);
+}
+
+void
+csp_process_bag_nested_name(struct csp *csp, struct csp_process *process,
+                            struct csp_process_bag *subprocesses,
+                            const char *op, struct csp_name_visitor *visitor)
+{
+    struct csp_process_bag_iterator iter;
+    size_t i;
+    struct csp_process *lhs = NULL;
+    struct csp_process *rhs = NULL;
+
+    /* If there aren't exactly two operands, use the replicated syntax. */
+    if (csp_process_bag_size(subprocesses) != 2) {
+        csp_name_visitor_call(csp, visitor, op);
+        csp_name_visitor_call(csp, visitor, " ");
+        csp_process_bag_name(csp, subprocesses, visitor);
+        return;
+    }
+
+    i = 0;
+    csp_process_bag_foreach (subprocesses, &iter) {
+        struct csp_process *process = csp_process_bag_iterator_get(&iter);
+        size_t count = csp_process_bag_iterator_get_count(&iter);
+        size_t j;
+        for (j = 0; j < count; j++) {
+            if (i++ == 0) {
+                lhs = process;
+            } else {
+                rhs = process;
+            }
+        }
+    }
+    if (lhs->index > rhs->index) {
+        swap(lhs, rhs);
+    }
+
+    csp_process_nested_name(csp, process, lhs, visitor);
+    csp_name_visitor_call(csp, visitor, " ");
+    csp_name_visitor_call(csp, visitor, op);
+    csp_name_visitor_call(csp, visitor, " ");
+    csp_process_nested_name(csp, process, rhs, visitor);
+}
+
+void
+csp_process_bag_add(struct csp_process_bag *bag, struct csp_process *process)
+{
+    uintptr_t *count;
+    bag->count++;
+    count = (uintptr_t *) csp_map_at(&bag->map, (uintptr_t) process);
+    (*count)++;
+}
+
+void
+csp_process_bag_remove(struct csp_process_bag *bag, struct csp_process *process)
+{
+    uintptr_t *count;
+    count = (uintptr_t *) csp_map_at(&bag->map, (uintptr_t) process);
+    assert(*count > 0);
+    bag->count--;
+    if (*count == 1) {
+        csp_map_remove(&bag->map, (uintptr_t) process, NULL, NULL);
+    } else {
+        (*count)--;
+    }
+}
+
+void
+csp_process_bag_union(struct csp_process_bag *bag,
+                      const struct csp_process_bag *other)
+{
+    struct csp_process_bag_iterator iter;
+    bag->count += other->count;
+    csp_process_bag_foreach (other, &iter) {
+        struct csp_process *process = csp_process_bag_iterator_get(&iter);
+        size_t count = csp_process_bag_iterator_get_count(&iter);
+        uintptr_t *our_count =
+                (uintptr_t *) csp_map_at(&bag->map, (uintptr_t) process);
+        *our_count += count;
+    }
+}
+
+void
+csp_process_bag_get_iterator(const struct csp_process_bag *bag,
+                             struct csp_process_bag_iterator *iter)
+{
+    csp_map_get_iterator(&bag->map, &iter->iter);
+}
+
+struct csp_process *
+csp_process_bag_iterator_get(const struct csp_process_bag_iterator *iter)
+{
+    return (void *) iter->iter.key;
+}
+
+size_t
+csp_process_bag_iterator_get_count(const struct csp_process_bag_iterator *iter)
+{
+    return (uintptr_t) *iter->iter.value;
+}
+
+bool
+csp_process_bag_iterator_done(struct csp_process_bag_iterator *iter)
+{
+    return csp_map_iterator_done(&iter->iter);
+}
+
+void
+csp_process_bag_iterator_advance(struct csp_process_bag_iterator *iter)
+{
+    csp_map_iterator_advance(&iter->iter);
 }

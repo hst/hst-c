@@ -27,7 +27,7 @@ csp_external_choice(struct csp *csp, struct csp_process *p,
                     struct csp_process *q);
 
 struct csp_process *
-csp_interleave(struct csp *csp, const struct csp_process_set *ps);
+csp_interleave(struct csp *csp, const struct csp_process_bag *ps);
 
 struct csp_process *
 csp_internal_choice(struct csp *csp, struct csp_process *p,

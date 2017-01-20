@@ -123,3 +123,17 @@ csp_map_insert(struct csp_map *map, csp_id id, csp_map_init_entry_f *init_entry,
     }
     return *entry;
 }
+
+void
+csp_map_remove(struct csp_map *map, csp_id id, csp_map_free_entry_f *free_entry,
+               void *ud)
+{
+    UNNEEDED int rc;
+    if (free_entry != NULL) {
+        void *entry = csp_map_get(map, id);
+        if (entry != NULL) {
+            free_entry(ud, entry);
+        }
+    }
+    JLD(rc, map->entries, id);
+}
