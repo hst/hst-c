@@ -13,9 +13,9 @@
 
 #include "ccan/container_of/container_of.h"
 #include "event.h"
-#include "macros.h"
-#include "normalization.h"
+#include "operators.h"
 #include "process.h"
+#include "refinement.h"
 
 /*------------------------------------------------------------------------------
  * Traces
@@ -92,73 +92,23 @@ csp_trace_print(struct csp *csp, const struct csp_trace *trace,
     csp_name_visitor_call(csp, visitor, "⟩");
 }
 
-struct csp_process_has_trace {
-    struct csp_trace_event_visitor visitor;
-    struct csp_process_set set1;
-    struct csp_process_set set2;
-    struct csp_process_set *current;
-    struct csp_process_set *afters;
-};
-
-static void
-csp_process_has_trace_visit(struct csp *csp,
-                            struct csp_trace_event_visitor *visitor,
-                            const struct csp_trace *trace, size_t index)
+struct csp_process *
+csp_process_from_trace(struct csp *csp, const struct csp_trace *trace)
 {
-    struct csp_process_has_trace *self =
-            container_of(visitor, struct csp_process_has_trace, visitor);
-    struct csp_process_set_iterator iter;
-    struct csp_collect_afters collect;
-
-    if (trace == NULL) {
-        return;
+    struct csp_process *current = csp->stop;
+    while (trace != NULL) {
+        current = csp_prefix(csp, trace->event, current);
+        trace = trace->prev;
     }
-
-    /* We might currently be in (the τ closure of) any of the `current`
-     * processes.  Find which processes we could end up in if we follow the
-     * current trace event from one of them. */
-    csp_find_process_closure(csp, csp->tau, self->current);
-    csp_process_set_clear(self->afters);
-    collect = csp_collect_afters(self->afters);
-    csp_process_set_foreach (self->current, &iter) {
-        struct csp_process *process = csp_process_set_iterator_get(&iter);
-        csp_process_visit_afters(csp, process, trace->event, &collect.visitor);
-    }
-
-    /* This new `afters` set becomes the `current` set for the next event in the
-     * trace. */
-    swap(self->current, self->afters);
-}
-
-static void
-csp_process_has_trace_init(struct csp_process_has_trace *self)
-{
-    self->visitor.visit = csp_process_has_trace_visit;
-    csp_process_set_init(&self->set1);
-    csp_process_set_init(&self->set2);
-    self->current = &self->set1;
-    self->afters = &self->set2;
-}
-
-static void
-csp_process_has_trace_done(struct csp_process_has_trace *self)
-{
-    csp_process_set_done(&self->set1);
-    csp_process_set_done(&self->set2);
+    return current;
 }
 
 bool
 csp_process_has_trace(struct csp *csp, struct csp_process *process,
                       const struct csp_trace *trace)
 {
-    struct csp_process_has_trace self;
-    bool result;
-    csp_process_has_trace_init(&self);
-    csp_process_set_add(self.current, process);
-    csp_trace_visit_events(csp, trace, &self.visitor);
-    result = !csp_process_set_empty(self.current);
-    csp_process_has_trace_done(&self);
-    return result;
+    struct csp_process *trace_process = csp_process_from_trace(csp, trace);
+    return csp_check_traces_refinement(csp, process, trace_process);
 }
 
 /*------------------------------------------------------------------------------

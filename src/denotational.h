@@ -49,6 +49,10 @@ void
 csp_trace_print(struct csp *csp, const struct csp_trace *trace,
                 struct csp_name_visitor *visitor);
 
+/* Returns the process that has only `trace` as its maximal trace. */
+struct csp_process *
+csp_process_from_trace(struct csp *csp, const struct csp_trace *trace);
+
 bool
 csp_process_has_trace(struct csp *csp, struct csp_process *process,
                       const struct csp_trace *trace);
