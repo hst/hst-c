@@ -271,6 +271,21 @@ csp_id_add_process(csp_id id, struct csp_process *process)
 }
 
 csp_id
+csp_id_add_process_bag(csp_id id, const struct csp_process_bag *bag)
+{
+    struct csp_process_bag_iterator iter;
+    csp_process_bag_foreach(bag, &iter) {
+        struct csp_process *process = csp_process_bag_iterator_get(&iter);
+        size_t count = csp_process_bag_iterator_get_count(&iter);
+        size_t j;
+        for (j = 0; j < count; j++) {
+            id = csp_id_add_process(id, process);
+        }
+    }
+    return id;
+}
+
+csp_id
 csp_id_add_process_set(csp_id id, const struct csp_process_set *set)
 {
     struct csp_process_set_iterator iter;

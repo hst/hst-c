@@ -121,6 +121,9 @@ csp_id
 csp_id_add_process(csp_id id, struct csp_process *process);
 
 csp_id
+csp_id_add_process_bag(csp_id id, const struct csp_process_bag *bag);
+
+csp_id
 csp_id_add_process_set(csp_id id, const struct csp_process_set *set);
 
 #endif /* HST_ENVIRONMENT_H */

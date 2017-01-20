@@ -32,6 +32,7 @@ ForEachMacros:
   - csp_id_set_map_foreach
   - csp_map_foreach
   - csp_normalized_lts_nodes_foreach
+  - csp_process_bag_foreach
   - csp_process_set_foreach
   - csp_set_foreach
 IncludeCategories:
