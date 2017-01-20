@@ -43,4 +43,31 @@ void
 csp_trace_print(struct csp *csp, const struct csp_trace *trace,
                 struct csp_name_visitor *visitor);
 
+bool
+csp_process_has_trace(struct csp *csp, struct csp_process *process,
+                      const struct csp_trace *trace);
+
+/*------------------------------------------------------------------------------
+ * Trace element visitor
+ */
+
+/* You almost certainly want to iterate through the events of a trace in the
+ * "correct" order, which isn't trivial since we store them in reverse order.
+ * This helper takes care of reversing the reversal for you. */
+
+struct csp_trace_event_visitor {
+    /* This will always be called first with trace == NULL and index == 0 */
+    void (*visit)(struct csp *csp, struct csp_trace_event_visitor *visitor,
+                  const struct csp_trace *trace, size_t index);
+};
+
+void
+csp_trace_event_visitor_call(struct csp *csp,
+                             struct csp_trace_event_visitor *visitor,
+                             const struct csp_trace *trace, size_t index);
+
+void
+csp_trace_visit_events(struct csp *csp, const struct csp_trace *trace,
+                       struct csp_trace_event_visitor *visitor);
+
 #endif /* HST_DENOTATIONAL_H */
