@@ -40,6 +40,16 @@ csp_trace_free(struct csp_trace *trace)
     free(trace);
 }
 
+void
+csp_trace_free_deep(struct csp_trace *trace)
+{
+    if (trace != NULL) {
+        struct csp_trace *prev = trace->prev;
+        free(trace);
+        csp_trace_free_deep(prev);
+    }
+}
+
 bool
 csp_trace_eq(const struct csp_trace *trace1, const struct csp_trace *trace2)
 {

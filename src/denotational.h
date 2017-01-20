@@ -33,8 +33,14 @@ struct csp_trace *
 csp_trace_new(const struct csp_event *event, struct csp_process *process,
               struct csp_trace *prev);
 
+/* Frees (only) `trace`. */
 void
 csp_trace_free(struct csp_trace *trace);
+
+/* Frees `trace` and all of its predecessors.  Don't call this if any of the
+ * predecessors are shared with other traces! */
+void
+csp_trace_free_deep(struct csp_trace *trace);
 
 bool
 csp_trace_eq(const struct csp_trace *trace1, const struct csp_trace *trace2);
