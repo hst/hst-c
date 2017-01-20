@@ -9,6 +9,7 @@
 
 #include <string.h>
 
+#include "denotational.h"
 #include "environment.h"
 #include "event.h"
 #include "operators.h"
@@ -568,4 +569,118 @@ TEST_CASE("precedence: a → STOP □ b → SKIP ; c → STOP")
     check_csp0_eq("a → STOP □ b → SKIP ; c → STOP", root);
     /* Clean up. */
     csp_free(csp);
+}
+
+static void
+check_trace_(const char *filename, unsigned int line, const char *str,
+             struct csp_trace_factory expected_)
+{
+    struct csp *csp;
+    struct csp_trace *expected;
+    struct csp_trace *actual = NULL;
+    check_alloc(csp, csp_new());
+    expected = csp_trace_factory_create(csp, expected_);
+    check0_with_msg_(filename, line, csp_load_trace_string(csp, str, &actual),
+                     "Cannot parse trace %s", str);
+    check_with_msg_(filename, line, csp_trace_eq(actual, expected),
+                    "Got unexpected trace");
+    csp_trace_free_deep(actual);
+    csp_free(csp);
+}
+#define check_trace ADD_FILE_AND_LINE(check_trace_)
+
+static void
+check_trace_invalid_(const char *filename, unsigned int line, const char *str)
+{
+    struct csp *csp;
+    struct csp_trace *actual = NULL;
+    check_alloc(csp, csp_new());
+    checkx0_with_msg_(filename, line, csp_load_trace_string(csp, str, &actual),
+                      "Shouldn't be able to parse trace %s", str);
+    csp_free(csp);
+}
+#define check_trace_invalid ADD_FILE_AND_LINE(check_trace_invalid_)
+
+TEST_CASE_GROUP("CSP₀ traces");
+
+TEST_CASE("parse: ⟨⟩")
+{
+    check_trace("<>", trace());
+    check_trace(" <>", trace());
+    check_trace(" < >", trace());
+    check_trace(" < > ", trace());
+    check_trace("⟨⟩", trace());
+    check_trace(" ⟨⟩", trace());
+    check_trace(" ⟨ ⟩", trace());
+    check_trace(" ⟨ ⟩ ", trace());
+}
+
+TEST_CASE("parse: ⟨a⟩")
+{
+    check_trace("<a>", trace("a"));
+    check_trace(" <a>", trace("a"));
+    check_trace(" < a>", trace("a"));
+    check_trace(" < a >", trace("a"));
+    check_trace(" < a > ", trace("a"));
+    check_trace("⟨a⟩", trace("a"));
+    check_trace(" ⟨a⟩", trace("a"));
+    check_trace(" ⟨ a⟩", trace("a"));
+    check_trace(" ⟨ a ⟩", trace("a"));
+    check_trace(" ⟨ a ⟩ ", trace("a"));
+}
+
+TEST_CASE("parse: ⟨a,b⟩")
+{
+    check_trace("<a,b>", trace("a", "b"));
+    check_trace(" <a,b>", trace("a", "b"));
+    check_trace(" < a,b>", trace("a", "b"));
+    check_trace(" < a ,b>", trace("a", "b"));
+    check_trace(" < a , b>", trace("a", "b"));
+    check_trace(" < a , b >", trace("a", "b"));
+    check_trace(" < a , b > ", trace("a", "b"));
+    check_trace("⟨a,b⟩", trace("a", "b"));
+    check_trace(" ⟨a,b⟩", trace("a", "b"));
+    check_trace(" ⟨ a,b⟩", trace("a", "b"));
+    check_trace(" ⟨ a ,b⟩", trace("a", "b"));
+    check_trace(" ⟨ a , b⟩", trace("a", "b"));
+    check_trace(" ⟨ a , b ⟩", trace("a", "b"));
+    check_trace(" ⟨ a , b ⟩ ", trace("a", "b"));
+}
+
+TEST_CASE("parse: ⟨a,b,c⟩")
+{
+    check_trace("<a,b,c>", trace("a", "b", "c"));
+    check_trace(" <a,b,c>", trace("a", "b", "c"));
+    check_trace(" < a,b,c>", trace("a", "b", "c"));
+    check_trace(" < a ,b,c>", trace("a", "b", "c"));
+    check_trace(" < a , b,c>", trace("a", "b", "c"));
+    check_trace(" < a , b ,c>", trace("a", "b", "c"));
+    check_trace(" < a , b , c>", trace("a", "b", "c"));
+    check_trace(" < a , b , c >", trace("a", "b", "c"));
+    check_trace(" < a , b , c > ", trace("a", "b", "c"));
+    check_trace("⟨a,b,c⟩", trace("a", "b", "c"));
+    check_trace(" ⟨a,b,c⟩", trace("a", "b", "c"));
+    check_trace(" ⟨ a,b,c⟩", trace("a", "b", "c"));
+    check_trace(" ⟨ a ,b,c⟩", trace("a", "b", "c"));
+    check_trace(" ⟨ a , b,c⟩", trace("a", "b", "c"));
+    check_trace(" ⟨ a , b ,c⟩", trace("a", "b", "c"));
+    check_trace(" ⟨ a , b , c⟩", trace("a", "b", "c"));
+    check_trace(" ⟨ a , b , c ⟩", trace("a", "b", "c"));
+    check_trace(" ⟨ a , b , c ⟩ ", trace("a", "b", "c"));
+}
+
+TEST_CASE("cannot parse invalid traces")
+{
+    check_trace_invalid("<");
+    check_trace_invalid("<a");
+    check_trace_invalid("<a,");
+    check_trace_invalid("<a,b");
+    check_trace_invalid("<a,b,");
+    check_trace_invalid("<a,b,c");
+    check_trace_invalid("⟨");
+    check_trace_invalid("⟨a");
+    check_trace_invalid("⟨a,");
+    check_trace_invalid("⟨a,b");
+    check_trace_invalid("⟨a,b,");
+    check_trace_invalid("⟨a,b,c");
 }

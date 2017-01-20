@@ -10,7 +10,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "has-trace.c.in"
 #include "reachable.c.in"
+
+struct command {
+    const char *name;
+    void (*run)(int argc, char **argv);
+};
+
+static struct command commands[] = {
+        {"has-trace", has_trace}, {"reachable", reachable}, {NULL, NULL}};
 
 static bool
 streq(const char *str1, const char *str2)
@@ -22,6 +31,7 @@ int
 main(int argc, char **argv)
 {
     const char *command;
+    struct command *curr;
 
     if (argc <= 1) {
         fprintf(stderr, "Usage: hst [command]\n");
@@ -31,12 +41,13 @@ main(int argc, char **argv)
     argc--, argv++; /* Executable name */
     command = *argv;
 
-    if (streq(command, "reachable")) {
-        reachable(argc, argv);
-    } else {
-        fprintf(stderr, "Unknown command %s\n", command);
-        exit(EXIT_FAILURE);
+    for (curr = commands; curr->name != NULL; curr++) {
+        if (streq(command, curr->name)) {
+            curr->run(argc, argv);
+            exit(EXIT_SUCCESS);
+        }
     }
 
-    return 0;
+    fprintf(stderr, "Unknown command %s\n", command);
+    exit(EXIT_FAILURE);
 }

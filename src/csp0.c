@@ -681,3 +681,75 @@ csp_load_csp0_string(struct csp *csp, const char *str)
     }
     return result;
 }
+
+static int
+parse_trace(struct csp0_parse_state *state, struct csp_trace **dest)
+{
+    const char *close;
+    struct csp_trace *trace;
+    struct csp0_identifier id;
+    const struct csp_event *event;
+
+    DEBUG(2, "ENTER  trace");
+    if (parse_token(state, "<") == 0) {
+        close = ">";
+    } else if (parse_token(state, "⟨") == 0) {
+        close = "⟩";
+    } else {
+        DEBUG(1, "FAIL   trace");
+        return -1;
+    }
+
+    skip_whitespace(state);
+    if (parse_identifier(state, &id) != 0) {
+        require(parse_token(state, close));
+        *dest = NULL;
+        DEBUG(2, "PASS   trace");
+        return 0;
+    }
+
+    event = csp_event_get_sized(id.start, id.length);
+    trace = csp_trace_new(event, NULL, NULL);
+    skip_whitespace(state);
+
+    while (parse_token(state, ",") == 0) {
+        skip_whitespace(state);
+        if (unlikely(parse_identifier(state, &id) != 0)) {
+            csp_trace_free_deep(trace);
+            DEBUG(1, "FAIL   trace");
+            return -1;
+        }
+        event = csp_event_get_sized(id.start, id.length);
+        trace = csp_trace_new(event, NULL, trace);
+        skip_whitespace(state);
+    }
+
+    if (unlikely(parse_token(state, close) != 0)) {
+        csp_trace_free_deep(trace);
+        DEBUG(1, "FAIL   trace");
+        return -1;
+    }
+
+    *dest = trace;
+    DEBUG(2, "PASS   trace");
+    return 0;
+}
+
+int
+csp_load_trace_string(struct csp *csp, const char *str, struct csp_trace **dest)
+{
+    struct csp0_parse_state state;
+    state.csp = csp;
+    state.current_scope = NULL;
+    state.p = str;
+    state.eof = strchr(str, '\0');
+    skip_whitespace(&state);
+    require(parse_trace(&state, dest));
+    skip_whitespace(&state);
+    if (unlikely(state.p != state.eof)) {
+        // Unexpected characters at end of stream
+        csp_trace_free_deep(*dest);
+        return -1;
+    }
+    return 0;
+}
