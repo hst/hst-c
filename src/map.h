@@ -1,6 +1,6 @@
 /* -*- coding: utf-8 -*-
  * -----------------------------------------------------------------------------
- * Copyright © 2016, HST Project.
+ * Copyright © 2016-2017, HST Project.
  * Please see the COPYING file in this distribution for license details.
  * -----------------------------------------------------------------------------
  */
@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "ccan/avl/avl.h"
 #include "basics.h"
 
 /* A map whose keys are IDs, and whose values are anything pointer-sized that
@@ -19,7 +20,7 @@
  * one of those directly.  (Take a look at csp_id_map to see an example of how
  * to implement one of those more specialized map types.) */
 struct csp_map {
-    void *entries;
+    AVL *avl;
 };
 
 void
@@ -44,36 +45,30 @@ csp_map_empty(const struct csp_map *map);
 size_t
 csp_map_size(const struct csp_map *map);
 
-/* Return NULL if the entry doesn't exist. */
+/* Returns NULL if the entry doesn't exist. */
 void *
 csp_map_get(const struct csp_map *map, csp_id id);
 
-/* Creates an entry if it doesn't exist, initialized to NULL. */
-void **
-csp_map_at(struct csp_map *map, csp_id id);
-
-typedef void
-csp_map_init_entry_f(void *ud, void **entry);
-
-/* Ensure that `map` contains an entry with the given `id`, creating it if
- * necessary.  If the entry is new, calls `init_entry` to initialize it.  Return
- * the entry. */
-void *
-csp_map_insert(struct csp_map *map, csp_id id, csp_map_init_entry_f *init_entry,
-               void *ud);
+/* Inserts a new entry into `map`.  Returns true if the entry is new. */
+bool
+csp_map_insert(struct csp_map *map, csp_id id, void *value);
 
 void
 csp_map_remove(struct csp_map *map, csp_id id, csp_map_free_entry_f *free_entry,
                void *ud);
 
 struct csp_map_iterator {
-    void *const *entries;
-    csp_id key;
-    void **value;
+    AvlIter iter;
 };
 
 void
 csp_map_get_iterator(const struct csp_map *map, struct csp_map_iterator *iter);
+
+csp_id
+csp_map_iterator_get_key(const struct csp_map_iterator *iter);
+
+void *
+csp_map_iterator_get_value(const struct csp_map_iterator *iter);
 
 bool
 csp_map_iterator_done(struct csp_map_iterator *iter);

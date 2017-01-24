@@ -977,19 +977,15 @@ pair_set_factory(struct csp *csp, void *vids)
     size_t  i;
     struct csp_id_factory_array *ids = vids;
     struct csp_id_pair_set *set = malloc(sizeof(struct csp_id_pair_set));
-    struct csp_id_pair_set_builder builder;
     assert(set != NULL);
     csp_id_pair_set_init(set);
     test_case_cleanup_register(csp_id_pair_set_free_, set);
-    csp_id_pair_set_builder_init(&builder);
     for (i = 0; i < ids->count;) {
         csp_id from = csp_id_factory_create(csp, ids->factories[i++]);
         csp_id to = csp_id_factory_create(csp, ids->factories[i++]);
         struct csp_id_pair pair = {from, to};
-        csp_id_pair_set_builder_add(&builder, pair);
+        csp_id_pair_set_add(set, pair);
     }
-    csp_id_pair_set_build(set, &builder);
-    csp_id_pair_set_builder_done(&builder);
     return set;
 }
 

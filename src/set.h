@@ -12,6 +12,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "ccan/avl/avl.h"
+
 /* A set of any pointer that you want.  The pointers must be directly comparable
  * — i.e., a pointer is only equal to itself; there isn't any way to define a
  * deeper comparison operation for your elements.  (If you want to do that, use
@@ -19,7 +21,7 @@
  * instead, there are several helper types that store particular kinds of
  * elements, and you'll use one of those directly. */
 struct csp_set {
-    void *elements;
+    AVL *avl;
 };
 
 void
@@ -76,9 +78,7 @@ bool
 csp_set_union(struct csp_set *set, const struct csp_set *other);
 
 struct csp_set_iterator {
-    void *const *elements;
-    uintptr_t current;
-    int found;
+    AvlIter iter;
 };
 
 void

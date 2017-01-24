@@ -7,14 +7,12 @@
 
 #include "set.h"
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#define JUDYERROR_NOTEST 1
-#include <Judy.h>
-
-#include "ccan/compiler/compiler.h"
+#include "ccan/avl/avl.h"
 #include "ccan/hash/hash.h"
 
 /* Hashing sets: We use Zobrist hashes to calculate a hash for each set.  A
@@ -25,16 +23,28 @@
 
 #define CSP_SET_INITIAL_HASH UINT64_C(0xec87ea715d6826f5) /* random */
 
+static int
+csp_set_cmp(const void *element1, const void *element2)
+{
+    if (element1 < element2) {
+        return -1;
+    } else if (element1 > element2) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 void
 csp_set_init(struct csp_set *set)
 {
-    set->elements = NULL;
+    set->avl = avl_new(csp_set_cmp);
+    assert(set->avl != NULL);
 }
 
 void
 csp_set_done(struct csp_set *set, csp_set_free_entry_f *free_entry, void *ud)
 {
-    UNNEEDED Word_t dummy;
     if (free_entry != NULL) {
         struct csp_set_iterator iter;
         csp_set_foreach (set, &iter) {
@@ -42,7 +52,7 @@ csp_set_done(struct csp_set *set, csp_set_free_entry_f *free_entry, void *ud)
             free_entry(ud, entry);
         }
     }
-    J1FA(dummy, set->elements);
+    avl_free(set->avl);
 }
 
 void
@@ -68,15 +78,13 @@ csp_set_hash(const struct csp_set *set, uint64_t base)
 bool
 csp_set_empty(const struct csp_set *set)
 {
-    return set->elements == NULL;
+    return avl_count(set->avl) == 0;
 }
 
 size_t
 csp_set_size(const struct csp_set *set)
 {
-    Word_t count;
-    J1C(count, set->elements, 0, -1);
-    return count;
+    return avl_count(set->avl);
 }
 
 bool
@@ -121,9 +129,7 @@ csp_set_subseteq(const struct csp_set *set1, const struct csp_set *set2)
 bool
 csp_set_add(struct csp_set *set, void *element)
 {
-    int rc;
-    J1S(rc, set->elements, (uintptr_t) element);
-    return rc;
+    return avl_insert(set->avl, element, element);
 }
 
 bool
@@ -142,9 +148,7 @@ csp_set_add_many(struct csp_set *set, size_t count, void **elements)
 bool
 csp_set_remove(struct csp_set *set, void *element)
 {
-    int rc;
-    J1U(rc, set->elements, (uintptr_t) element);
-    return rc;
+    return avl_remove(set->avl, element);
 }
 
 bool
@@ -176,25 +180,23 @@ csp_set_union(struct csp_set *set, const struct csp_set *other)
 void
 csp_set_get_iterator(const struct csp_set *set, struct csp_set_iterator *iter)
 {
-    iter->elements = &set->elements;
-    iter->current = 0;
-    J1F(iter->found, *iter->elements, iter->current);
+    avl_iter_begin(&iter->iter, set->avl, FORWARD);
 }
 
 void *
 csp_set_iterator_get(const struct csp_set_iterator *iter)
 {
-    return (void *) iter->current;
+    return iter->iter.key;
 }
 
 bool
 csp_set_iterator_done(struct csp_set_iterator *iter)
 {
-    return !iter->found;
+    return iter->iter.node == NULL;
 }
 
 void
 csp_set_iterator_advance(struct csp_set_iterator *iter)
 {
-    J1N(iter->found, *iter->elements, iter->current);
+    avl_iter_next(&iter->iter);
 }
