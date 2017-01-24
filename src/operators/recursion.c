@@ -122,17 +122,19 @@ csp_recursive_processes_done(struct csp_recursive_processes *processes)
     csp_map_done(&processes->map, NULL, NULL);
 }
 
-struct csp_recursive_process **
-csp_recursive_processes_at(struct csp_recursive_processes *processes, csp_id id)
-{
-    return (struct csp_recursive_process **) csp_map_at(&processes->map, id);
-}
-
-struct csp_recursive_process *
+static struct csp_recursive_process *
 csp_recursive_processes_get(struct csp_recursive_processes *processes,
                             csp_id id)
 {
     return csp_map_get(&processes->map, id);
+}
+
+static void
+csp_recursive_processes_insert(struct csp_recursive_processes *processes,
+                               csp_id id,
+                               struct csp_recursive_process *recursive_process)
+{
+    csp_map_insert(&processes->map, id, recursive_process);
 }
 
 /*------------------------------------------------------------------------------
@@ -183,14 +185,16 @@ csp_recursion_scope_get_sized(struct csp *csp,
                               struct csp_recursion_scope *scope,
                               const char *name, size_t name_length)
 {
-    struct csp_recursive_process **recursive_process;
+    struct csp_recursive_process *recursive_process;
     csp_id id = csp_recursion_create_id(scope->scope, name, name_length);
-    recursive_process = csp_recursive_processes_at(&scope->processes, id);
-    if (*recursive_process == NULL) {
-        csp_recursive_process(csp, name, name_length, id, recursive_process);
+    recursive_process = csp_recursive_processes_get(&scope->processes, id);
+    if (recursive_process == NULL) {
+        csp_recursive_process(csp, name, name_length, id, &recursive_process);
+        csp_recursive_processes_insert(&scope->processes, id,
+                                       recursive_process);
         scope->unfilled_count++;
     }
-    return &(*recursive_process)->process;
+    return &recursive_process->process;
 }
 
 bool

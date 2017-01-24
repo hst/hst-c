@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "ccan/container_of/container_of.h"
+#include "ccan/likely/likely.h"
 #include "basics.h"
 #include "environment.h"
 #include "event.h"
@@ -441,10 +442,16 @@ csp_process_bag_init(struct csp_process_bag *bag)
     bag->count = 0;
 }
 
+static void
+csp_process_bag_free_entry(void *ud, void *entry)
+{
+    free(entry);
+}
+
 void
 csp_process_bag_done(struct csp_process_bag *bag)
 {
-    csp_map_done(&bag->map, NULL, NULL);
+    csp_map_done(&bag->map, csp_process_bag_free_entry, NULL);
 }
 
 bool
@@ -477,9 +484,8 @@ csp_process_bag_eq(const struct csp_process_bag *bag1,
 void
 csp_process_bag_clear(struct csp_process_bag *bag)
 {
-    csp_map_done(&bag->map, NULL, NULL);
-    csp_map_init(&bag->map);
-    bag->count = 0;
+    csp_process_bag_done(bag);
+    csp_process_bag_init(bag);
 }
 
 void
@@ -568,21 +574,26 @@ csp_process_bag_nested_name(struct csp *csp, struct csp_process *process,
 void
 csp_process_bag_add(struct csp_process_bag *bag, struct csp_process *process)
 {
-    uintptr_t *count;
+    uintptr_t *count = csp_map_get(&bag->map, (uintptr_t) process);
     bag->count++;
-    count = (uintptr_t *) csp_map_at(&bag->map, (uintptr_t) process);
-    (*count)++;
+    if (unlikely(count == NULL)) {
+        count = malloc(sizeof(uintptr_t));
+        *count = 1;
+        csp_map_insert(&bag->map, (uintptr_t) process, count);
+    } else {
+        (*count)++;
+    }
 }
 
 void
 csp_process_bag_remove(struct csp_process_bag *bag, struct csp_process *process)
 {
-    uintptr_t *count;
-    count = (uintptr_t *) csp_map_at(&bag->map, (uintptr_t) process);
-    assert(*count > 0);
+    uintptr_t *count = csp_map_get(&bag->map, (uintptr_t) process);
+    assert(count != NULL && *count > 0);
     bag->count--;
     if (*count == 1) {
-        csp_map_remove(&bag->map, (uintptr_t) process, NULL, NULL);
+        csp_map_remove(&bag->map, (uintptr_t) process,
+                       csp_process_bag_free_entry, NULL);
     } else {
         (*count)--;
     }
@@ -597,9 +608,14 @@ csp_process_bag_union(struct csp_process_bag *bag,
     csp_process_bag_foreach (other, &iter) {
         struct csp_process *process = csp_process_bag_iterator_get(&iter);
         size_t count = csp_process_bag_iterator_get_count(&iter);
-        uintptr_t *our_count =
-                (uintptr_t *) csp_map_at(&bag->map, (uintptr_t) process);
-        *our_count += count;
+        uintptr_t *our_count = csp_map_get(&bag->map, (uintptr_t) process);
+        if (unlikely(our_count == NULL)) {
+            our_count = malloc(sizeof(uintptr_t));
+            *our_count = count;
+            csp_map_insert(&bag->map, (uintptr_t) process, our_count);
+        } else {
+            *our_count += count;
+        }
     }
 }
 
@@ -613,13 +629,13 @@ csp_process_bag_get_iterator(const struct csp_process_bag *bag,
 struct csp_process *
 csp_process_bag_iterator_get(const struct csp_process_bag_iterator *iter)
 {
-    return (void *) iter->iter.key;
+    return (void *) csp_map_iterator_get_key(&iter->iter);
 }
 
 size_t
 csp_process_bag_iterator_get_count(const struct csp_process_bag_iterator *iter)
 {
-    return (uintptr_t) *iter->iter.value;
+    return *((uintptr_t *) csp_map_iterator_get_value(&iter->iter));
 }
 
 bool

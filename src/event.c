@@ -77,10 +77,17 @@ csp_event_map_done(struct csp_event_map *map)
     csp_map_done(&map->map, csp_event_map_free_entry, NULL);
 }
 
-static const struct csp_event **
-csp_event_map_at(struct csp_event_map *map, csp_id id)
+static const struct csp_event *
+csp_event_map_get(struct csp_event_map *map, csp_id id)
 {
-    return (const struct csp_event **) csp_map_at(&map->map, id);
+    return csp_map_get(&map->map, id);
+}
+
+static void
+csp_event_map_insert(struct csp_event_map *map, csp_id id,
+                     const struct csp_event *event)
+{
+    csp_map_insert(&map->map, id, (void *) event);
 }
 
 static struct csp_event_map events;
@@ -124,11 +131,12 @@ csp_event_get_sized(const char *name, size_t name_length)
 {
     struct csp_event_map *map = get_event_map();
     csp_id event_id = hash_sized_name(name, name_length);
-    const struct csp_event **event = csp_event_map_at(map, event_id);
-    if (unlikely(*event == NULL)) {
-        *event = csp_event_new(event_id, name, name_length);
+    const struct csp_event *event = csp_event_map_get(map, event_id);
+    if (unlikely(event == NULL)) {
+        event = csp_event_new(event_id, name, name_length);
+        csp_event_map_insert(map, event_id, event);
     }
-    return *event;
+    return event;
 }
 
 csp_id

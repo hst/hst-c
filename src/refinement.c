@@ -79,7 +79,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
 {
     struct csp_id_pair_set checked;
     struct csp_id_pair_set checking;
-    struct csp_id_pair_set_builder pending;
+    struct csp_id_pair_set pending;
     struct csp_event_set initials;
     struct csp_collect_events collect_initials = csp_collect_events(&initials);
     struct csp_process_set afters;
@@ -90,22 +90,24 @@ csp_perform_traces_refinement_check(struct csp *csp,
 
     csp_id_pair_set_init(&checked);
     csp_id_pair_set_init(&checking);
-    csp_id_pair_set_builder_init(&pending);
+    csp_id_pair_set_init(&pending);
     csp_event_set_init(&initials);
     csp_process_set_init(&afters);
     csp_behavior_init(&spec_behavior);
     csp_behavior_init(&impl_behavior);
-    csp_id_pair_set_builder_add(&pending, root);
+    csp_id_pair_set_add(&pending, root);
     DEBUG("=== check " CSP_ID_FMT " ⊑T " CSP_ID_FMT, normalized_spec->id,
           impl->id);
 
-    while (pending.count > 0) {
-        size_t i;
-        csp_id_pair_set_build(&checking, &pending);
+    while (!csp_id_pair_set_empty(&pending)) {
+        struct csp_id_pair_set_iterator i;
+        swap(checking, pending);
+        csp_id_pair_set_clear(&pending);
         DEBUG("--- new round; checking %zu pairs", checking.count);
-        for (i = 0; i < checking.count; i++) {
+        csp_id_pair_set_foreach (&checking, &i) {
             struct csp_event_set_iterator j;
-            const struct csp_id_pair *current = &checking.pairs[i];
+            const struct csp_id_pair *current =
+                    csp_id_pair_set_iterator_get(&i);
             csp_id spec_id = current->from;
             csp_id impl_id = current->to;
             struct csp_process *spec = csp_require_process(csp, spec_id);
@@ -160,7 +162,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
                     if (!csp_id_pair_set_contains(&checked, next)) {
                         DEBUG("      enqueue (" CSP_ID_FMT "," CSP_ID_FMT ")",
                               spec_after->id, impl_after->id);
-                        csp_id_pair_set_builder_add(&pending, next);
+                        csp_id_pair_set_add(&pending, next);
                     }
                 }
             }
@@ -171,7 +173,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
 
     csp_id_pair_set_done(&checked);
     csp_id_pair_set_done(&checking);
-    csp_id_pair_set_builder_done(&pending);
+    csp_id_pair_set_done(&pending);
     csp_event_set_done(&initials);
     csp_process_set_done(&afters);
     csp_behavior_done(&spec_behavior);
@@ -181,7 +183,7 @@ csp_perform_traces_refinement_check(struct csp *csp,
 failure:
     csp_id_pair_set_done(&checked);
     csp_id_pair_set_done(&checking);
-    csp_id_pair_set_builder_done(&pending);
+    csp_id_pair_set_done(&pending);
     csp_event_set_done(&initials);
     csp_process_set_done(&afters);
     csp_behavior_done(&spec_behavior);

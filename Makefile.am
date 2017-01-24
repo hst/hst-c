@@ -75,12 +75,18 @@ libhst_la_SOURCES = \
 	src/operators/prefix.c \
 	src/operators/recursion.c \
 	src/operators/sequential-composition.c \
+	third_party/ccan/avl/avl.h \
+	third_party/ccan/avl/avl.c \
 	third_party/ccan/build_assert/build_assert.h \
 	third_party/ccan/compiler/compiler.h \
 	third_party/ccan/container_of/container_of.h \
 	third_party/ccan/hash/hash.h \
 	third_party/ccan/hash/hash.c \
-	third_party/ccan/likely/likely.h
+	third_party/ccan/likely/likely.h \
+	third_party/ccan/order/order.h \
+	third_party/ccan/order/order.c \
+	third_party/ccan/ptrint/ptrint.h \
+	third_party/ccan/typesafe_cb/typesafe_cb.h
 libhst_la_LDFLAGS = -export-symbols-regex '^csp_[^_]'
 
 libtests_la_SOURCES = \

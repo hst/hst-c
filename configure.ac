@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------------------------
-# Copyright © 2016, HST Project.
+# Copyright © 2016-2017, HST Project.
 # Please see the COPYING file in this distribution for license details.
 # ------------------------------------------------------------------------------
 
@@ -23,7 +23,6 @@ AC_C_BIGENDIAN([AC_DEFINE([HAVE_BIG_ENDIAN], [1],
                [AC_DEFINE([HAVE_LITTLE_ENDIAN], [1],
                           [Whether this system is little-endian])])
 AC_C_TYPEOF
-AC_CHECK_LIB([Judy], [Judy1Set], [], [AC_MSG_ERROR([libjudy not found])])
 AX_GCC_BUILTIN([__builtin_expect])
 AX_GCC_FUNC_ATTRIBUTE([constructor])
 AX_GCC_FUNC_ATTRIBUTE([unused])

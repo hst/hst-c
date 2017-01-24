@@ -142,22 +142,23 @@ csp_id_process_map_free_entry(void *ud, void *entry)
     csp_process_free(csp, process);
 }
 
-void
+static void
 csp_id_process_map_done(struct csp *csp, struct csp_id_process_map *map)
 {
     csp_map_done(&map->map, csp_id_process_map_free_entry, csp);
 }
 
-struct csp_process *
+static struct csp_process *
 csp_id_process_map_get(const struct csp_id_process_map *map, csp_id id)
 {
     return csp_map_get(&map->map, id);
 }
 
-struct csp_process **
-csp_id_process_map_at(struct csp_id_process_map *map, csp_id id)
+static void
+csp_id_process_map_insert(struct csp_id_process_map *map, csp_id id,
+                          struct csp_process *process)
 {
-    return (struct csp_process **) csp_map_at(&map->map, id);
+    csp_map_insert(&map->map, id, process);
 }
 
 /*------------------------------------------------------------------------------
@@ -202,10 +203,8 @@ void
 csp_register_process(struct csp *pcsp, struct csp_process *process)
 {
     struct csp_priv *csp = container_of(pcsp, struct csp_priv, public);
-    struct csp_process **entry =
-            csp_id_process_map_at(&csp->processes, process->id);
-    assert(*entry == NULL);
-    *entry = process;
+    assert(csp_id_process_map_get(&csp->processes, process->id) == NULL);
+    csp_id_process_map_insert(&csp->processes, process->id, process);
     process->index = csp->process_count++;
 }
 
