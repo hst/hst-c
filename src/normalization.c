@@ -486,17 +486,11 @@ static void
 csp_normalized_process_name(struct csp *csp, struct csp_process *process,
                             struct csp_name_visitor *visitor)
 {
-    struct csp_normalized_process *self =
-            container_of(process, struct csp_normalized_process, process);
     struct csp_process_set merged;
-    csp_name_visitor_call(csp, visitor, "normalized ");
     csp_process_set_init(&merged);
     csp_normalized_process_get_processes(csp, process, &merged);
     csp_process_set_name(csp, &merged, visitor);
     csp_process_set_done(&merged);
-    csp_name_visitor_call(csp, visitor, " within ");
-    csp_process_set_name(csp, csp_prenormalized_process_get_processes(
-                                      self->prenormalized_root), visitor);
 }
 
 static void

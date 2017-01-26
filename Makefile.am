@@ -16,7 +16,6 @@ check_PROGRAMS = \
 	tests/test-events \
 	tests/test-event-sets \
 	tests/test-id-maps \
-	tests/test-id-pairs \
 	tests/test-id-set-maps \
 	tests/test-id-sets \
 	tests/test-process-sets \
@@ -49,8 +48,6 @@ libhst_la_SOURCES = \
 	src/equivalence.c \
 	src/event.h \
 	src/event.c \
-	src/id-pair.h \
-	src/id-pair.c \
 	src/id-map.h \
 	src/id-map.c \
 	src/id-set.h \

@@ -26,7 +26,6 @@
 #include "equivalence.h"
 #include "event.h"
 #include "id-map.h"
-#include "id-pair.h"
 #include "id-set.h"
 
 /*------------------------------------------------------------------------------
@@ -671,14 +670,6 @@ process_set_(size_t count, ...)
     return set;
 }
 
-/* Create a new pair with the given contents. */
-struct csp_id_pair
-pair(csp_id from, csp_id to)
-{
-    struct csp_id_pair pair = {from, to};
-    return pair;
-}
-
 /* Creates a new array of strings.  The set (but not the strings in the array)
  * will be automatically freed for you at the end of the test case. */
 struct string_array {
@@ -779,33 +770,6 @@ struct csp_id_map_factory {
 UNNEEDED
 static struct csp_id_map *
 csp_id_map_factory_create(struct csp *csp, struct csp_id_map_factory factory)
-{
-    return factory.create(csp, factory.ud);
-}
-
-/* ID pair factories are functions that can create an ID pair. */
-struct csp_id_pair_factory {
-    struct csp_id_pair (*create)(struct csp *csp, void *ud);
-    void *ud;
-};
-
-UNNEEDED
-static struct csp_id_pair
-csp_id_pair_factory_create(struct csp *csp, struct csp_id_pair_factory factory)
-{
-    return factory.create(csp, factory.ud);
-}
-
-/* ID pair set factories are functions that can create an ID pair set. */
-struct csp_id_pair_set_factory {
-    struct csp_id_pair_set *(*create)(struct csp *csp, void *ud);
-    void *ud;
-};
-
-UNNEEDED
-static struct csp_id_pair_set *
-csp_id_pair_set_factory_create(struct csp *csp,
-                               struct csp_id_pair_set_factory factory)
 {
     return factory.create(csp, factory.ud);
 }
@@ -955,45 +919,6 @@ static struct csp_id_map_factory
 id_map_(struct csp_id_factory_array *ids)
 {
     struct csp_id_map_factory factory = {id_map_factory, ids};
-    assert((ids->count % 2) == 0);
-    return factory;
-}
-
-/* Creates a new ID pair set factory that wraps a bunch of ID factories to
- * create the contents of each pair. */
-#define pair_set(...) (pair_set_(csp_id_factory_array_new(__VA_ARGS__)))
-
-static void
-csp_id_pair_set_free_(void *vset)
-{
-    struct csp_id_pair_set *set = vset;
-    csp_id_pair_set_done(set);
-    free(set);
-}
-
-static struct csp_id_pair_set *
-pair_set_factory(struct csp *csp, void *vids)
-{
-    size_t  i;
-    struct csp_id_factory_array *ids = vids;
-    struct csp_id_pair_set *set = malloc(sizeof(struct csp_id_pair_set));
-    assert(set != NULL);
-    csp_id_pair_set_init(set);
-    test_case_cleanup_register(csp_id_pair_set_free_, set);
-    for (i = 0; i < ids->count;) {
-        csp_id from = csp_id_factory_create(csp, ids->factories[i++]);
-        csp_id to = csp_id_factory_create(csp, ids->factories[i++]);
-        struct csp_id_pair pair = {from, to};
-        csp_id_pair_set_add(set, pair);
-    }
-    return set;
-}
-
-UNNEEDED
-static struct csp_id_pair_set_factory
-pair_set_(struct csp_id_factory_array *ids)
-{
-    struct csp_id_pair_set_factory factory = {pair_set_factory, ids};
     assert((ids->count % 2) == 0);
     return factory;
 }
