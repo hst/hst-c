@@ -1117,15 +1117,15 @@ trace_factory(struct csp *csp, void *vnames)
 {
     struct string_array *names = vnames;
     size_t i;
-    struct csp_trace *prev = NULL;
+    struct csp_trace *prev = csp_trace_new_empty();
     for (i = 0; i < names->count; i++) {
         const char *event_name = names->strings[i];
         const struct csp_event *event = csp_event_get(event_name);
-        struct csp_trace *trace = csp_trace_new(event, NULL, prev);
-        test_case_cleanup_register((test_case_cleanup_f *) csp_trace_free,
-                                   trace);
+        struct csp_trace *trace = csp_trace_new(event, prev);
         prev = trace;
     }
+    test_case_cleanup_register((test_case_cleanup_f *) csp_trace_free_deep,
+                               prev);
     return prev;
 }
 

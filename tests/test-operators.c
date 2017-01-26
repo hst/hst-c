@@ -184,7 +184,7 @@ check_process_maximal_trace_(const char *filename, unsigned int line,
         check_with_msg_(filename, line,
                         csp_process_has_trace(csp, process, trace),
                         "Process should have trace");
-        if (trace == NULL) {
+        if (csp_trace_empty(trace)) {
             break;
         }
         trace = trace->prev;

@@ -21,17 +21,33 @@
  * Traces
  */
 
+struct csp_trace
+csp_trace_init(const struct csp_event *event, struct csp_trace *prev)
+{
+    struct csp_trace trace = {event, prev};
+    return trace;
+}
+
+struct csp_trace
+csp_trace_init_empty(void)
+{
+    return csp_trace_init(NULL, NULL);
+}
+
 struct csp_trace *
-csp_trace_new(const struct csp_event *event, struct csp_process *process,
-              struct csp_trace *prev)
+csp_trace_new(const struct csp_event *event, struct csp_trace *prev)
 {
     struct csp_trace *trace = malloc(sizeof(struct csp_trace));
     assert(trace != NULL);
     trace->event = event;
-    trace->process = process;
-    trace->length = 1 + ((prev == NULL) ? 0 : prev->length);
     trace->prev = prev;
     return trace;
+}
+
+struct csp_trace *
+csp_trace_new_empty(void)
+{
+    return csp_trace_new(NULL, NULL);
 }
 
 void
@@ -51,10 +67,16 @@ csp_trace_free_deep(struct csp_trace *trace)
 }
 
 bool
+csp_trace_empty(const struct csp_trace *trace)
+{
+    return trace->event == NULL;
+}
+
+bool
 csp_trace_eq(const struct csp_trace *trace1, const struct csp_trace *trace2)
 {
-    if (trace1 == NULL || trace2 == NULL) {
-        return trace1 == trace2;
+    if (csp_trace_empty(trace1) || csp_trace_empty(trace2)) {
+        return csp_trace_empty(trace1) == csp_trace_empty(trace2);
     }
     if (trace1->event != trace2->event) {
         return false;
@@ -73,7 +95,7 @@ csp_trace_print_visit(struct csp *csp, struct csp_trace_event_visitor *visitor,
 {
     struct csp_trace_print *self =
             container_of(visitor, struct csp_trace_print, visitor);
-    if (trace == NULL) {
+    if (csp_trace_empty(trace)) {
         return;
     }
     if (index > 1) {
@@ -96,7 +118,7 @@ struct csp_process *
 csp_process_from_trace(struct csp *csp, const struct csp_trace *trace)
 {
     struct csp_process *current = csp->stop;
-    while (trace != NULL) {
+    while (!csp_trace_empty(trace)) {
         current = csp_prefix(csp, trace->event, current);
         trace = trace->prev;
     }
@@ -107,6 +129,7 @@ bool
 csp_process_has_trace(struct csp *csp, struct csp_process *process,
                       const struct csp_trace *trace)
 {
+    assert(trace != NULL);
     struct csp_process *trace_process = csp_process_from_trace(csp, trace);
     return csp_check_traces_refinement(csp, process, trace_process);
 }
@@ -128,7 +151,7 @@ csp_trace_visit_one_event(struct csp *csp, const struct csp_trace *trace,
                           struct csp_trace_event_visitor *visitor)
 {
     size_t index;
-    if (trace == NULL) {
+    if (csp_trace_empty(trace)) {
         index = 0;
     } else {
         index = csp_trace_visit_one_event(csp, trace->prev, visitor) + 1;
