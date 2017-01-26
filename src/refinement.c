@@ -11,7 +11,6 @@
 #include "ccan/container_of/container_of.h"
 #include "behavior.h"
 #include "event.h"
-#include "id-pair.h"
 #include "macros.h"
 #include "normalization.h"
 

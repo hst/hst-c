@@ -28,7 +28,6 @@ ExperimentalAutoDetectBinPacking: false
 ForEachMacros:
   - csp_event_set_foreach
   - csp_id_map_foreach
-  - csp_id_pair_set_foreach
   - csp_id_set_foreach
   - csp_id_set_map_foreach
   - csp_map_foreach
