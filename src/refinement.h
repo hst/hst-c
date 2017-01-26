@@ -14,6 +14,16 @@
 #include "process.h"
 
 /*------------------------------------------------------------------------------
+ * Refinement check process
+ */
+
+/* Creates a process that contains a (Spec, Impl) pair that needs to be visited
+ * during a refinement check.  `spec` should be a normalized process. */
+struct csp_process *
+csp_refinement_process(struct csp *csp, struct csp_process *spec,
+                       struct csp_process *impl);
+
+/*------------------------------------------------------------------------------
  * Refinement
  */
 
