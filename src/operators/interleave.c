@@ -49,6 +49,38 @@ csp_interleave_name(struct csp *csp, struct csp_process *process,
     csp_process_bag_nested_name(csp, process, &interleave->ps, "⫴", visitor);
 }
 
+struct csp_interleave_build_initial {
+    struct csp_event_visitor visitor;
+    struct csp_event_visitor *wrapped;
+    bool any_initials;
+};
+
+static void
+csp_interleave_build_initial_visit(struct csp *csp,
+                                   struct csp_event_visitor *visitor,
+                                   const struct csp_event *initial)
+{
+    struct csp_interleave_build_initial *self =
+            container_of(visitor, struct csp_interleave_build_initial, visitor);
+    /* For rule 4, we need to keep track of whether there were any initials; if
+     * not, we'll add a ✔ at the last minute. */
+    self->any_initials = true;
+    /* For rule 3, we need to translate any ✔s into τs. */
+    if (initial == csp->tick) {
+        initial = csp->tau;
+    }
+    /* And after all of that, we need to pass the event on to the visitor. */
+    csp_event_visitor_call(csp, self->wrapped, initial);
+}
+
+static struct csp_interleave_build_initial
+csp_interleave_build_initial(struct csp_event_visitor *wrapped)
+{
+    struct csp_interleave_build_initial self = {
+            {csp_interleave_build_initial_visit}, wrapped, false};
+    return self;
+}
+
 static void
 csp_interleave_initials(struct csp *csp, struct csp_process *process,
                         struct csp_event_visitor *visitor)
@@ -60,28 +92,50 @@ csp_interleave_initials(struct csp *csp, struct csp_process *process,
      */
     struct csp_interleave *interleave =
             container_of(process, struct csp_interleave, process);
-    struct csp_event_set initials;
-    struct csp_collect_events collect;
-    struct csp_process_bag_iterator i;
-    csp_event_set_init(&initials);
-    collect = csp_collect_events(&initials);
-
-    /* Rules 1 and 2 */
-    csp_process_bag_foreach (&interleave->ps, &i) {
-        struct csp_process *p = csp_process_bag_iterator_get(&i);
-        csp_process_visit_initials(csp, p, &collect.visitor);
-    }
-    /* Rule 3 */
-    if (csp_event_set_remove(&initials, csp->tick)) {
-        csp_event_set_add(&initials, csp->tau);
+    struct csp_process_bag_iterator iter;
+    struct csp_interleave_build_initial build_initial =
+            csp_interleave_build_initial(visitor);
+    csp_process_bag_foreach (&interleave->ps, &iter) {
+        struct csp_process *p = csp_process_bag_iterator_get(&iter);
+        csp_process_visit_initials(csp, p, &build_initial.visitor);
     }
     /* Rule 4 */
-    if (csp_event_set_empty(&initials)) {
-        csp_event_set_add(&initials, csp->tick);
+    if (!build_initial.any_initials) {
+        csp_event_visitor_call(csp, visitor, csp->tick);
     }
+}
 
-    csp_event_set_visit(csp, &initials, visitor);
-    csp_event_set_done(&initials);
+struct csp_interleave_build_normal_after {
+    struct csp_edge_visitor visitor;
+    struct csp_edge_visitor *wrapped;
+    struct csp_process_bag *ps_prime;
+};
+
+static void
+csp_interleave_build_normal_after_visit(struct csp *csp,
+                                        struct csp_edge_visitor *visitor,
+                                        const struct csp_event *initial,
+                                        struct csp_process *p_prime)
+{
+    struct csp_interleave_build_normal_after *self = container_of(
+            visitor, struct csp_interleave_build_normal_after, visitor);
+    /* ps_prime currently contains Ps.  Add P' and remove P to produce
+     * (Ps ∖ {P} ∪ {P'}) */
+    csp_process_bag_add(self->ps_prime, p_prime);
+    /* Create ⫴ (Ps ∖ {P} ∪ {P'}) as a result. */
+    csp_edge_visitor_call(csp, self->wrapped, initial,
+                          csp_interleave(csp, self->ps_prime));
+    /* Reset Ps' back to Ps ∖ {P}. */
+    csp_process_bag_remove(self->ps_prime, p_prime);
+}
+
+static struct csp_interleave_build_normal_after
+csp_interleave_build_normal_after(struct csp_edge_visitor *wrapped,
+                                  struct csp_process_bag *ps_prime)
+{
+    struct csp_interleave_build_normal_after self = {
+            {csp_interleave_build_normal_after_visit}, wrapped, ps_prime};
+    return self;
 }
 
 static void
@@ -94,42 +148,25 @@ csp_interleave_normal_afters(struct csp *csp, struct csp_process *process,
     /* afters(⫴ Ps, a ∉ {τ,✔}) = ⋃ { ⫴ Ps ∖ {P} ∪ {P'} |
      *                                  P ∈ Ps, P' ∈ afters(P, a) }     [rule 2]
      */
-    struct csp_process_bag_iterator i;
-    /* We'll need to grab afters(P, a) for each P ∈ Ps. */
-    struct csp_process_set p_afters;
+    struct csp_process_bag_iterator iter;
     /* We're going to build up a lot of new Ps' sets that all have the same
      * basic structure: Ps' = Ps ∖ {P} ∪ {P'} */
     struct csp_process_bag ps_prime;
-    csp_process_set_init(&p_afters);
+    struct csp_interleave_build_normal_after build_after =
+            csp_interleave_build_normal_after(visitor, &ps_prime);
     csp_process_bag_init(&ps_prime);
     /* Each Ps' starts with Ps, so go ahead and add that to our Ps' set once. */
     csp_process_bag_union(&ps_prime, &interleave->ps);
     /* For all P ∈ Ps */
-    csp_process_bag_foreach (&interleave->ps, &i) {
-        struct csp_process_set_iterator j;
-        struct csp_process *p = csp_process_bag_iterator_get(&i);
-        struct csp_collect_afters collect = csp_collect_afters(&p_afters);
+    csp_process_bag_foreach (&interleave->ps, &iter) {
+        struct csp_process *p = csp_process_bag_iterator_get(&iter);
         /* Set Ps' to Ps ∖ {P} */
         csp_process_bag_remove(&ps_prime, p);
-        /* Grab afters(P, a) */
-        csp_process_set_clear(&p_afters);
-        csp_process_visit_afters(csp, p, initial, &collect.visitor);
         /* For all P' ∈ afters(P, a) */
-        csp_process_set_foreach (&p_afters, &j) {
-            struct csp_process *p_prime = csp_process_set_iterator_get(&j);
-            /* ps_prime currently contains Ps.  Add P' and remove P to produce
-             * (Ps ∖ {P} ∪ {P'}) */
-            csp_process_bag_add(&ps_prime, p_prime);
-            /* Create ⫴ (Ps ∖ {P} ∪ {P'}) as a result. */
-            csp_edge_visitor_call(csp, visitor, initial,
-                                  csp_interleave(csp, &ps_prime));
-            /* Reset Ps' back to Ps ∖ {P}. */
-            csp_process_bag_remove(&ps_prime, p_prime);
-        }
+        csp_process_visit_afters(csp, p, initial, &build_after.visitor);
         /* Reset Ps' back to Ps. */
         csp_process_bag_add(&ps_prime, p);
     }
-    csp_process_set_done(&p_afters);
     csp_process_bag_done(&ps_prime);
 }
 

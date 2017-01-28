@@ -30,6 +30,22 @@ csp_edge_visitor_call(struct csp *csp, struct csp_edge_visitor *visitor,
 }
 
 static void
+csp_any_edges_visit(struct csp *csp, struct csp_edge_visitor *visitor,
+                    const struct csp_event *initial, struct csp_process *after)
+{
+    struct csp_any_edges *self =
+            container_of(visitor, struct csp_any_edges, visitor);
+    self->has_edges = true;
+}
+
+struct csp_any_edges
+csp_any_edges(void)
+{
+    struct csp_any_edges self = {{csp_any_edges_visit}, false};
+    return self;
+}
+
+static void
 csp_collect_afters_visit(struct csp *csp, struct csp_edge_visitor *visitor,
                          const struct csp_event *event,
                          struct csp_process *after)
