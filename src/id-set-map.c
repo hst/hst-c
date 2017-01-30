@@ -55,16 +55,20 @@ csp_id_set_map_get(const struct csp_id_set_map *map, csp_id id)
     return csp_map_get(&map->map, id);
 }
 
+static void
+csp_id_set_map_init_entry(void *ud, void **ventry)
+{
+    struct csp_id_set *set = malloc(sizeof(struct csp_id_set));
+    assert(set != NULL);
+    csp_id_set_init(set);
+    *ventry = set;
+}
+
 bool
 csp_id_set_map_insert(struct csp_id_set_map *map, csp_id from, csp_id to)
 {
-    struct csp_id_set *set = csp_map_get(&map->map, from);
-    if (unlikely(set == NULL)) {
-        set = malloc(sizeof(struct csp_id_set));
-        assert(set != NULL);
-        csp_id_set_init(set);
-        csp_map_insert(&map->map, from, set);
-    }
+    struct csp_id_set *set =
+            csp_map_insert(&map->map, from, csp_id_set_map_init_entry, NULL);
     return csp_id_set_add(set, to);
 }
 
@@ -101,11 +105,11 @@ csp_id_set_map_iterator_advance(struct csp_id_set_map_iterator *iter)
 csp_id
 csp_id_set_map_iterator_get_from(const struct csp_id_set_map_iterator *iter)
 {
-    return csp_map_iterator_get_key(&iter->iter);
+    return iter->iter.key;
 }
 
 const struct csp_id_set *
 csp_id_set_map_iterator_get_tos(const struct csp_id_set_map_iterator *iter)
 {
-    return csp_map_iterator_get_value(&iter->iter);
+    return *iter->iter.value;
 }

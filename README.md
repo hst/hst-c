@@ -16,12 +16,18 @@ useful, that would be a pleasant side effect!
 ## Building
 
 HST is implemented in C, and uses the [autotools][] for its build environment.
-To install all of the build tools and dependencies on [Arch Linux][], you'd use:
+Its only dependency is on [Judy][], which provides some useful data structures.
+To install it, look for a package called `judy`, `libjudy` or `libjudy-dev` in
+your package manager.
 
-    $ sudo pacman -S base-devel
+As an example, to install all of the build tools and dependencies on [Arch
+Linux][], you'd use something like:
+
+    $ sudo pacman -S base-devel judy
 
 [Arch Linux]: https://www.archlinux.org/
 [autotools]: https://autotools.io/index.html
+[Judy]: http://judy.sourceforge.net/
 
 Once all of the dependencies are installed, build the code:
 
