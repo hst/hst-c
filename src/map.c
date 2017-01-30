@@ -7,42 +7,54 @@
 
 #include "map.h"
 
-#include <assert.h>
 #include <stdbool.h>
 
-#include "ccan/avl/avl.h"
-#include "ccan/compiler/compiler.h"
+#define JUDYERROR_NOTEST 1
+#include <Judy.h>
 
-static int
-csp_map_cmp(const void *key1, const void *key2)
-{
-    if (key1 < key2) {
-        return -1;
-    } else if (key1 > key2) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
+#include "ccan/compiler/compiler.h"
 
 void
 csp_map_init(struct csp_map *map)
 {
-    map->avl = avl_new(csp_map_cmp);
-    assert(map->avl != NULL);
+    map->entries = NULL;
 }
 
 void
 csp_map_done(struct csp_map *map, csp_map_free_entry_f *free_entry, void *ud)
 {
+    UNNEEDED Word_t dummy;
     if (free_entry != NULL) {
-        struct csp_map_iterator iter;
-        csp_map_foreach (map, &iter) {
-            void *value = csp_map_iterator_get_value(&iter);
-            free_entry(ud, value);
+        Word_t *ventry;
+        csp_id id = 0;
+        JLF(ventry, map->entries, id);
+        while (ventry != NULL) {
+            void *entry = (void *) *ventry;
+            free_entry(ud, entry);
+            JLN(ventry, map->entries, id);
         }
     }
-    avl_free(map->avl);
+    JLFA(dummy, map->entries);
+}
+
+void
+csp_map_get_iterator(const struct csp_map *map, struct csp_map_iterator *iter)
+{
+    iter->entries = &map->entries;
+    iter->key = 0;
+    JLF(iter->value, *iter->entries, iter->key);
+}
+
+bool
+csp_map_iterator_done(struct csp_map_iterator *iter)
+{
+    return iter->value == NULL;
+}
+
+void
+csp_map_iterator_advance(struct csp_map_iterator *iter)
+{
+    JLN(iter->value, *iter->entries, iter->key);
 }
 
 bool
@@ -51,12 +63,12 @@ csp_map_eq(const struct csp_map *map1, const struct csp_map *map2,
 {
     struct csp_map_iterator iter;
     csp_map_foreach (map1, &iter) {
-        void *value1 = csp_map_iterator_get_value(&iter);
-        void *value2 = csp_map_get(map2, csp_map_iterator_get_key(&iter));
-        if (value2 == NULL) {
+        void *entry1 = *iter.value;
+        void *entry2 = csp_map_get(map2, iter.key);
+        if (entry2 == NULL) {
             return false;
         }
-        if (!entry_eq(ud, value1, value2)) {
+        if (!entry_eq(ud, entry1, entry2)) {
             return false;
         }
     }
@@ -66,66 +78,62 @@ csp_map_eq(const struct csp_map *map1, const struct csp_map *map2,
 bool
 csp_map_empty(const struct csp_map *map)
 {
-    return avl_count(map->avl) == 0;
+    return map->entries == NULL;
 }
 
 size_t
 csp_map_size(const struct csp_map *map)
 {
-    return avl_count(map->avl);
+    Word_t count;
+    JLC(count, map->entries, 0, -1);
+    return count;
 }
 
 void *
 csp_map_get(const struct csp_map *map, csp_id id)
 {
-    return avl_lookup(map->avl, (void *) id);
+    Word_t *ventry;
+    JLG(ventry, map->entries, id);
+    if (ventry == NULL) {
+        return NULL;
+    } else {
+        void **entry = (void **) ventry;
+        return *entry;
+    }
 }
 
-bool
-csp_map_insert(struct csp_map *map, csp_id id, void *value)
+void **
+csp_map_at(struct csp_map *map, csp_id id)
 {
-    return avl_insert(map->avl, (void *) id, value);
+    Word_t *ventry;
+    JLI(ventry, map->entries, id);
+    return (void **) ventry;
+}
+
+void *
+csp_map_insert(struct csp_map *map, csp_id id, csp_map_init_entry_f *init_entry,
+               void *ud)
+{
+    Word_t *ventry;
+    void **entry;
+    JLI(ventry, map->entries, id);
+    entry = (void **) ventry;
+    if (*entry == NULL) {
+        init_entry(ud, entry);
+    }
+    return *entry;
 }
 
 void
 csp_map_remove(struct csp_map *map, csp_id id, csp_map_free_entry_f *free_entry,
                void *ud)
 {
+    UNNEEDED int rc;
     if (free_entry != NULL) {
         void *entry = csp_map_get(map, id);
         if (entry != NULL) {
             free_entry(ud, entry);
         }
     }
-    avl_remove(map->avl, (void *) id);
-}
-
-void
-csp_map_get_iterator(const struct csp_map *map, struct csp_map_iterator *iter)
-{
-    avl_iter_begin(&iter->iter, map->avl, FORWARD);
-}
-
-csp_id
-csp_map_iterator_get_key(const struct csp_map_iterator *iter)
-{
-    return (uintptr_t) iter->iter.key;
-}
-
-void *
-csp_map_iterator_get_value(const struct csp_map_iterator *iter)
-{
-    return (void *) iter->iter.value;
-}
-
-bool
-csp_map_iterator_done(struct csp_map_iterator *iter)
-{
-    return iter->iter.node == NULL;
-}
-
-void
-csp_map_iterator_advance(struct csp_map_iterator *iter)
-{
-    avl_iter_next(&iter->iter);
+    JLD(rc, map->entries, id);
 }

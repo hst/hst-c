@@ -7,6 +7,8 @@
 
 #include "refinement.h"
 
+#include <assert.h>
+
 #include "ccan/compiler/compiler.h"
 #include "ccan/container_of/container_of.h"
 #include "behavior.h"

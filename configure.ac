@@ -14,6 +14,18 @@ AM_MAINTAINER_MODE([enable])  # Allow packagers to disable if they want
 AM_SILENT_RULES([yes])
 LT_INIT
 
+# Judy stuff
+dnl  Figure out if we are 32-bit or 64-bit (LP64)
+AC_CHECK_SIZEOF(void *)
+if test "$ac_cv_sizeof_void_p" = 8; then
+    AC_MSG_RESULT(Detected 64-bit Build Environment)
+    JUDY_CFLAGS="-DJU_64BIT"
+else
+    AC_MSG_RESULT(Detected 32-bit Build Environment)
+    JUDY_CFLAGS="-UJU_64BIT"
+fi
+AC_SUBST(JUDY_CFLAGS)
+
 # Turn on fatal warnings by default; you can override this by setting CPPFLAGS
 # to something else when running configure.
 : ${CPPFLAGS="-Wall -Werror"}

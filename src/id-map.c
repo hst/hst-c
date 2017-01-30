@@ -56,9 +56,10 @@ csp_id_map_get(const struct csp_id_map *map, csp_id id)
 csp_id
 csp_id_map_insert(struct csp_id_map *map, csp_id from, csp_id to)
 {
-    csp_id old_entry = (uintptr_t) csp_map_get(&map->map, from);
-    csp_map_insert(&map->map, from, (void *) to);
-    return old_entry;
+    void **entry = csp_map_at(&map->map, from);
+    csp_id result = (uintptr_t) *entry;
+    *entry = (void *) to;
+    return result;
 }
 
 void
@@ -83,11 +84,11 @@ csp_id_map_iterator_advance(struct csp_id_map_iterator *iter)
 csp_id
 csp_id_map_iterator_get_from(const struct csp_id_map_iterator *iter)
 {
-    return csp_map_iterator_get_key(&iter->iter);
+    return iter->iter.key;
 }
 
 csp_id
 csp_id_map_iterator_get_to(const struct csp_id_map_iterator *iter)
 {
-    return (uintptr_t) csp_map_iterator_get_value(&iter->iter);
+    return (uintptr_t) *iter->iter.value;
 }
