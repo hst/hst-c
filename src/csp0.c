@@ -13,6 +13,7 @@
 #include "ccan/likely/likely.h"
 #include "environment.h"
 #include "event.h"
+#include "normalization.h"
 #include "operators.h"
 
 #if defined(CSP0_DEBUG)
@@ -285,6 +286,7 @@ parse_process_set(struct csp0_parse_state *state, struct csp_process_set *set)
  * 10. \
  * 11. replicated operators (prefix)
  * 12. let
+ * 13. prenormalized normalized
  */
 
 /* Each of these numbered parse_process functions corresponds to one of the
@@ -655,9 +657,43 @@ parse_process12(struct csp0_parse_state *state, struct csp_process **dest)
 }
 
 static int
+parse_process13(struct csp0_parse_state *state, struct csp_process **dest)
+{
+    // process13 = process12 | prenormalized {process}
+
+    DEBUG(2, "ENTER  process13");
+
+    // prenormalized
+    if (parse_token(state, "prenormalized") == 0) {
+        struct csp_process_set processes;
+        skip_whitespace(state);
+        csp_process_set_init(&processes);
+        if (unlikely(parse_process_set(state, &processes) != 0)) {
+            csp_process_set_done(&processes);
+            DEBUG(1, "FAIL   process13");
+            return -1;
+        }
+        csp_find_process_closure(state->csp, state->csp->tau, &processes);
+        *dest = csp_prenormalized_process_new(state->csp, &processes);
+        csp_process_set_done(&processes);
+        DEBUG_PROCESS(*dest, "process13 prenormalized");
+        return 0;
+    }
+
+    // process12
+    if (likely(parse_process12(state, dest) == 0)) {
+        DEBUG(2, "PASS   process13");
+        return 0;
+    } else {
+        DEBUG(1, "FAIL   process13");
+        return -1;
+    }
+}
+
+static int
 parse_process(struct csp0_parse_state *state, struct csp_process **dest)
 {
-    return parse_process12(state, dest);
+    return parse_process13(state, dest);
 }
 
 struct csp_process *

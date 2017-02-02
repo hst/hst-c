@@ -16,6 +16,7 @@
 #include "environment.h"
 #include "event.h"
 #include "id-set.h"
+#include "normalization.h"
 #include "process.h"
 #include "test-case-harness.h"
 #include "test-cases.h"
@@ -713,4 +714,102 @@ TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
     check_process_maximal_trace(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), trace());
     check_process_maximal_trace(csp0("(a → b → STOP ⊓ SKIP) ; STOP"),
                                 trace("a", "b"));
+}
+
+TEST_CASE_GROUP("prenormalization");
+
+TEST_CASE("prenormalized {a → STOP}")
+{
+    check_process_name(csp0("prenormalized {a → STOP}"),
+                       "prenormalized {a → STOP}");
+    check_process_initials(csp0("prenormalized {a → STOP}"), events("a"));
+    check_process_afters(csp0("prenormalized {a → STOP}"), event("a"),
+                         csp0s("prenormalized {STOP}"));
+    check_process_reachable(
+            csp0("prenormalized {a → STOP}"),
+            csp0s("prenormalized {a → STOP}", "prenormalized {STOP}"));
+    check_process_traces_behavior(csp0("prenormalized {a → STOP}"),
+                                  events("a"));
+    check_process_maximal_trace(csp0("prenormalized {a → STOP}"), trace("a"));
+}
+
+TEST_CASE("prenormalized {a → STOP □ b → STOP}")
+{
+    check_process_name(csp0("prenormalized {a → STOP □ b → STOP}"),
+                       "prenormalized {a → STOP □ b → STOP}");
+    check_process_initials(csp0("prenormalized {a → STOP □ b → STOP}"),
+                           events("a", "b"));
+    check_process_afters(csp0("prenormalized {a → STOP □ b → STOP}"),
+                         event("a"), csp0s("prenormalized {STOP}"));
+    check_process_afters(csp0("prenormalized {a → STOP □ b → STOP}"),
+                         event("b"), csp0s("prenormalized {STOP}"));
+    check_process_reachable(csp0("prenormalized {a → STOP □ b → STOP}"),
+                            csp0s("prenormalized {a → STOP □ b → STOP}",
+                                  "prenormalized {STOP}"));
+    check_process_traces_behavior(csp0("prenormalized {a → STOP □ b → STOP}"),
+                                  events("a", "b"));
+    check_process_maximal_trace(csp0("prenormalized {a → STOP □ b → STOP}"),
+                                trace("a"));
+    check_process_maximal_trace(csp0("prenormalized {a → STOP □ b → STOP}"),
+                                trace("b"));
+}
+
+TEST_CASE("prenormalized {a → STOP □ a → b → STOP}")
+{
+    check_process_name(csp0("prenormalized {a → STOP □ a → b → STOP}"),
+                       "prenormalized {a → STOP □ a → b → STOP}");
+    check_process_initials(csp0("prenormalized {a → STOP □ a → b → STOP}"),
+                           events("a"));
+    check_process_afters(csp0("prenormalized {a → STOP □ a → b → STOP}"),
+                         event("a"), csp0s("prenormalized {STOP, b → STOP}"));
+    check_process_reachable(
+            csp0("prenormalized {a → STOP □ a → b → STOP}"),
+            csp0s("prenormalized {a → STOP □ a → b → STOP}",
+                  "prenormalized {STOP, b → STOP}", "prenormalized {STOP}"));
+    check_process_traces_behavior(
+            csp0("prenormalized {a → STOP □ a → b → STOP}"), events("a"));
+    check_process_maximal_trace(csp0("prenormalized {a → STOP □ a → b → STOP}"),
+                                trace("a"));
+    check_process_maximal_trace(csp0("prenormalized {a → STOP □ a → b → STOP}"),
+                                trace("a", "b"));
+}
+
+TEST_CASE("prenormalized {a → STOP ⊓ b → STOP}")
+{
+    check_process_name(
+            csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+            "prenormalized {a → STOP, b → STOP, a → STOP ⊓ b → STOP}");
+    check_process_initials(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+                           events("a", "b"));
+    check_process_afters(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+                         event("a"), csp0s("prenormalized {STOP}"));
+    check_process_afters(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+                         event("b"), csp0s("prenormalized {STOP}"));
+    check_process_reachable(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+                            csp0s("prenormalized {a → STOP ⊓ b → STOP}",
+                                  "prenormalized {STOP}"));
+    check_process_traces_behavior(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+                                  events("a", "b"));
+    check_process_maximal_trace(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+                                trace("a"));
+    check_process_maximal_trace(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+                                trace("b"));
+}
+
+TEST_CASE("prenormalized {a → SKIP ; b → STOP}")
+{
+    check_process_name(csp0("prenormalized {a → SKIP ; b → STOP}"),
+                       "prenormalized {a → SKIP ; b → STOP}");
+    check_process_initials(csp0("prenormalized {a → SKIP ; b → STOP}"),
+                           events("a"));
+    check_process_afters(csp0("prenormalized {a → SKIP ; b → STOP}"),
+                         event("a"), csp0s("prenormalized {SKIP ; b → STOP}"));
+    check_process_reachable(
+            csp0("prenormalized {a → SKIP ; b → STOP}"),
+            csp0s("prenormalized {a → SKIP ; b → STOP}",
+                  "prenormalized {SKIP ; b → STOP}", "prenormalized {STOP}"));
+    check_process_traces_behavior(csp0("prenormalized {a → SKIP ; b → STOP}"),
+                                  events("a"));
+    check_process_maximal_trace(csp0("prenormalized {a → SKIP ; b → STOP}"),
+                                trace("a"));
 }
