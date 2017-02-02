@@ -21,21 +21,33 @@
 
 /* A sequence of events.  To make them easier to construct, we represent a trace
  * as a reversed linked list, and we include a reference to the process that you
- * end up in after following the trace. */
+ * end up in after following the trace.
+ *
+ * An empty trace has `event == NULL`, and must also have `prev == NULL`.
+ * */
 struct csp_trace {
     const struct csp_event *event;
-    struct csp_process *process;
-    size_t length;
     struct csp_trace *prev;
 };
 
+struct csp_trace
+csp_trace_init(const struct csp_event *event, struct csp_trace *prev);
+
+struct csp_trace
+csp_trace_init_empty(void);
+
 struct csp_trace *
-csp_trace_new(const struct csp_event *event, struct csp_process *process,
-              struct csp_trace *prev);
+csp_trace_new(const struct csp_event *event, struct csp_trace *prev);
+
+struct csp_trace *
+csp_trace_new_empty(void);
 
 /* Frees (only) `trace`. */
 void
 csp_trace_free(struct csp_trace *trace);
+
+bool
+csp_trace_empty(const struct csp_trace *trace);
 
 /* Frees `trace` and all of its predecessors.  Don't call this if any of the
  * predecessors are shared with other traces! */

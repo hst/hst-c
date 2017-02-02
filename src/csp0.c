@@ -739,13 +739,13 @@ parse_trace(struct csp0_parse_state *state, struct csp_trace **dest)
     skip_whitespace(state);
     if (parse_identifier(state, &id) != 0) {
         require(parse_token(state, close));
-        *dest = NULL;
+        *dest = csp_trace_new_empty();
         DEBUG(2, "PASS   trace");
         return 0;
     }
 
     event = csp_event_get_sized(id.start, id.length);
-    trace = csp_trace_new(event, NULL, NULL);
+    trace = csp_trace_new(event, csp_trace_new_empty());
     skip_whitespace(state);
 
     while (parse_token(state, ",") == 0) {
@@ -756,7 +756,7 @@ parse_trace(struct csp0_parse_state *state, struct csp_trace **dest)
             return -1;
         }
         event = csp_event_get_sized(id.start, id.length);
-        trace = csp_trace_new(event, NULL, trace);
+        trace = csp_trace_new(event, trace);
         skip_whitespace(state);
     }
 
