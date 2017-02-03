@@ -12,14 +12,17 @@
 
 #include "has-trace.c.in"
 #include "reachable.c.in"
+#include "traces.c.in"
 
 struct command {
     const char *name;
     void (*run)(int argc, char **argv);
 };
 
-static struct command commands[] = {
-        {"has-trace", has_trace}, {"reachable", reachable}, {NULL, NULL}};
+static struct command commands[] = {{"has-trace", has_trace},
+                                    {"reachable", reachable},
+                                    {"traces", traces},
+                                    {NULL, NULL}};
 
 static bool
 streq(const char *str1, const char *str2)

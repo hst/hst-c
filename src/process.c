@@ -154,29 +154,20 @@ csp_process_visit_afters(struct csp *csp, struct csp_process *process,
     process->iface->afters(csp, process, initial, visitor);
 }
 
-struct csp_process_visit_transitions {
-    struct csp_process *process;
-    struct csp_edge_visitor *wrapped;
-    struct csp_event_visitor visit_initial;
-};
-
-static void
-csp_process_visit_transitions_visit_initial(struct csp *csp,
-                                            struct csp_event_visitor *visitor,
-                                            const struct csp_event *initial)
-{
-    struct csp_process_visit_transitions *self = container_of(
-            visitor, struct csp_process_visit_transitions, visit_initial);
-    csp_process_visit_afters(csp, self->process, initial, self->wrapped);
-}
-
 void
 csp_process_visit_transitions(struct csp *csp, struct csp_process *process,
                               struct csp_edge_visitor *visitor)
 {
-    struct csp_process_visit_transitions self = {
-            process, visitor, {csp_process_visit_transitions_visit_initial}};
-    csp_process_visit_initials(csp, process, &self.visit_initial);
+    struct csp_event_set initials;
+    struct csp_collect_events collect = csp_collect_events(&initials);
+    struct csp_event_set_iterator iter;
+    csp_event_set_init(&initials);
+    csp_process_visit_initials(csp, process, &collect.visitor);
+    csp_event_set_foreach (&initials, &iter) {
+        const struct csp_event *initial = csp_event_set_iterator_get(&iter);
+        csp_process_visit_afters(csp, process, initial, visitor);
+    }
+    csp_event_set_done(&initials);
 }
 
 struct csp_process_bfs {

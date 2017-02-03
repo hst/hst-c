@@ -13,6 +13,7 @@
 
 #include "ccan/container_of/container_of.h"
 #include "event.h"
+#include "normalization.h"
 #include "operators.h"
 #include "process.h"
 #include "refinement.h"
@@ -85,20 +86,23 @@ csp_trace_eq(const struct csp_trace *trace1, const struct csp_trace *trace2)
 }
 
 struct csp_trace_print {
-    struct csp_trace_event_visitor visitor;
+    struct csp_trace_visitor visitor;
     struct csp_name_visitor *wrapped;
+    bool first;
 };
 
 static void
-csp_trace_print_visit(struct csp *csp, struct csp_trace_event_visitor *visitor,
-                      const struct csp_trace *trace, size_t index)
+csp_trace_print_visit(struct csp *csp, struct csp_trace_visitor *visitor,
+                      const struct csp_trace *trace)
 {
     struct csp_trace_print *self =
             container_of(visitor, struct csp_trace_print, visitor);
     if (csp_trace_empty(trace)) {
         return;
     }
-    if (index > 1) {
+    if (self->first) {
+        self->first = false;
+    } else {
         csp_name_visitor_call(csp, self->wrapped, ",");
     }
     csp_name_visitor_call(csp, self->wrapped, csp_event_name(trace->event));
@@ -108,9 +112,9 @@ void
 csp_trace_print(struct csp *csp, const struct csp_trace *trace,
                 struct csp_name_visitor *visitor)
 {
-    struct csp_trace_print self = {{csp_trace_print_visit}, visitor};
+    struct csp_trace_print self = {{csp_trace_print_visit}, visitor, true};
     csp_name_visitor_call(csp, visitor, "⟨");
-    csp_trace_visit_events(csp, trace, &self.visitor);
+    csp_trace_visit_prefixes(csp, trace, &self.visitor);
     csp_name_visitor_call(csp, visitor, "⟩");
 }
 
@@ -139,30 +143,116 @@ csp_process_has_trace(struct csp *csp, struct csp_process *process,
  */
 
 void
-csp_trace_event_visitor_call(struct csp *csp,
-                             struct csp_trace_event_visitor *visitor,
-                             const struct csp_trace *trace, size_t index)
+csp_trace_visitor_call(struct csp *csp, struct csp_trace_visitor *visitor,
+                       const struct csp_trace *trace)
 {
-    visitor->visit(csp, visitor, trace, index);
+    visitor->visit(csp, visitor, trace);
 }
 
-static size_t
-csp_trace_visit_one_event(struct csp *csp, const struct csp_trace *trace,
-                          struct csp_trace_event_visitor *visitor)
+static void
+csp_print_traces_visit(struct csp *csp, struct csp_trace_visitor *visitor,
+                       const struct csp_trace *trace)
 {
-    size_t index;
-    if (csp_trace_empty(trace)) {
-        index = 0;
-    } else {
-        index = csp_trace_visit_one_event(csp, trace->prev, visitor) + 1;
+    struct csp_print_traces *self =
+            container_of(visitor, struct csp_print_traces, visitor);
+    csp_trace_print(csp, trace, self->wrapped);
+    csp_name_visitor_call(csp, self->wrapped, "\n");
+}
+
+struct csp_print_traces
+csp_print_traces(struct csp_name_visitor *wrapped)
+{
+    struct csp_print_traces self = {{csp_print_traces_visit}, wrapped};
+    return self;
+}
+
+static void
+csp_trace_visit_one_prefix(struct csp *csp, const struct csp_trace *trace,
+                           struct csp_trace_visitor *visitor)
+{
+    if (!csp_trace_empty(trace)) {
+        csp_trace_visit_one_prefix(csp, trace->prev, visitor);
     }
-    csp_trace_event_visitor_call(csp, visitor, trace, index);
-    return index;
+    csp_trace_visitor_call(csp, visitor, trace);
 }
 
 void
-csp_trace_visit_events(struct csp *csp, const struct csp_trace *trace,
-                       struct csp_trace_event_visitor *visitor)
+csp_trace_visit_prefixes(struct csp *csp, const struct csp_trace *trace,
+                         struct csp_trace_visitor *visitor)
 {
-    csp_trace_visit_one_event(csp, trace, visitor);
+    csp_trace_visit_one_prefix(csp, trace, visitor);
+}
+
+/*------------------------------------------------------------------------------
+ * Finite traces
+ */
+
+/* The prenormalization code can do most of the work for us; it will give us a
+ * bunch of subprocesses with at most one outgoing transition for any event.  We
+ * then just have to walk through its edges. */
+
+struct csp_subprocess_traces {
+    struct csp_edge_visitor visitor;
+    struct csp_trace_visitor *wrapped;
+    struct csp_subprocess_traces *prev;
+    struct csp_process *process;
+    struct csp_trace trace;
+    bool any_afters;
+};
+
+static bool
+csp_subprocess_traces_contains_process(struct csp_subprocess_traces *self,
+                                       struct csp_process *process)
+{
+    if (self == NULL) {
+        return false;
+    }
+    if (self->process == process) {
+        return true;
+    }
+    return csp_subprocess_traces_contains_process(self->prev, process);
+}
+
+static void
+csp_subprocess_traces_visit(struct csp *csp, struct csp_edge_visitor *visitor,
+                            const struct csp_event *initial,
+                            struct csp_process *after)
+{
+    struct csp_subprocess_traces *self =
+            container_of(visitor, struct csp_subprocess_traces, visitor);
+    struct csp_subprocess_traces next;
+
+    self->any_afters = true;
+    next.visitor.visit = csp_subprocess_traces_visit;
+    next.wrapped = self->wrapped;
+    next.prev = self;
+    next.process = after;
+    next.trace = csp_trace_init(initial, &self->trace);
+    next.any_afters = false;
+
+    /* If the current trace already contains `after`, then we've encountered a
+     * cycle, and have encountered a maximal finite trace. */
+    if (csp_subprocess_traces_contains_process(self, after)) {
+        csp_trace_visitor_call(csp, self->wrapped, &next.trace);
+    } else {
+        csp_process_visit_transitions(csp, after, &next.visitor);
+        if (!next.any_afters) {
+            csp_trace_visitor_call(csp, self->wrapped, &next.trace);
+        }
+    }
+}
+
+void
+csp_process_visit_maximal_finite_traces(struct csp *csp,
+                                        struct csp_process *process,
+                                        struct csp_trace_visitor *wrapped)
+{
+    struct csp_process *prenormalized = csp_prenormalize_process(csp, process);
+    struct csp_subprocess_traces start = {
+            {csp_subprocess_traces_visit}, wrapped, NULL, prenormalized,
+            csp_trace_init_empty(),        false};
+    csp_process_visit_transitions(csp, prenormalized, &start.visitor);
+    if (!start.any_afters) {
+        csp_trace_visitor_call(csp, wrapped, &start.trace);
+    }
 }

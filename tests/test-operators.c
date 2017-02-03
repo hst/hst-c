@@ -170,16 +170,11 @@ check_process_traces_behavior_(const char *filename, unsigned int line,
 /* Verify that the given CSP₀ process has a particular trace, and every prefix
  * of that trace. */
 static void
-check_process_maximal_trace_(const char *filename, unsigned int line,
-                             struct csp_process_factory process_,
-                             struct csp_trace_factory trace_)
+check_process_trace(const char *filename, unsigned int line,
+                    struct csp_process *process, const struct csp_trace *trace)
 {
     struct csp *csp;
-    struct csp_process *process;
-    struct csp_trace *trace;
     check_alloc(csp, csp_new());
-    process = csp_process_factory_create(csp, process_);
-    trace = csp_trace_factory_create(csp, trace_);
     while (true) {
         check_with_msg_(filename, line,
                         csp_process_has_trace(csp, process, trace),
@@ -191,8 +186,91 @@ check_process_maximal_trace_(const char *filename, unsigned int line,
     }
     csp_free(csp);
 }
-#define check_process_maximal_trace \
-    ADD_FILE_AND_LINE(check_process_maximal_trace_)
+
+struct csp_check_trace {
+    struct csp_trace_visitor visitor;
+    size_t count;
+    struct csp_trace **traces;
+    const char *filename;
+    unsigned int line;
+};
+
+static void
+csp_check_trace_visit(struct csp *csp, struct csp_trace_visitor *visitor,
+                      const struct csp_trace *trace)
+{
+    struct csp_check_trace *self =
+            container_of(visitor, struct csp_check_trace, visitor);
+    size_t i;
+    for (i = 0; i < self->count; i++) {
+        if (self->traces[i] != NULL && csp_trace_eq(trace, self->traces[i])) {
+            self->traces[i] = NULL;
+            return;
+        }
+    }
+    fail_at(self->filename, self->line, "Unexpected maximal trace found");
+}
+
+static void
+csp_check_trace_verify_all_found(const char *filename, unsigned int line,
+                                 struct csp *csp, struct csp_check_trace *self)
+{
+    size_t i;
+    for (i = 0; i < self->count; i++) {
+        if (self->traces[i] != NULL) {
+            struct csp_collect_name collect;
+            csp_collect_name_init(&collect);
+            csp_trace_print(csp, self->traces[i], &collect.visitor);
+            fail_at(filename, line, "Maximal trace %s wasn't found",
+                    collect.name);
+        }
+    }
+}
+
+static struct csp_check_trace
+csp_check_trace(const char *filename, unsigned int line, size_t count,
+                struct csp_trace **traces)
+{
+    struct csp_check_trace self = {
+            {csp_check_trace_visit}, count, traces, filename, line};
+    return self;
+}
+
+/* Verify that the given CSP₀ process has a particular set of maximal traces.
+ * Also verify that each prefix of those traces is also a valid trace of the
+ * process. */
+static void
+check_process_maximal_traces_(const char *filename, unsigned int line,
+                              struct csp_process_factory process_,
+                              struct csp_trace_factory_array *traces_)
+{
+    struct csp *csp;
+    struct csp_process *process;
+    struct csp_trace **traces;
+    size_t i;
+    struct csp_check_trace check_trace;
+    assert(traces_->count > 0);
+    check_alloc(csp, csp_new());
+    process = csp_process_factory_create(csp, process_);
+    traces = calloc(traces_->count, sizeof(struct csp_trace *));
+    assert(traces != NULL);
+    test_case_cleanup_register(free, traces);
+    for (i = 0; i < traces_->count; i++) {
+        traces[i] = csp_trace_factory_create(csp, traces_->traces[i]);
+    }
+    /* First verify that each of the traces passed in is a trace of the process,
+     * and that each prefix of that trace is, too. */
+    for (i = 0; i < traces_->count; i++) {
+        check_process_trace(filename, line, process, traces[i]);
+    }
+    /* Then verify that it's also the list of maximal traces for the process. */
+    check_trace = csp_check_trace(filename, line, traces_->count, traces);
+    csp_process_visit_maximal_finite_traces(csp, process, &check_trace.visitor);
+    csp_check_trace_verify_all_found(filename, line, csp, &check_trace);
+    csp_free(csp);
+}
+#define check_process_maximal_traces \
+    ADD_FILE_AND_LINE(check_process_maximal_traces_)
 
 /* Verify the `initials` of a subprocess.  `subprocess` should be a process that
  * has been defined as part of `process`. */
@@ -285,7 +363,7 @@ TEST_CASE("STOP □ STOP")
     check_process_afters(csp0("STOP □ STOP"), event("a"), csp0s());
     check_process_reachable(csp0("STOP □ STOP"), csp0s("STOP □ STOP"));
     check_process_traces_behavior(csp0("STOP □ STOP"), events());
-    check_process_maximal_trace(csp0("STOP □ STOP"), trace());
+    check_process_maximal_traces(csp0("STOP □ STOP"), traces(trace()));
 }
 
 TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)")
@@ -306,12 +384,8 @@ TEST_CASE("(a → STOP) □ (b → STOP ⊓ c → STOP)")
                   "a → STOP □ c → STOP", "STOP"));
     check_process_traces_behavior(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
                                   events("a"));
-    check_process_maximal_trace(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
-                                trace("a"));
-    check_process_maximal_trace(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
-                                trace("b"));
-    check_process_maximal_trace(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
-                                trace("c"));
+    check_process_maximal_traces(csp0("(a → STOP) □ (b → STOP ⊓ c → STOP)"),
+                                 traces(trace("a"), trace("b"), trace("c")));
 }
 
 TEST_CASE("(a → STOP) □ (b → STOP)")
@@ -327,8 +401,8 @@ TEST_CASE("(a → STOP) □ (b → STOP)")
                             csp0s("(a → STOP) □ (b → STOP)", "STOP"));
     check_process_traces_behavior(csp0("(a → STOP) □ (b → STOP)"),
                                   events("a", "b"));
-    check_process_maximal_trace(csp0("(a → STOP) □ (b → STOP)"), trace("a"));
-    check_process_maximal_trace(csp0("(a → STOP) □ (b → STOP)"), trace("b"));
+    check_process_maximal_traces(csp0("(a → STOP) □ (b → STOP)"),
+                                 traces(trace("a"), trace("b")));
 }
 
 TEST_CASE("□ {a → STOP, b → STOP, c → STOP}")
@@ -349,12 +423,8 @@ TEST_CASE("□ {a → STOP, b → STOP, c → STOP}")
                             csp0s("□ {a → STOP, b → STOP, c → STOP}", "STOP"));
     check_process_traces_behavior(csp0("□ {a → STOP, b → STOP, c → STOP}"),
                                   events("a", "b", "c"));
-    check_process_maximal_trace(csp0("□ {a → STOP, b → STOP, c → STOP}"),
-                                trace("a"));
-    check_process_maximal_trace(csp0("□ {a → STOP, b → STOP, c → STOP}"),
-                                trace("b"));
-    check_process_maximal_trace(csp0("□ {a → STOP, b → STOP, c → STOP}"),
-                                trace("c"));
+    check_process_maximal_traces(csp0("□ {a → STOP, b → STOP, c → STOP}"),
+                                 traces(trace("a"), trace("b"), trace("c")));
 }
 
 TEST_CASE_GROUP("interleaving");
@@ -368,7 +438,7 @@ TEST_CASE("STOP ⫴ STOP")
     check_process_afters(csp0("STOP ⫴ STOP"), event("τ"), csp0s());
     check_process_reachable(csp0("STOP ⫴ STOP"), csp0s("STOP ⫴ STOP", "STOP"));
     check_process_traces_behavior(csp0("STOP ⫴ STOP"), events("✔"));
-    check_process_maximal_trace(csp0("STOP ⫴ STOP"), trace("✔"));
+    check_process_maximal_traces(csp0("STOP ⫴ STOP"), traces(trace("✔")));
 }
 
 TEST_CASE("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)")
@@ -391,14 +461,10 @@ TEST_CASE("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)")
                                   "a → STOP ⫴ STOP", "STOP ⫴ STOP", "STOP"));
     check_process_traces_behavior(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
                                   events("a"));
-    check_process_maximal_trace(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
-                                trace("a", "b"));
-    check_process_maximal_trace(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
-                                trace("a", "c"));
-    check_process_maximal_trace(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
-                                trace("b", "a"));
-    check_process_maximal_trace(csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
-                                trace("c", "a"));
+    check_process_maximal_traces(
+            csp0("(a → STOP) ⫴ (b → STOP ⊓ c → STOP)"),
+            traces(trace("a", "b", "✔"), trace("a", "c", "✔"),
+                   trace("b", "a", "✔"), trace("c", "a", "✔")));
 }
 
 TEST_CASE("a → STOP ⫴ a → STOP")
@@ -413,7 +479,8 @@ TEST_CASE("a → STOP ⫴ a → STOP")
                             csp0s("a → STOP ⫴ a → STOP", "a → STOP ⫴ STOP",
                                   "STOP ⫴ STOP", "STOP"));
     check_process_traces_behavior(csp0("a → STOP ⫴ a → STOP"), events("a"));
-    check_process_maximal_trace(csp0("a → STOP ⫴ a → STOP"), trace("a", "a"));
+    check_process_maximal_traces(csp0("a → STOP ⫴ a → STOP"),
+                                 traces(trace("a", "a", "✔")));
 }
 
 TEST_CASE("a → STOP ⫴ b → STOP")
@@ -430,8 +497,9 @@ TEST_CASE("a → STOP ⫴ b → STOP")
                                   "STOP ⫴ b → STOP", "STOP ⫴ STOP", "STOP"));
     check_process_traces_behavior(csp0("a → STOP ⫴ b → STOP"),
                                   events("a", "b"));
-    check_process_maximal_trace(csp0("a → STOP ⫴ b → STOP"), trace("a", "b"));
-    check_process_maximal_trace(csp0("a → STOP ⫴ b → STOP"), trace("b", "a"));
+    check_process_maximal_traces(
+            csp0("a → STOP ⫴ b → STOP"),
+            traces(trace("a", "b", "✔"), trace("b", "a", "✔")));
 }
 
 TEST_CASE("a → SKIP ⫴ b → SKIP")
@@ -451,10 +519,9 @@ TEST_CASE("a → SKIP ⫴ b → SKIP")
                   "STOP ⫴ STOP", "SKIP ⫴ SKIP", "STOP"));
     check_process_traces_behavior(csp0("a → SKIP ⫴ b → SKIP"),
                                   events("a", "b"));
-    check_process_maximal_trace(csp0("a → SKIP ⫴ b → SKIP"),
-                                trace("a", "b", "✔"));
-    check_process_maximal_trace(csp0("a → SKIP ⫴ b → SKIP"),
-                                trace("b", "a", "✔"));
+    check_process_maximal_traces(
+            csp0("a → SKIP ⫴ b → SKIP"),
+            traces(trace("a", "b", "✔"), trace("b", "a", "✔")));
 }
 
 TEST_CASE("(a → SKIP ⫴ b → SKIP) ; c → STOP")
@@ -480,10 +547,9 @@ TEST_CASE("(a → SKIP ⫴ b → SKIP) ; c → STOP")
                   "c → STOP", "STOP"));
     check_process_traces_behavior(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"),
                                   events("a", "b"));
-    check_process_maximal_trace(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"),
-                                trace("a", "b", "c"));
-    check_process_maximal_trace(csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"),
-                                trace("b", "a", "c"));
+    check_process_maximal_traces(
+            csp0("(a → SKIP ⫴ b → SKIP) ; c → STOP"),
+            traces(trace("a", "b", "c"), trace("b", "a", "c")));
 }
 
 TEST_CASE("⫴ {a → STOP, b → STOP, c → STOP}")
@@ -510,18 +576,11 @@ TEST_CASE("⫴ {a → STOP, b → STOP, c → STOP}")
                   "⫴ {STOP, STOP, STOP}", "STOP"));
     check_process_traces_behavior(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
                                   events("a", "b", "c"));
-    check_process_maximal_trace(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
-                                trace("a", "b", "c"));
-    check_process_maximal_trace(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
-                                trace("a", "c", "b"));
-    check_process_maximal_trace(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
-                                trace("b", "a", "c"));
-    check_process_maximal_trace(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
-                                trace("b", "c", "a"));
-    check_process_maximal_trace(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
-                                trace("c", "a", "b"));
-    check_process_maximal_trace(csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
-                                trace("c", "b", "a"));
+    check_process_maximal_traces(
+            csp0("⫴ {a → STOP, b → STOP, c → STOP}"),
+            traces(trace("a", "b", "c", "✔"), trace("a", "c", "b", "✔"),
+                   trace("b", "a", "c", "✔"), trace("b", "c", "a", "✔"),
+                   trace("c", "a", "b", "✔"), trace("c", "b", "a", "✔")));
 }
 
 TEST_CASE_GROUP("internal choice");
@@ -534,7 +593,7 @@ TEST_CASE("STOP ⊓ STOP")
     check_process_afters(csp0("STOP ⊓ STOP"), event("a"), csp0s());
     check_process_reachable(csp0("STOP ⊓ STOP"), csp0s("STOP ⊓ STOP", "STOP"));
     check_process_traces_behavior(csp0("STOP ⊓ STOP"), events());
-    check_process_maximal_trace(csp0("STOP ⊓ STOP"), trace());
+    check_process_maximal_traces(csp0("STOP ⊓ STOP"), traces(trace()));
 }
 
 TEST_CASE("(a → STOP) ⊓ (b → STOP)")
@@ -548,8 +607,8 @@ TEST_CASE("(a → STOP) ⊓ (b → STOP)")
             csp0("(a → STOP) ⊓ (b → STOP)"),
             csp0s("(a → STOP) ⊓ (b → STOP)", "a → STOP", "b → STOP", "STOP"));
     check_process_traces_behavior(csp0("(a → STOP) ⊓ (b → STOP)"), events());
-    check_process_maximal_trace(csp0("(a → STOP) ⊓ (b → STOP)"), trace("a"));
-    check_process_maximal_trace(csp0("(a → STOP) ⊓ (b → STOP)"), trace("b"));
+    check_process_maximal_traces(csp0("(a → STOP) ⊓ (b → STOP)"),
+                                 traces(trace("a"), trace("b")));
 }
 
 TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}")
@@ -567,12 +626,8 @@ TEST_CASE("⊓ {a → STOP, b → STOP, c → STOP}")
                                   "a → STOP", "b → STOP", "c → STOP", "STOP"));
     check_process_traces_behavior(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
                                   events());
-    check_process_maximal_trace(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
-                                trace("a"));
-    check_process_maximal_trace(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
-                                trace("b"));
-    check_process_maximal_trace(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
-                                trace("c"));
+    check_process_maximal_traces(csp0("⊓ {a → STOP, b → STOP, c → STOP}"),
+                                 traces(trace("a"), trace("b"), trace("c")));
 }
 
 TEST_CASE_GROUP("prefix");
@@ -585,7 +640,7 @@ TEST_CASE("a → STOP")
     check_process_afters(csp0("a → STOP"), event("b"), csp0s());
     check_process_reachable(csp0("a → STOP"), csp0s("a → STOP", "STOP"));
     check_process_traces_behavior(csp0("a → STOP"), events("a"));
-    check_process_maximal_trace(csp0("a → STOP"), trace("a"));
+    check_process_maximal_traces(csp0("a → STOP"), traces(trace("a")));
 }
 
 TEST_CASE("a → b → STOP")
@@ -597,7 +652,7 @@ TEST_CASE("a → b → STOP")
     check_process_reachable(csp0("a → b → STOP"),
                             csp0s("a → b → STOP", "b → STOP", "STOP"));
     check_process_traces_behavior(csp0("a → b → STOP"), events("a"));
-    check_process_maximal_trace(csp0("a → b → STOP"), trace("a", "b"));
+    check_process_maximal_traces(csp0("a → b → STOP"), traces(trace("a", "b")));
 }
 
 TEST_CASE_GROUP("recursion");
@@ -612,7 +667,8 @@ TEST_CASE("let X=a → STOP within X")
     check_process_traces_behavior(csp0("let X=a → STOP within X"), events("a"));
     check_process_reachable(csp0("let X=a → STOP within X"),
                             csp0s("X@0", "STOP"));
-    check_process_maximal_trace(csp0("let X=a → STOP within X"), trace("a"));
+    check_process_maximal_traces(csp0("let X=a → STOP within X"),
+                                 traces(trace("a")));
 }
 
 TEST_CASE("let X=a → Y Y=b → X within X")
@@ -632,10 +688,10 @@ TEST_CASE("let X=a → Y Y=b → X within X")
                              event("b"), csp0s("X@0"));
     check_process_sub_traces_behavior(csp0("let X=a → Y Y=b → X within X"),
                                       csp0("Y@0"), events("b"));
-    check_process_maximal_trace(csp0("let X=a → Y Y=b → X within X"),
-                                trace("a", "b"));
-    check_process_maximal_trace(csp0("let X=a → Y Y=b → X within X"),
-                                trace("a", "b", "a", "b"));  /* and on and on */
+    //check_process_trace(csp0("let X=a → Y Y=b → X within X"),
+    //                    trace("a", "b", "a", "b")); /* and on and on */
+    check_process_maximal_traces(csp0("let X=a → Y Y=b → X within X"),
+                                 traces(trace("a", "b")));
 }
 
 TEST_CASE_GROUP("sequential composition");
@@ -650,7 +706,7 @@ TEST_CASE("SKIP ; STOP")
     check_process_afters(csp0("SKIP ; STOP"), event("✔"), csp0s());
     check_process_reachable(csp0("SKIP ; STOP"), csp0s("SKIP ; STOP", "STOP"));
     check_process_traces_behavior(csp0("SKIP ; STOP"), events());
-    check_process_maximal_trace(csp0("SKIP ; STOP"), trace());
+    check_process_maximal_traces(csp0("SKIP ; STOP"), traces(trace()));
 }
 
 TEST_CASE("a → SKIP ; STOP")
@@ -665,7 +721,7 @@ TEST_CASE("a → SKIP ; STOP")
     check_process_reachable(csp0("a → SKIP ; STOP"),
                             csp0s("a → SKIP ; STOP", "SKIP ; STOP", "STOP"));
     check_process_traces_behavior(csp0("a → SKIP ; STOP"), events("a"));
-    check_process_maximal_trace(csp0("a → SKIP ; STOP"), trace("a"));
+    check_process_maximal_traces(csp0("a → SKIP ; STOP"), traces(trace("a")));
 }
 
 TEST_CASE("(a → b → STOP □ SKIP) ; STOP")
@@ -687,9 +743,8 @@ TEST_CASE("(a → b → STOP □ SKIP) ; STOP")
                                   "b → STOP ; STOP", "STOP ; STOP", "STOP"));
     check_process_traces_behavior(csp0("(a → b → STOP □ SKIP) ; STOP"),
                                   events("a"));
-    check_process_maximal_trace(csp0("(a → b → STOP □ SKIP) ; STOP"), trace());
-    check_process_maximal_trace(csp0("(a → b → STOP □ SKIP) ; STOP"),
-                                trace("a", "b"));
+    check_process_maximal_traces(csp0("(a → b → STOP □ SKIP) ; STOP"),
+                                 traces(trace("a", "b")));
 }
 
 TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
@@ -711,9 +766,8 @@ TEST_CASE("(a → b → STOP ⊓ SKIP) ; STOP")
                   "SKIP ; STOP", "b → STOP ; STOP", "STOP ; STOP", "STOP"));
     check_process_traces_behavior(csp0("(a → b → STOP ⊓ SKIP) ; STOP"),
                                   events());
-    check_process_maximal_trace(csp0("(a → b → STOP ⊓ SKIP) ; STOP"), trace());
-    check_process_maximal_trace(csp0("(a → b → STOP ⊓ SKIP) ; STOP"),
-                                trace("a", "b"));
+    check_process_maximal_traces(csp0("(a → b → STOP ⊓ SKIP) ; STOP"),
+                                 traces(trace("a", "b")));
 }
 
 TEST_CASE_GROUP("prenormalization");
@@ -730,7 +784,8 @@ TEST_CASE("prenormalized {a → STOP}")
             csp0s("prenormalized {a → STOP}", "prenormalized {STOP}"));
     check_process_traces_behavior(csp0("prenormalized {a → STOP}"),
                                   events("a"));
-    check_process_maximal_trace(csp0("prenormalized {a → STOP}"), trace("a"));
+    check_process_maximal_traces(csp0("prenormalized {a → STOP}"),
+                                 traces(trace("a")));
 }
 
 TEST_CASE("prenormalized {a → STOP □ b → STOP}")
@@ -748,10 +803,8 @@ TEST_CASE("prenormalized {a → STOP □ b → STOP}")
                                   "prenormalized {STOP}"));
     check_process_traces_behavior(csp0("prenormalized {a → STOP □ b → STOP}"),
                                   events("a", "b"));
-    check_process_maximal_trace(csp0("prenormalized {a → STOP □ b → STOP}"),
-                                trace("a"));
-    check_process_maximal_trace(csp0("prenormalized {a → STOP □ b → STOP}"),
-                                trace("b"));
+    check_process_maximal_traces(csp0("prenormalized {a → STOP □ b → STOP}"),
+                                 traces(trace("a"), trace("b")));
 }
 
 TEST_CASE("prenormalized {a → STOP □ a → b → STOP}")
@@ -768,10 +821,9 @@ TEST_CASE("prenormalized {a → STOP □ a → b → STOP}")
                   "prenormalized {STOP, b → STOP}", "prenormalized {STOP}"));
     check_process_traces_behavior(
             csp0("prenormalized {a → STOP □ a → b → STOP}"), events("a"));
-    check_process_maximal_trace(csp0("prenormalized {a → STOP □ a → b → STOP}"),
-                                trace("a"));
-    check_process_maximal_trace(csp0("prenormalized {a → STOP □ a → b → STOP}"),
-                                trace("a", "b"));
+    check_process_maximal_traces(
+            csp0("prenormalized {a → STOP □ a → b → STOP}"),
+            traces(trace("a", "b")));
 }
 
 TEST_CASE("prenormalized {a → STOP ⊓ b → STOP}")
@@ -790,10 +842,8 @@ TEST_CASE("prenormalized {a → STOP ⊓ b → STOP}")
                                   "prenormalized {STOP}"));
     check_process_traces_behavior(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
                                   events("a", "b"));
-    check_process_maximal_trace(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
-                                trace("a"));
-    check_process_maximal_trace(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
-                                trace("b"));
+    check_process_maximal_traces(csp0("prenormalized {a → STOP ⊓ b → STOP}"),
+                                 traces(trace("a"), trace("b")));
 }
 
 TEST_CASE("prenormalized {a → SKIP ; b → STOP}")
@@ -810,6 +860,6 @@ TEST_CASE("prenormalized {a → SKIP ; b → STOP}")
                   "prenormalized {SKIP ; b → STOP}", "prenormalized {STOP}"));
     check_process_traces_behavior(csp0("prenormalized {a → SKIP ; b → STOP}"),
                                   events("a"));
-    check_process_maximal_trace(csp0("prenormalized {a → SKIP ; b → STOP}"),
-                                trace("a"));
+    check_process_maximal_traces(csp0("prenormalized {a → SKIP ; b → STOP}"),
+                                 traces(trace("a", "b")));
 }
