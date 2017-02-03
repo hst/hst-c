@@ -186,7 +186,7 @@ libjudylprev_la_SOURCES = \
 libjudylprev_la_LIBADD = libjudyl.la
 
 libjudy_la_SOURCES = \
-	third_party/judy/src/JudyCommon/JudyMalloc.c
+	src/judy-malloc.c
 libjudy_la_LIBADD = \
 	libjudy1.la \
 	libjudy1count.la \
