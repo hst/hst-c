@@ -1137,4 +1137,37 @@ trace_(struct string_array *names)
     return factory;
 }
 
+/* An array of ID set factories. */
+struct csp_trace_factory_array {
+    size_t count;
+    struct csp_trace_factory *traces;
+};
+
+#define traces(...)                                 \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
+    (traces_(LENGTH(__VA_ARGS__), __VA_ARGS__))(traces_(0, NULL))
+
+UNNEEDED
+static struct csp_trace_factory_array *
+traces_(size_t count, ...)
+{
+    size_t i;
+    size_t size = (count * sizeof(struct csp_trace_factory)) +
+                  sizeof(struct csp_trace_factory_array);
+    va_list args;
+    struct csp_trace_factory_array *array = malloc(size);
+    assert(array != NULL);
+    test_case_cleanup_register(free, array);
+    array->count = count;
+    array->traces = (void *) (array + 1);
+    va_start(args, count);
+    for (i = 0; i < count; i++) {
+        struct csp_trace_factory factory =
+                va_arg(args, struct csp_trace_factory);
+        array->traces[i] = factory;
+    }
+    va_end(args);
+    return array;
+}
+
 #endif /* TEST_CASES_H */

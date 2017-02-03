@@ -6,50 +6,42 @@
  */
 
 #include <assert.h>
-#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
-#include "ccan/container_of/container_of.h"
 #include "csp0.h"
+#include "denotational.h"
 #include "environment.h"
 #include "process.h"
 
-struct reachable {
-    struct csp_process_visitor visitor;
+struct count_traces {
+    struct csp_trace_visitor visitor;
     size_t count;
-    bool verbose;
 };
 
 static void
-reachable_visit(struct csp *csp, struct csp_process_visitor *visitor,
-                struct csp_process *process)
+count_traces_visit(struct csp *csp, struct csp_trace_visitor *visitor,
+                   const struct csp_trace *trace)
 {
-    struct reachable *self = container_of(visitor, struct reachable, visitor);
+    struct count_traces *self =
+            container_of(visitor, struct count_traces, visitor);
     self->count++;
-    if (self->verbose) {
-        struct csp_print_name print = csp_print_name(stdout);
-        csp_process_name(csp, process, &print.visitor);
-        printf("\n");
-    }
 }
 
-struct reachable
-reachable_init(bool verbose)
+static struct count_traces
+count_traces(void)
 {
-    struct reachable self = {{reachable_visit}, 0, verbose};
+    struct count_traces self = {{count_traces_visit}, 0};
     return self;
 }
 
 static void
-reachable(int argc, char **argv)
+traces(int argc, char **argv)
 {
     bool verbose = false;
-    const char *csp0;
+    const char *str;
     struct csp *csp;
     struct csp_process *process;
-    struct reachable reachable;
 
     static struct option options[] = {{"verbose", no_argument, 0, 'v'},
                                       {0, 0, 0, 0}};
@@ -74,27 +66,32 @@ reachable(int argc, char **argv)
     argc -= optind, argv += optind;
 
     if (argc != 1) {
-        fprintf(stderr, "Usage: hst reachable [-v] <process>\n");
+        fprintf(stderr, "Usage: hst traces [-v] <process>\n");
         exit(EXIT_FAILURE);
     }
 
     csp = csp_new();
     assert(csp != NULL);
 
-    csp0 = (argc--, *argv++);
-    process = csp_load_csp0_string(csp, csp0);
+    str = (argc--, *argv++);
+    process = csp_load_csp0_string(csp, str);
     if (process == NULL) {
         csp_free(csp);
-        fprintf(stderr, "Invalid CSP₀ process \"%s\"\n", csp0);
+        fprintf(stderr, "Invalid CSP₀ process \"%s\"\n", str);
         exit(EXIT_FAILURE);
     }
 
-    reachable = reachable_init(verbose);
-    csp_process_bfs(csp, process, &reachable.visitor);
     if (verbose) {
-        printf("Reachable processes: ");
+        struct csp_print_name print_name = csp_print_name(stdout);
+        struct csp_print_traces print_traces =
+                csp_print_traces(&print_name.visitor);
+        csp_process_visit_maximal_finite_traces(csp, process,
+                                                &print_traces.visitor);
+    } else {
+        struct count_traces count = count_traces();
+        csp_process_visit_maximal_finite_traces(csp, process, &count.visitor);
+        printf("Maximal finite traces: %zu\n", count.count);
     }
-    printf("%zu\n", reachable.count);
 
     csp_free(csp);
 }

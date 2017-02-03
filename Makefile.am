@@ -256,7 +256,8 @@ libtests_la_SOURCES = \
 hst_SOURCES = \
 	src/hst/has-trace.c.in \
 	src/hst/hst.c \
-	src/hst/reachable.c.in
+	src/hst/reachable.c.in \
+	src/hst/traces.c.in
 hst_LDADD = libhst.la
 
 LDADD = libhst.la libtests.la
