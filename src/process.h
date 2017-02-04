@@ -32,6 +32,14 @@ void
 csp_edge_visitor_call(struct csp *csp, struct csp_edge_visitor *visitor,
                       const struct csp_event *event, struct csp_process *after);
 
+struct csp_any_edges {
+    struct csp_edge_visitor visitor;
+    bool has_edges;
+};
+
+struct csp_any_edges
+csp_any_edges(void);
+
 struct csp_collect_afters {
     struct csp_edge_visitor visitor;
     struct csp_process_set *set;

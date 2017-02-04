@@ -95,6 +95,34 @@ csp_sequential_composition_initials(struct csp *csp,
     csp_process_visit_initials(csp, seq->p, &translate.visitor);
 }
 
+struct csp_sequential_composition_build_after {
+    struct csp_edge_visitor visitor;
+    struct csp_edge_visitor *wrapped;
+    struct csp_process *q;
+};
+
+static void
+csp_sequential_composition_build_after_visit(struct csp *csp,
+                                             struct csp_edge_visitor *visitor,
+                                             const struct csp_event *initial,
+                                             struct csp_process *p_prime)
+{
+    struct csp_sequential_composition_build_after *self = container_of(
+            visitor, struct csp_sequential_composition_build_after, visitor);
+    struct csp_process *seq_prime =
+            csp_sequential_composition(csp, p_prime, self->q);
+    csp_edge_visitor_call(csp, self->wrapped, initial, seq_prime);
+}
+
+static struct csp_sequential_composition_build_after
+csp_sequential_composition_build_after(struct csp_edge_visitor *wrapped,
+                                       struct csp_process *q)
+{
+    struct csp_sequential_composition_build_after self = {
+            {csp_sequential_composition_build_after_visit}, wrapped, q};
+    return self;
+}
+
 static void
 csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
                                   const struct csp_event *initial,
@@ -109,9 +137,8 @@ csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
      */
     struct csp_sequential_composition *seq =
             container_of(process, struct csp_sequential_composition, process);
-    struct csp_process_set_iterator i;
-    struct csp_process_set afters;
-    struct csp_collect_afters collect = csp_collect_afters(&afters);
+    struct csp_sequential_composition_build_after build_after =
+            csp_sequential_composition_build_after(visitor, seq->q);
 
     /* The composition can never perform a ✔; that's always translated into a τ
      * that activates process Q. */
@@ -121,28 +148,19 @@ csp_sequential_composition_afters(struct csp *csp, struct csp_process *process,
 
     /* If P can perform a non-✔ event (including τ) leading to P', then P;Q can
      * also perform that event, leading to P';Q. */
-    csp_process_set_init(&afters);
-    csp_process_visit_afters(csp, seq->p, initial, &collect.visitor);
-    csp_process_set_foreach (&afters, &i) {
-        struct csp_process *p_prime = csp_process_set_iterator_get(&i);
-        struct csp_process *seq_prime =
-                csp_sequential_composition(csp, p_prime, seq->q);
-        csp_edge_visitor_call(csp, visitor, initial, seq_prime);
-    }
+    csp_process_visit_afters(csp, seq->p, initial, &build_after.visitor);
 
     /* If P can perform a ✔ leading to P', then P;Q can perform a τ leading to
      * Q.  Note that we don't care what P' is; we just care that it exists. */
     if (initial == csp->tau) {
-        csp_process_set_clear(&afters);
-        csp_process_visit_afters(csp, seq->p, csp->tick, &collect.visitor);
-        if (!csp_process_set_empty(&afters)) {
-            /* A can perform ✔, and we don't actually care what it leads to,
+        struct csp_any_edges any_edges = csp_any_edges();
+        csp_process_visit_afters(csp, seq->p, csp->tick, &any_edges.visitor);
+        if (any_edges.has_edges) {
+            /* P can perform ✔, and we don't actually care what it leads to,
              * since we're going to lead to Q no matter what. */
             csp_edge_visitor_call(csp, visitor, initial, seq->q);
         }
     }
-
-    csp_process_set_done(&afters);
 }
 
 static void
