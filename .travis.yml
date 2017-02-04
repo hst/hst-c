@@ -3,10 +3,12 @@ branches:
   only:
     - master
 
-# Test both in-source and out-of-source builds.
+# Test both in-source and out-of-source builds, as well as mildly optimized vs
+# wildly optimized.
 env:
   - BUILD_TYPE=in_source
   - BUILD_TYPE=out_of_source
+  - BUILD_TYPE=hella_optimized
 
 language: c
 script: .travis/test.sh
