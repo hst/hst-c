@@ -284,8 +284,8 @@ static bool
 csp_equivalences_equiv(struct csp_equivalences *equiv, struct csp_process *p1,
                        struct csp_process *p2)
 {
-    csp_id  class1 = csp_equivalences_get_class(equiv, p1->id);
-    csp_id  class2 = csp_equivalences_get_class(equiv, p2->id);
+    csp_id  class1 = csp_equivalences_get_class(equiv, p1);
+    csp_id  class2 = csp_equivalences_get_class(equiv, p2);
     assert(class1 != CSP_ID_NONE);
     assert(class2 != CSP_ID_NONE);
     DEBUG("      " CSP_ID_FMT " ∈ " CSP_ID_FMT, p1->id, class1);
@@ -354,7 +354,7 @@ csp_init_bisimulation_visit_process(struct csp *csp,
     csp_process_get_behavior(csp, process, CSP_TRACES, &self->behavior);
     DEBUG("  init " CSP_ID_FMT " ⇒ " CSP_ID_FMT, process->id,
           self->behavior.hash);
-    csp_equivalences_add(self->equiv, self->behavior.hash, process->id);
+    csp_equivalences_add(self->equiv, self->behavior.hash, process);
 }
 
 static void
@@ -375,14 +375,12 @@ csp_calculate_bisimulation(struct csp *csp, struct csp_process *prenormalized,
                            struct csp_equivalences *equiv)
 {
     struct csp_id_set classes;
-    struct csp_id_set members;
     struct csp_equivalences new_equiv;
     struct csp_equivalences *prev_equiv = equiv;
     struct csp_equivalences *next_equiv = &new_equiv;
     bool changed;
 
     csp_id_set_init(&classes);
-    csp_id_set_init(&members);
     csp_equivalences_init(&new_equiv);
     csp_init_bisimulation(csp, prenormalized, prev_equiv);
 
@@ -400,25 +398,23 @@ csp_calculate_bisimulation(struct csp *csp, struct csp_process *prenormalized,
         csp_id_set_clear(&classes);
         csp_equivalences_build_classes(prev_equiv, &classes);
         csp_id_set_foreach (&classes, &i) {
-            struct csp_id_set_iterator j;
+            struct csp_process_set_iterator j;
+            const struct csp_process_set *members;
             size_t j_index;
             csp_id class_id = csp_id_set_iterator_get(&i);
-            csp_id head_id;
             struct csp_process *head;
             csp_id new_class_id = CSP_ID_NONE;
             DEBUG("class " CSP_ID_FMT, class_id);
 
-            csp_id_set_clear(&members);
-            csp_equivalences_build_members(prev_equiv, class_id, &members);
+            members = csp_equivalences_get_members(prev_equiv, class_id);
 
             /* The "head" of this class is just the one that happens to be first
              * in the list of members. */
-            csp_id_set_get_iterator(&members, &j);
-            assert(!csp_id_set_iterator_done(&j));
-            head_id = csp_id_set_iterator_get(&j);
-            head = csp_require_process(csp, head_id);
-            DEBUG("member[0] = " CSP_ID_FMT, head_id);
-            csp_equivalences_add(next_equiv, class_id, head_id);
+            csp_process_set_get_iterator(members, &j);
+            assert(!csp_process_set_iterator_done(&j));
+            head = csp_process_set_iterator_get(&j);
+            DEBUG("member[0] = " CSP_ID_FMT, head->id);
+            csp_equivalences_add(next_equiv, class_id, head);
 
             /* If we find a non-equivalent member of this class, we'll need to
              * separate it out into a new class.  This new class will need a
@@ -428,29 +424,26 @@ csp_calculate_bisimulation(struct csp *csp, struct csp_process *prenormalized,
              * we'll put them into the same new equivalence class; if they turn
              * out to also not be equivalent to each other, we'll catch that in
              * a later iteration. */
-            for (csp_id_set_iterator_advance(&j), j_index = 1;
-                 !csp_id_set_iterator_done(&j);
-                 csp_id_set_iterator_advance(&j), j_index++) {
-                csp_id member_id = csp_id_set_iterator_get(&j);
-                struct csp_process *member =
-                        csp_require_process(csp, member_id);
-                DEBUG("member[%zu] = " CSP_ID_FMT, j_index, member_id);
+            for (csp_process_set_iterator_advance(&j), j_index = 1;
+                 !csp_process_set_iterator_done(&j);
+                 csp_process_set_iterator_advance(&j), j_index++) {
+                struct csp_process *member = csp_process_set_iterator_get(&j);
+                DEBUG("member[%zu] = " CSP_ID_FMT, j_index, member->id);
                 if (!csp_processes_equiv(csp, prev_equiv, head, member)) {
                     /* This state is not equivalent to its head.  If necessary,
                      * create a new equivalence class.  Add the node to this new
                      * class. */
                     if (new_class_id == CSP_ID_NONE) {
-                        new_class_id = member_id;
+                        new_class_id = member->id;
                     }
-                    DEBUG("  move " CSP_ID_FMT " ⇒ " CSP_ID_FMT, member_id,
+                    DEBUG("  move " CSP_ID_FMT " ⇒ " CSP_ID_FMT, member->id,
                           new_class_id);
-                    csp_equivalences_add(next_equiv, new_class_id,
-                                         member_id);
+                    csp_equivalences_add(next_equiv, new_class_id, member);
                     changed = true;
                 } else {
-                    DEBUG("  keep " CSP_ID_FMT " ⇒ " CSP_ID_FMT, member_id,
+                    DEBUG("  keep " CSP_ID_FMT " ⇒ " CSP_ID_FMT, member->id,
                           class_id);
-                    csp_equivalences_add(next_equiv, class_id, member_id);
+                    csp_equivalences_add(next_equiv, class_id, member);
                 }
             }
         }
@@ -459,7 +452,6 @@ csp_calculate_bisimulation(struct csp *csp, struct csp_process *prenormalized,
     } while (changed);
 
     csp_id_set_done(&classes);
-    csp_id_set_done(&members);
     csp_equivalences_done(&new_equiv);
 }
 
@@ -470,7 +462,8 @@ csp_calculate_bisimulation(struct csp *csp, struct csp_process *prenormalized,
 struct csp_normalized_process {
     struct csp_process process;
     struct csp_process *prenormalized_root;
-    struct csp_id_set subprocess_ids; /* Should be prenormalized processes */
+    /* Should be prenormalized processes */
+    const struct csp_process_set *subprocesses;
     struct csp_equivalences *equiv;
     csp_id equivalence_class;
     bool equiv_owned;
@@ -500,11 +493,9 @@ csp_normalized_process_initials(struct csp *csp, struct csp_process *process,
     struct csp_normalized_process *self =
             container_of(process, struct csp_normalized_process, process);
     struct csp_ignore_event ignore = csp_ignore_event(visitor, csp->tau);
-    struct csp_id_set_iterator iter;
-    csp_id_set_foreach (&self->subprocess_ids, &iter) {
-        csp_id subprocess_id = csp_id_set_iterator_get(&iter);
-        struct csp_process *subprocess =
-                csp_require_process(csp, subprocess_id);
+    struct csp_process_set_iterator iter;
+    csp_process_set_foreach (self->subprocesses, &iter) {
+        struct csp_process *subprocess = csp_process_set_iterator_get(&iter);
         csp_process_visit_initials(csp, subprocess, &ignore.visitor);
     }
 }
@@ -516,8 +507,7 @@ csp_normalized_process_afters(struct csp *csp, struct csp_process *process,
 {
     struct csp_normalized_process *self =
             container_of(process, struct csp_normalized_process, process);
-    struct csp_id_set_iterator i;
-    struct csp_process_set_iterator p;
+    struct csp_process_set_iterator iter;
     struct csp_process_set afters;
     csp_id equivalence_class;
     struct csp_process *after;
@@ -525,10 +515,8 @@ csp_normalized_process_afters(struct csp *csp, struct csp_process *process,
     /* Find the set of processes that you could end up in by starting in one of
      * our underlying processes and following a single `initial` event. */
     csp_process_set_init(&afters);
-    csp_id_set_foreach (&self->subprocess_ids, &i) {
-        csp_id subprocess_id = csp_id_set_iterator_get(&i);
-        struct csp_process *subprocess =
-                csp_require_process(csp, subprocess_id);
+    csp_process_set_foreach (self->subprocesses, &iter) {
+        struct csp_process *subprocess = csp_process_set_iterator_get(&iter);
         struct csp_collect_afters collect = csp_collect_afters(&afters);
         csp_process_visit_afters(csp, subprocess, initial, &collect.visitor);
     }
@@ -537,10 +525,10 @@ csp_normalized_process_afters(struct csp *csp, struct csp_process *process,
      * equivalent processes via bisimulation, all of the `afters` that we just
      * found should all belong to the same equivalence class. */
     equivalence_class = CSP_ID_NONE;
-    csp_process_set_foreach (&afters, &p) {
-        struct csp_process *after = csp_process_set_iterator_get(&p);
+    csp_process_set_foreach (&afters, &iter) {
+        struct csp_process *after = csp_process_set_iterator_get(&iter);
         csp_id after_equivalence_class =
-                csp_equivalences_get_class(self->equiv, after->id);
+                csp_equivalences_get_class(self->equiv, after);
         assert(equivalence_class == CSP_ID_NONE ||
                equivalence_class == after_equivalence_class);
         equivalence_class = after_equivalence_class;
@@ -559,7 +547,6 @@ csp_normalized_process_free(struct csp *csp, struct csp_process *process)
 {
     struct csp_normalized_process *self =
             container_of(process, struct csp_normalized_process, process);
-    csp_id_set_done(&self->subprocess_ids);
     if (self->equiv_owned) {
         csp_equivalences_free(self->equiv);
     }
@@ -607,9 +594,7 @@ csp_normalized_process_new(struct csp *csp,
     self->equiv = equiv;
     self->equiv_owned = equiv_owned;
     self->equivalence_class = equivalence_class;
-    csp_id_set_init(&self->subprocess_ids);
-    csp_equivalences_build_members(equiv, equivalence_class,
-                                   &self->subprocess_ids);
+    self->subprocesses = csp_equivalences_get_members(equiv, equivalence_class);
     csp_register_process(csp, &self->process);
     return &self->process;
 }
@@ -620,7 +605,7 @@ csp_normalize_process(struct csp *csp, struct csp_process *prenormalized)
     struct csp_equivalences *equiv = csp_equivalences_new();
     csp_id equivalence_class;
     csp_calculate_bisimulation(csp, prenormalized, equiv);
-    equivalence_class = csp_equivalences_get_class(equiv, prenormalized->id);
+    equivalence_class = csp_equivalences_get_class(equiv, prenormalized);
     assert(equivalence_class != CSP_ID_NONE);
     return csp_normalized_process_new(csp, prenormalized, equiv,
                                       equivalence_class, true);
@@ -641,7 +626,7 @@ csp_normalized_subprocess(struct csp *csp, struct csp_process *root_,
             csp_normalized_process_downcast(root_);
     csp_id class_id;
     /* Figure out which equivalence class `prenormalized` belongs to. */
-    class_id = csp_equivalences_get_class(root->equiv, prenormalized->id);
+    class_id = csp_equivalences_get_class(root->equiv, prenormalized);
     /* Then return the normalized subprocess for that equivalence class. */
     return csp_normalized_process_new(csp, root->prenormalized_root,
                                       root->equiv, class_id, false);
@@ -652,16 +637,14 @@ csp_normalized_process_get_processes(struct csp *csp,
                                      struct csp_process *process,
                                      struct csp_process_set *set)
 {
-    struct csp_id_set_iterator iter;
+    struct csp_process_set_iterator iter;
     struct csp_normalized_process *self =
             csp_normalized_process_downcast(process);
-    /* self->ps is the set of prenormalized processes that this normalized
-     * process represents.  We need to grab the processes that each of those
-     * represent to get our final answer. */
-    csp_id_set_foreach (&self->subprocess_ids, &iter) {
-        csp_id subprocess_id = csp_id_set_iterator_get(&iter);
-        struct csp_process *subprocess =
-                csp_require_process(csp, subprocess_id);
+    /* self->subprocesses is the set of prenormalized processes that this
+     * normalized process represents.  We need to grab the processes that each
+     * of those represent to get our final answer. */
+    csp_process_set_foreach (self->subprocesses, &iter) {
+        struct csp_process *subprocess = csp_process_set_iterator_get(&iter);
         csp_process_set_union(
                 set, csp_prenormalized_process_get_processes(subprocess));
     }
