@@ -119,44 +119,42 @@ check_bisimulation(struct csp_process_factory root_,
     struct csp_process *prenormalized;
     struct csp_equivalences equiv;
     csp_id class_id = CSP_ID_NONE;
-    struct csp_id_set actual;
-    struct csp_id_set expected;
+    const struct csp_process_set *actual;
+    struct csp_process_set expected;
     /* Initialize everything. */
     check_alloc(csp, csp_new());
     csp_equivalences_init(&equiv);
-    csp_id_set_init(&actual);
-    csp_id_set_init(&expected);
+    csp_process_set_init(&expected);
     /* Load the main process. */
     root = csp_process_factory_create(csp, root_);
     /* Prenormalize and bisimulate the root process. */
     prenormalized = csp_prenormalize_process(csp, root);
     csp_calculate_bisimulation(csp, prenormalized, &equiv);
-    /* Construct a set containing the IDs of the normalized nodes that are
-     * expected to be equivalent. */
+    /* Construct a set containing the normalized nodes that are expected to be
+     * equivalent. */
     check(equivalent_->count > 0);
     for (i = 0; i < equivalent_->count; i++) {
         const struct csp_process_set *node_processes =
                 csp_process_set_factory_create(csp, equivalent_->sets[i]);
         struct csp_process *node =
                 csp_prenormalized_process_new(csp, node_processes);
-        csp_id_set_add(&expected, node->id);
+        csp_process_set_add(&expected, node);
         if (i == 0) {
             /* While building up this set grab the ID of the equivalence class
              * that the first normalized node belongs to. */
-            class_id = csp_equivalences_get_class(&equiv, node->id);
+            class_id = csp_equivalences_get_class(&equiv, node);
             check_id_ne(class_id, CSP_ID_NONE);
         }
     }
     /* Find all of the nodes that are in the same equivalence class as the first
      * expected node. */
-    csp_equivalences_build_members(&equiv, class_id, &actual);
+    actual = csp_equivalences_get_members(&equiv, class_id);
     /* And verify that the actual and expected sets of equivalent nodes are
      * equal. */
-    check_set_eq(&actual, &expected);
+    check_process_set_eq(csp, actual, &expected);
     /* Clean up. */
     csp_equivalences_done(&equiv);
-    csp_id_set_done(&actual);
-    csp_id_set_done(&expected);
+    csp_process_set_done(&expected);
     csp_free(csp);
 }
 

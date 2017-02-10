@@ -160,11 +160,21 @@ struct csp_process_set {
     struct csp_set set;
 };
 
+struct csp_process_set *
+csp_process_set_new(void);
+
 void
 csp_process_set_init(struct csp_process_set *set);
 
 void
 csp_process_set_done(struct csp_process_set *set);
+
+void
+csp_process_set_free(struct csp_process_set *set);
+
+/* We'll make sure this gets freed. */
+const struct csp_process_set *
+csp_process_set_new_empty(void);
 
 bool
 csp_process_set_empty(const struct csp_process_set *set);

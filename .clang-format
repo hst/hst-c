@@ -26,10 +26,9 @@ DerivePointerAlignment: false
 DisableFormat: false
 ExperimentalAutoDetectBinPacking: false
 ForEachMacros:
+  - csp_class_members_foreach
   - csp_event_set_foreach
-  - csp_id_map_foreach
   - csp_id_set_foreach
-  - csp_id_set_map_foreach
   - csp_map_foreach
   - csp_normalized_lts_nodes_foreach
   - csp_process_bag_foreach

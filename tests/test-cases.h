@@ -25,7 +25,6 @@
 #include "denotational.h"
 #include "equivalence.h"
 #include "event.h"
-#include "id-map.h"
 #include "id-set.h"
 
 /*------------------------------------------------------------------------------
@@ -761,19 +760,6 @@ csp_id_set_factory_create(struct csp *csp, struct csp_id_set_factory factory)
     return factory.create(csp, factory.ud);
 }
 
-/* A factory that can create an ID→ID map */
-struct csp_id_map_factory {
-    struct csp_id_map *(*create)(struct csp *csp, void *ud);
-    void *ud;
-};
-
-UNNEEDED
-static struct csp_id_map *
-csp_id_map_factory_create(struct csp *csp, struct csp_id_map_factory factory)
-{
-    return factory.create(csp, factory.ud);
-}
-
 /* Factory for creating a single process. */
 struct csp_process_factory {
     struct csp_process *(*create)(struct csp *csp, void *ud);
@@ -885,44 +871,6 @@ csp_id_factory_array_new_(size_t count, ...)
     return array;
 }
 
-/* Creates a new ID→ID map factory that wraps a bunch of ID factories to create
- * the contents of each map entry. */
-#define id_map(...) (id_map_(csp_id_factory_array_new(__VA_ARGS__)))
-
-static void
-csp_id_map_free_(void *varray)
-{
-    struct csp_id_map *array = varray;
-    csp_id_map_done(array);
-    free(array);
-}
-
-static struct csp_id_map *
-id_map_factory(struct csp *csp, void *vids)
-{
-    size_t i;
-    struct csp_id_factory_array *ids = vids;
-    struct csp_id_map *map = malloc(sizeof(struct csp_id_map));
-    assert(map != NULL);
-    csp_id_map_init(map);
-    test_case_cleanup_register(csp_id_map_free_, map);
-    for (i = 0; i < ids->count;) {
-        csp_id from = csp_id_factory_create(csp, ids->factories[i++]);
-        csp_id to = csp_id_factory_create(csp, ids->factories[i++]);
-        csp_id_map_insert(map, from, to);
-    }
-    return map;
-}
-
-UNNEEDED
-static struct csp_id_map_factory
-id_map_(struct csp_id_factory_array *ids)
-{
-    struct csp_id_map_factory factory = {id_map_factory, ids};
-    assert((ids->count % 2) == 0);
-    return factory;
-}
-
 /* Creates a new ID factory that returns the ID of an event. */
 UNNEEDED
 static struct csp_event_factory
@@ -1024,55 +972,6 @@ csp0s_(struct string_array *processes)
 {
     struct csp_process_set_factory factory = {csp0s_factory, processes};
     return factory;
-}
-
-/* Verify which equivalence class a member belongs to. */
-UNNEEDED
-static void
-check_equivalence_classes(struct csp *csp, struct csp_equivalences *equiv,
-                          struct csp_id_set_factory classes)
-{
-    struct csp_id_set actual;
-    const struct csp_id_set *class_set;
-    csp_id_set_init(&actual);
-    csp_equivalences_build_classes(equiv, &actual);
-    class_set = csp_id_set_factory_create(csp, classes);
-    check_set_eq(&actual, class_set);
-    csp_id_set_done(&actual);
-}
-
-/* Verify which equivalence class a member belongs to. */
-UNNEEDED
-static void
-check_equivalence_class(struct csp *csp, struct csp_equivalences *equiv,
-                        struct csp_id_factory clazz,
-                        struct csp_id_factory member)
-{
-    csp_id class_id;
-    csp_id member_id;
-    csp_id actual;
-    class_id = csp_id_factory_create(csp, clazz);
-    member_id = csp_id_factory_create(csp, member);
-    actual = csp_equivalences_get_class(equiv, member_id);
-    check_id_eq(actual, class_id);
-}
-
-/* Verify the members of an equivalence class. */
-UNNEEDED
-static void
-check_equivalence_class_members(struct csp *csp, struct csp_equivalences *equiv,
-                                struct csp_id_factory clazz,
-                                struct csp_id_set_factory members)
-{
-    csp_id class_id;
-    const struct csp_id_set *member_set;
-    struct csp_id_set actual;
-    csp_id_set_init(&actual);
-    class_id = csp_id_factory_create(csp, clazz);
-    member_set = csp_id_set_factory_create(csp, members);
-    csp_equivalences_build_members(equiv, class_id, &actual);
-    check_set_eq(&actual, member_set);
-    csp_id_set_done(&actual);
 }
 
 /* An array of ID set factories. */

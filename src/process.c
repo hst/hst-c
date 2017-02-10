@@ -268,6 +268,15 @@ csp_process_bfs(struct csp *csp, struct csp_process *root,
  * Process sets
  */
 
+struct csp_process_set *
+csp_process_set_new(void)
+{
+    struct csp_process_set *set = malloc(sizeof(struct csp_process_set));
+    assert(set != NULL);
+    csp_process_set_init(set);
+    return set;
+}
+
 void
 csp_process_set_init(struct csp_process_set *set)
 {
@@ -278,6 +287,21 @@ void
 csp_process_set_done(struct csp_process_set *set)
 {
     csp_set_done(&set->set, NULL, NULL);
+}
+
+void
+csp_process_set_free(struct csp_process_set *set)
+{
+    csp_process_set_done(set);
+    free(set);
+}
+
+static const struct csp_process_set EMPTY = {{NULL}};
+
+const struct csp_process_set *
+csp_process_set_new_empty(void)
+{
+    return &EMPTY;
 }
 
 bool
