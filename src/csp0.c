@@ -111,6 +111,28 @@ skip_whitespace(struct csp0_parse_state *state)
 }
 
 static int
+parse_token(struct csp0_parse_state *state, const char *expected)
+{
+    const char *p = state->p;
+    const char *eof = state->eof;
+    size_t expected_length = strlen(expected);
+    DEBUG(2, "ENTER  token `%s`", expected);
+    if (unlikely((p + expected_length) > eof)) {
+        // Unexpected end of input
+        DEBUG(1, "FAIL   token `%s`", expected);
+        return -1;
+    } else if (likely(memcmp(p, expected, expected_length) == 0)) {
+        state->p += expected_length;
+        DEBUG(1, "ACCEPT token `%s`", expected);
+        return 0;
+    } else {
+        // Expected something else
+        DEBUG(1, "FAIL   token `%s`", expected);
+        return -1;
+    }
+}
+
+static int
 parse_numeric_identifier(struct csp0_parse_state *state, csp_id *dest)
 {
     const char *p = state->p;
@@ -148,6 +170,20 @@ parse_identifier(struct csp0_parse_state *state, struct csp0_identifier *dest)
         // Unexpected end of input
         return -1;
     }
+    // A hack until we process unicode identifiers more properly.
+    if (parse_token(state, "τ") == 0) {
+        dest->start = p;
+        dest->length = strlen("τ");
+        DEBUG(1, "ACCEPT tau `τ`");
+        return 0;
+    }
+    if (parse_token(state, "✔") == 0) {
+        dest->start = p;
+        dest->length = strlen("✔");
+        DEBUG(1, "ACCEPT tick `✔`");
+        return 0;
+    }
+    // Try a dollar identifier first
     if (*p == '$') {
         const char *start = p++;
         DEBUG(2, "ENTER  dollar identifier");
@@ -182,28 +218,6 @@ parse_identifier(struct csp0_parse_state *state, struct csp0_identifier *dest)
         state->p = p;
         DEBUG(1, "ACCEPT identifier `%.*s`", (int) dest->length, start);
         return 0;
-    }
-}
-
-static int
-parse_token(struct csp0_parse_state *state, const char *expected)
-{
-    const char *p = state->p;
-    const char *eof = state->eof;
-    size_t expected_length = strlen(expected);
-    DEBUG(2, "ENTER  token `%s`", expected);
-    if (unlikely((p + expected_length) > eof)) {
-        // Unexpected end of input
-        DEBUG(1, "FAIL   token `%s`", expected);
-        return -1;
-    } else if (likely(memcmp(p, expected, expected_length) == 0)) {
-        state->p += expected_length;
-        DEBUG(1, "ACCEPT token `%s`", expected);
-        return 0;
-    } else {
-        // Expected something else
-        DEBUG(1, "FAIL   token `%s`", expected);
-        return -1;
     }
 }
 

@@ -13,6 +13,7 @@
 
 #include "ccan/container_of/container_of.h"
 #include "csp0.h"
+#include "denotational.h"
 #include "environment.h"
 #include "process.h"
 
@@ -45,23 +46,29 @@ reachable_init(bool verbose)
 static void
 reachable(int argc, char **argv)
 {
+    bool traces = false;
     bool verbose = false;
     const char *csp0;
     struct csp *csp;
     struct csp_process *process;
     struct reachable reachable;
 
-    static struct option options[] = {{"verbose", no_argument, 0, 'v'},
+    static struct option options[] = {{"traces", no_argument, 0, 't'},
+                                      {"verbose", no_argument, 0, 'v'},
                                       {0, 0, 0, 0}};
 
     while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "v", options, &option_index);
+        int c = getopt_long(argc, argv, "tv", options, &option_index);
         if (c == -1) {
             break;
         }
 
         switch (c) {
+            case 't':
+                traces = true;
+                break;
+
             case 'v':
                 verbose = true;
                 break;
@@ -89,6 +96,9 @@ reachable(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    if (verbose && traces) {
+        process = csp_traced_process(csp, process);
+    }
     reachable = reachable_init(verbose);
     csp_process_bfs(csp, process, &reachable.visitor);
     if (verbose) {
