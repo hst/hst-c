@@ -342,7 +342,7 @@ struct csp_init_bisimulation {
     struct csp_equivalences *equiv;
 };
 
-static void
+static int
 csp_init_bisimulation_visit_process(struct csp *csp,
                                     struct csp_process_visitor *visitor,
                                     struct csp_process *process)
@@ -355,6 +355,7 @@ csp_init_bisimulation_visit_process(struct csp *csp,
     DEBUG("  init " CSP_ID_FMT " ⇒ " CSP_ID_FMT, process->id,
           self->behavior.hash);
     csp_equivalences_add(self->equiv, self->behavior.hash, process);
+    return 0;
 }
 
 static void

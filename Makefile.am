@@ -28,6 +28,7 @@ noinst_PROGRAMS = \
 	judyltables
 check_LTLIBRARIES = libtests.la
 check_PROGRAMS = \
+	tests/test-bfs \
 	tests/test-csp0 \
 	tests/test-denotational \
 	tests/test-environment \
@@ -255,6 +256,7 @@ hst_SOURCES = \
 hst_LDADD = libhst.la
 
 LDADD = libhst.la libtests.la
+tests_test_bfs_LDFLAGS = -no-install
 tests_test_csp0_LDFLAGS = -no-install
 tests_test_denotational_LDFLAGS = -no-install
 tests_test_environment_LDFLAGS = -no-install

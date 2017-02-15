@@ -66,14 +66,14 @@ csp_collect_afters(struct csp_process_set *set)
  * Process visitors
  */
 
-void
+int
 csp_process_visitor_call(struct csp *csp, struct csp_process_visitor *visitor,
                          struct csp_process *process)
 {
-    visitor->visit(csp, visitor, process);
+    return visitor->visit(csp, visitor, process);
 }
 
-static void
+static int
 csp_collect_processes_visit(struct csp *csp,
                             struct csp_process_visitor *visitor,
                             struct csp_process *process)
@@ -81,6 +81,7 @@ csp_collect_processes_visit(struct csp *csp,
     struct csp_collect_processes *self =
             container_of(visitor, struct csp_collect_processes, visitor);
     csp_process_set_add(self->set, process);
+    return 0;
 }
 
 struct csp_collect_processes
@@ -216,12 +217,15 @@ csp_process_bfs_visit_transition(struct csp *csp,
     csp_process_bfs_enqueue(csp, self, after);
 }
 
-static void
+static bool
 csp_process_bfs_visit_process(struct csp *csp, struct csp_process_bfs *self,
                               struct csp_process *process)
 {
-    csp_process_visitor_call(csp, self->wrapped, process);
-    csp_process_visit_transitions(csp, process, &self->visit_transition);
+    int rc = csp_process_visitor_call(csp, self->wrapped, process);
+    if (likely(rc == CSP_PROCESS_BFS_CONTINUE)) {
+        csp_process_visit_transitions(csp, process, &self->visit_transition);
+    }
+    return rc != CSP_PROCESS_BFS_ABORT;
 }
 
 static void
@@ -258,7 +262,9 @@ csp_process_bfs(struct csp *csp, struct csp_process *root,
         csp_process_set_clear(self.next_queue);
         csp_process_set_foreach (self.current_queue, &iter) {
             struct csp_process *process = csp_process_set_iterator_get(&iter);
-            csp_process_bfs_visit_process(csp, &self, process);
+            if (unlikely(!csp_process_bfs_visit_process(csp, &self, process))) {
+                break;
+            }
         }
     }
     csp_process_bfs_done(&self);

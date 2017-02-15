@@ -53,11 +53,11 @@ csp_collect_afters(struct csp_process_set *set);
  */
 
 struct csp_process_visitor {
-    void (*visit)(struct csp *csp, struct csp_process_visitor *visitor,
-                  struct csp_process *process);
+    int (*visit)(struct csp *csp, struct csp_process_visitor *visitor,
+                 struct csp_process *process);
 };
 
-void
+int
 csp_process_visitor_call(struct csp *csp, struct csp_process_visitor *visitor,
                          struct csp_process *process);
 
@@ -148,6 +148,13 @@ void
 csp_process_visit_transitions(struct csp *csp, struct csp_process *process,
                               struct csp_edge_visitor *visitor);
 
+#define CSP_PROCESS_BFS_CONTINUE 0
+#define CSP_PROCESS_BFS_ABORT 1
+#define CSP_PROCESS_BFS_PRUNE 2
+
+/* If your callback ever returns `PRUNE`, then we will not follow any outgoing
+ * transitions from the corresponding process.  If your callback ever returns
+ * `ABORT`, we will immediately abort the entire BFS. */
 void
 csp_process_bfs(struct csp *csp, struct csp_process *process,
                 struct csp_process_visitor *visitor);

@@ -22,7 +22,7 @@ struct reachable {
     bool verbose;
 };
 
-static void
+static int
 reachable_visit(struct csp *csp, struct csp_process_visitor *visitor,
                 struct csp_process *process)
 {
@@ -33,6 +33,7 @@ reachable_visit(struct csp *csp, struct csp_process_visitor *visitor,
         csp_process_name(csp, process, &print.visitor);
         printf("\n");
     }
+    return 0;
 }
 
 struct reachable
