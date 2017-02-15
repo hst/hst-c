@@ -230,7 +230,7 @@ struct csp_find_recursive_processes {
     struct csp_process_set *set;
 };
 
-static void
+static int
 csp_find_recursive_processes_visit(struct csp *csp,
                                    struct csp_process_visitor *visitor,
                                    struct csp_process *process)
@@ -240,6 +240,7 @@ csp_find_recursive_processes_visit(struct csp *csp,
     if (process->iface == &csp_recursive_process_iface) {
         csp_process_set_add(self->set, process);
     }
+    return 0;
 }
 
 static struct csp_find_recursive_processes
