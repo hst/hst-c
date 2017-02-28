@@ -16,7 +16,7 @@
 #include "process.h"
 
 /*------------------------------------------------------------------------------
- * Denotational semantics
+ * Traces
  */
 
 /* A sequence of events.  To make them easier to construct, we represent a trace
@@ -28,6 +28,7 @@
 struct csp_trace {
     const struct csp_event *event;
     struct csp_trace *prev;
+    csp_id hash;
 };
 
 struct csp_trace
@@ -102,5 +103,26 @@ void
 csp_process_visit_maximal_finite_traces(struct csp *csp,
                                         struct csp_process *process,
                                         struct csp_trace_visitor *visitor);
+
+/*------------------------------------------------------------------------------
+ * Traced process
+ */
+
+/* Wraps `process` so that as you walk through its subprocesses, you can easily
+ * determine which minimal trace leads to the subprocess. */
+struct csp_process *
+csp_traced_process(struct csp *csp, struct csp_process *process);
+
+/* `process` must be a subprocess of a process created via csp_traced_process */
+const struct csp_trace *
+csp_traced_process_get_trace(struct csp *csp, struct csp_process *process);
+
+/* `process` must be a subprocess of a process created via csp_traced_process */
+struct csp_process *
+csp_traced_process_get_wrapped(struct csp *csp, struct csp_process *process);
+
+struct csp_process *
+csp_traced_process_new(struct csp *csp, struct csp_process *wrapped,
+                       const struct csp_trace *trace);
 
 #endif /* HST_DENOTATIONAL_H */

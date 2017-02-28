@@ -8,11 +8,14 @@
 #include "denotational.h"
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "ccan/container_of/container_of.h"
+#include "environment.h"
 #include "event.h"
+#include "macros.h"
 #include "normalization.h"
 #include "operators.h"
 #include "process.h"
@@ -22,17 +25,20 @@
  * Traces
  */
 
+#define CSP_EMPTY_TRACE_HASH UINT64_C(0x0e40beb4b610bc78) /* random */
+
 struct csp_trace
 csp_trace_init(const struct csp_event *event, struct csp_trace *prev)
 {
-    struct csp_trace trace = {event, prev};
+    struct csp_trace trace = {event, prev, prev->hash ^ csp_event_id(event)};
     return trace;
 }
 
 struct csp_trace
 csp_trace_init_empty(void)
 {
-    return csp_trace_init(NULL, NULL);
+    struct csp_trace trace = {NULL, NULL, CSP_EMPTY_TRACE_HASH};
+    return trace;
 }
 
 struct csp_trace *
@@ -40,15 +46,17 @@ csp_trace_new(const struct csp_event *event, struct csp_trace *prev)
 {
     struct csp_trace *trace = malloc(sizeof(struct csp_trace));
     assert(trace != NULL);
-    trace->event = event;
-    trace->prev = prev;
+    *trace = csp_trace_init(event, prev);
     return trace;
 }
 
 struct csp_trace *
 csp_trace_new_empty(void)
 {
-    return csp_trace_new(NULL, NULL);
+    struct csp_trace *trace = malloc(sizeof(struct csp_trace));
+    assert(trace != NULL);
+    *trace = csp_trace_init_empty();
+    return trace;
 }
 
 void
@@ -255,4 +263,144 @@ csp_process_visit_maximal_finite_traces(struct csp *csp,
     if (!start.any_afters) {
         csp_trace_visitor_call(csp, wrapped, &start.trace);
     }
+}
+
+/*------------------------------------------------------------------------------
+ * Traced process
+ */
+
+struct csp_traced_process {
+    struct csp_process process;
+    struct csp_process *wrapped;
+    struct csp_trace trace;
+};
+
+static void
+csp_traced_process_name(struct csp *csp, struct csp_process *process,
+                        struct csp_name_visitor *visitor)
+{
+    struct csp_traced_process *traced =
+            container_of(process, struct csp_traced_process, process);
+    csp_trace_print(csp, &traced->trace, visitor);
+    csp_name_visitor_call(csp, visitor, " ⇒ ");
+    csp_process_name(csp, traced->wrapped, visitor);
+}
+
+static void
+csp_traced_process_initials(struct csp *csp, struct csp_process *process,
+                            struct csp_event_visitor *visitor)
+{
+    struct csp_traced_process *traced =
+            container_of(process, struct csp_traced_process, process);
+    csp_process_visit_initials(csp, traced->wrapped, visitor);
+}
+
+struct csp_traced_process_after {
+    struct csp_edge_visitor visitor;
+    const struct csp_trace *trace;
+    struct csp_edge_visitor *wrapped;
+};
+
+static void
+csp_traced_process_after_visit(struct csp *csp,
+                               struct csp_edge_visitor *visitor,
+                               const struct csp_event *initial,
+                               struct csp_process *wrapped_after)
+{
+    struct csp_traced_process_after *traced =
+            container_of(visitor, struct csp_traced_process_after, visitor);
+    struct csp_process *after =
+            csp_traced_process_new(csp, wrapped_after, traced->trace);
+    csp_edge_visitor_call(csp, traced->wrapped, initial, after);
+}
+
+static struct csp_traced_process_after
+csp_traced_process_after(const struct csp_trace *trace,
+                         struct csp_edge_visitor *wrapped)
+{
+    struct csp_traced_process_after self = {
+            {csp_traced_process_after_visit}, trace, wrapped};
+    return self;
+}
+
+static void
+csp_traced_process_afters(struct csp *csp, struct csp_process *process,
+                          const struct csp_event *initial,
+                          struct csp_edge_visitor *visitor)
+{
+    struct csp_traced_process *traced =
+            container_of(process, struct csp_traced_process, process);
+    struct csp_trace trace;
+    struct csp_traced_process_after after;
+    trace = csp_trace_init(initial, &traced->trace);
+    after = csp_traced_process_after(&trace, visitor);
+    csp_process_visit_afters(csp, traced->wrapped, initial, &after.visitor);
+}
+
+static void
+csp_traced_process_free(struct csp *csp, struct csp_process *process)
+{
+    struct csp_traced_process *traced =
+            container_of(process, struct csp_traced_process, process);
+    free(traced);
+}
+
+static const struct csp_process_iface csp_traced_process_iface = {
+        0, csp_traced_process_name, csp_traced_process_initials,
+        csp_traced_process_afters, csp_traced_process_free};
+
+static csp_id
+csp_traced_process_get_id(struct csp_process *wrapped,
+                          const struct csp_trace *trace)
+{
+    static struct csp_id_scope traced_process;
+    csp_id id = csp_id_start(&traced_process);
+    id = csp_id_add_process(id, wrapped);
+    id = csp_id_add_id(id, trace->hash);
+    return id;
+}
+
+struct csp_process *
+csp_traced_process_new(struct csp *csp, struct csp_process *wrapped,
+                       const struct csp_trace *trace)
+{
+    csp_id id = csp_traced_process_get_id(wrapped, trace);
+    struct csp_traced_process *traced;
+    return_if_nonnull(csp_get_process(csp, id));
+    traced = malloc(sizeof(struct csp_traced_process));
+    assert(traced != NULL);
+    traced->process.id = id;
+    traced->process.iface = &csp_traced_process_iface;
+    traced->wrapped = wrapped;
+    traced->trace = *trace;
+    csp_register_process(csp, &traced->process);
+    return &traced->process;
+}
+
+static struct csp_traced_process *
+csp_traced_process_downcast(struct csp_process *process)
+{
+    assert(process->iface == &csp_traced_process_iface);
+    return container_of(process, struct csp_traced_process, process);
+}
+
+struct csp_process *
+csp_traced_process(struct csp *csp, struct csp_process *wrapped)
+{
+    struct csp_trace trace = csp_trace_init_empty();
+    return csp_traced_process_new(csp, wrapped, &trace);
+}
+
+const struct csp_trace *
+csp_traced_process_get_trace(struct csp *csp, struct csp_process *process)
+{
+    struct csp_traced_process *traced = csp_traced_process_downcast(process);
+    return &traced->trace;
+}
+
+struct csp_process *
+csp_traced_process_get_wrapped(struct csp *csp, struct csp_process *process)
+{
+    struct csp_traced_process *traced = csp_traced_process_downcast(process);
+    return traced->wrapped;
 }

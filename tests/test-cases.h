@@ -838,33 +838,33 @@ ids_(struct csp_id_set *set)
     return factory;
 }
 
-/* Creates an array of ID factories. */
-struct csp_id_factory_array {
+/* Creates an array of process factories. */
+struct csp_process_factory_array {
     size_t count;
-    struct csp_id_factory *factories;
+    struct csp_process_factory *factories;
 };
 
-#define csp_id_factory_array_new(...)                              \
-    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__))                \
-    (csp_id_factory_array_new_(LENGTH(__VA_ARGS__), __VA_ARGS__))( \
-            csp_id_factory_array_new_(0, NULL))
+#define processes(...)                              \
+    CPPMAGIC_IFELSE(CPPMAGIC_NONEMPTY(__VA_ARGS__)) \
+    (processes_(LENGTH(__VA_ARGS__), __VA_ARGS__))(processes_(0, NULL))
 
 UNNEEDED
-static struct csp_id_factory_array *
-csp_id_factory_array_new_(size_t count, ...)
+static struct csp_process_factory_array *
+processes_(size_t count, ...)
 {
     size_t i;
-    size_t size = (count * sizeof(struct csp_id_factory)) +
-                  sizeof(struct csp_id_factory_array);
+    size_t size = (count * sizeof(struct csp_process_factory)) +
+                  sizeof(struct csp_process_factory_array);
     va_list args;
-    struct csp_id_factory_array *array = malloc(size);
+    struct csp_process_factory_array *array = malloc(size);
     assert(array != NULL);
     test_case_cleanup_register(free, array);
     array->count = count;
     array->factories = (void *) (array + 1);
     va_start(args, count);
     for (i = 0; i < count; i++) {
-        struct csp_id_factory factory = va_arg(args, struct csp_id_factory);
+        struct csp_process_factory factory =
+                va_arg(args, struct csp_process_factory);
         array->factories[i] = factory;
     }
     va_end(args);
@@ -940,6 +940,52 @@ static struct csp_process_factory
 csp0(const char *csp0)
 {
     struct csp_process_factory factory = {csp0_factory, (void *) csp0};
+    return factory;
+}
+
+/* Creates a new process factory that returns a traced CSP₀ process. */
+struct traced_csp0 {
+    const char *trace;
+    const char *csp0;
+};
+
+static
+struct traced_csp0 *
+traced_csp0_new(const char *trace, const char *csp0)
+{
+    struct traced_csp0 *traced = malloc(sizeof(struct traced_csp0));
+    assert(traced != NULL);
+    test_case_cleanup_register(free, traced);
+    traced->trace = trace;
+    traced->csp0 = csp0;
+    return traced;
+}
+
+UNNEEDED
+static struct csp_process_factory
+traced_csp0(const char *trace, const char *csp0);
+
+static struct csp_process *
+traced_csp0_factory(struct csp *csp, void *vtraced)
+{
+    struct traced_csp0 *traced = vtraced;
+    struct csp_trace *trace;
+    struct csp_process *process;
+    check0_with_msg(csp_load_trace_string(csp, traced->trace, &trace),
+                    "Could not parse %s", traced->trace);
+    test_case_cleanup_register((test_case_cleanup_f *) csp_trace_free_deep,
+                               trace);
+    check_nonnull_with_msg(process = csp_load_csp0_string(csp, traced->csp0),
+                           "Could not parse %s", traced->csp0);
+    return csp_traced_process_new(csp, process, trace);
+}
+
+UNNEEDED
+static struct csp_process_factory
+traced_csp0(const char *trace, const char *csp0)
+{
+    struct csp_process_factory factory = {traced_csp0_factory,
+                                          traced_csp0_new(trace, csp0)};
     return factory;
 }
 
